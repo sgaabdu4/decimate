@@ -163,8 +163,12 @@ decimate health . --file-scores --hotspots --targets --ownership --format json
 Add LCOV or runtime coverage context:
 
 ```bash
+decimate coverage setup . --non-interactive --format json
+decimate coverage setup . --yes --format json
 decimate health . --coverage coverage/lcov.info --coverage-gaps --max-crap 30 --format json
 decimate coverage analyze . --runtime-coverage coverage-final.json --format json
+decimate coverage upload-inventory . --dry-run --repo owner/repo --format json
+decimate coverage upload-source-maps . --dir dist --git-sha <sha> --repo owner/repo --dry-run --format json
 ```
 
 Inventory feature flags:
@@ -245,7 +249,7 @@ Important schemas:
 - `decimate.init.v1`: project initialization reports
 - `decimate.hooks.v1`: hook status/install/uninstall reports
 - `decimate.decision-surface.v1`: changed-code review questions
-- `decimate.coverage.v1`: focused runtime coverage analysis
+- `decimate.coverage.v1`: runtime coverage setup, analysis, and dry-run upload packets
 - `decimate.ci-template.v1`: CI template output
 
 ## Configuration
@@ -347,7 +351,8 @@ Flutter:
 - changed-code audit and advisory decision-surface review
 - safe fix previews and confirmed apply flows
 - local impact reporting
-- local runtime coverage ingestion
+- local runtime coverage setup, ingestion, inventory dry-runs, and source-map
+  upload dry-runs
 
 Decimate also adds Dart-specific graph intelligence that Fallow does not need:
 
@@ -367,8 +372,9 @@ Known gaps before claiming full product parity with Fallow:
 - no hosted/cloud continuous runtime monitoring
 - no `watch`, `migrate`, telemetry, license, editor, or viz commands yet
 - hook parity is Git-only; no managed agent hook target yet
-- no Fallow-style `coverage setup`, source-map upload, inventory upload, or
-  cloud runtime workflow yet
+- coverage upload commands are intentionally offline dry-runs; real hosted
+  source-map/inventory uploads and `coverage analyze --cloud` are not enabled
+  yet
 - broader Flutter-framework intelligence is still partial: provider wiring and
   widget reachability are not complete
 - feature flags are inventory-focused and do not yet model owner, expiry, stale

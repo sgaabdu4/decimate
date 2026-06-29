@@ -22,16 +22,6 @@ fn schema_command_emits_agent_manifest() -> Result<(), Box<dyn std::error::Error
     assert_eq!(json["schemas"]["hooks"], "decimate.hooks.v1");
     assert!(json["commands"].as_array().is_some_and(|commands| {
         commands.iter().any(|command| {
-            command["name"] == "coverage analyze"
-                && command["kind"] == "runtime-coverage"
-                && command["schema"] == "decimate.coverage.v1"
-                && command["flags"]
-                    .as_array()
-                    .is_some_and(|flags| flags.iter().any(|flag| flag == "--runtime-coverage"))
-        })
-    }));
-    assert!(json["commands"].as_array().is_some_and(|commands| {
-        commands.iter().any(|command| {
             command["name"] == "trace-symbol" && command["schema"] == "decimate.trace.v1"
         })
     }));
@@ -98,6 +88,38 @@ fn schema_command_emits_agent_manifest() -> Result<(), Box<dyn std::error::Error
 }
 
 #[test]
+fn schema_command_lists_coverage_workflow_commands() -> Result<(), Box<dyn std::error::Error>> {
+    let json = schema_json()?;
+
+    assert!(has_command_with_flags(
+        &json,
+        "coverage analyze",
+        "runtime-coverage",
+        &["--runtime-coverage", "--cloud", "--repo"],
+    ));
+    assert!(has_command_with_flags(
+        &json,
+        "coverage setup",
+        "coverage-setup",
+        &["--yes", "--non-interactive"],
+    ));
+    assert!(has_command_with_flags(
+        &json,
+        "coverage upload-source-maps",
+        "coverage-upload-source-maps",
+        &["--dir", "--git-sha", "--dry-run"],
+    ));
+    assert!(has_command_with_flags(
+        &json,
+        "coverage upload-inventory",
+        "coverage-upload-inventory",
+        &["--dry-run"],
+    ));
+
+    Ok(())
+}
+
+#[test]
 fn schema_command_lists_actual_cli_flags() -> Result<(), Box<dyn std::error::Error>> {
     let json = schema_json()?;
 
@@ -130,6 +152,11 @@ fn schema_command_lists_actual_cli_flags() -> Result<(), Box<dyn std::error::Err
         &json,
         "trace-clone",
         &["--min-occurrences", "--fingerprint"],
+    );
+    assert_manifest_flags(
+        &json,
+        "coverage upload-source-maps",
+        &["--repo", "--git-sha", "--strip-path", "--dry-run"],
     );
     assert_manifest_flags(&json, "list", &["--files", "--entry-points", "--plugins"]);
     assert_manifest_flags(
@@ -173,6 +200,21 @@ fn assert_manifest_omits_flags(json: &Value, command_name: &str, unexpected: &[&
             "{command_name} unexpectedly lists {flag}"
         );
     }
+}
+
+fn has_command_with_flags(json: &Value, name: &str, kind: &str, expected_flags: &[&str]) -> bool {
+    json["commands"].as_array().is_some_and(|commands| {
+        commands.iter().any(|command| {
+            command["name"] == name
+                && command["kind"] == kind
+                && command["schema"] == "decimate.coverage.v1"
+                && command["flags"].as_array().is_some_and(|flags| {
+                    expected_flags
+                        .iter()
+                        .all(|expected| flags.iter().any(|flag| flag == expected))
+                })
+        })
+    })
 }
 
 fn manifest_command<'a>(json: &'a Value, command_name: &str) -> &'a Value {

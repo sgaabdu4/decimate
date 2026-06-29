@@ -204,13 +204,18 @@ pub enum CliError {
         /// Project root.
         root: PathBuf,
     },
-    /// Focused runtime coverage analysis requires a local coverage path.
     #[error("coverage analyze requires --runtime-coverage PATH")]
     MissingRuntimeCoverage,
-    /// Cloud runtime coverage is not implemented yet.
     #[error("cloud runtime coverage is not supported yet; provide --runtime-coverage PATH")]
     UnsupportedCoverageCloud,
-    /// CI template generation failed.
+    #[error("{command} is offline-only in this release; pass --dry-run")]
+    CoverageUploadDryRunRequired { command: &'static str },
+    #[error("coverage upload-source-maps directory does not exist: {path}")]
+    CoverageUploadDir { path: PathBuf },
+    #[error("invalid coverage upload git SHA {value:?}; expected 7 to 40 hex characters")]
+    CoverageUploadGitSha { value: String },
+    #[error("invalid coverage upload repo {value:?}; expected OWNER/REPO")]
+    CoverageUploadRepo { value: String },
     #[error(transparent)]
     CiTemplate(#[from] crate::CiTemplateError),
     /// Project initialization failed.

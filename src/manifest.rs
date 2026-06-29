@@ -49,6 +49,7 @@ pub fn decimate_schema() -> Value {
 fn commands() -> Value {
     let mut commands = Vec::new();
     append_commands(&mut commands, analysis_commands());
+    append_commands(&mut commands, coverage_commands());
     append_commands(&mut commands, evidence_commands());
     append_commands(&mut commands, support_commands());
     Value::Array(commands)
@@ -119,13 +120,6 @@ fn analysis_commands() -> Value {
             "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--top"]
         },
         {
-            "name": "coverage analyze",
-            "kind": "runtime-coverage",
-            "description": "Analyze local V8 or Istanbul runtime coverage.",
-            "schema": COVERAGE_ANALYSIS_SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--top"]
-        },
-        {
             "name": "flags",
             "kind": "flags",
             "description": "Inventory Dart and Flutter feature flag patterns.",
@@ -145,6 +139,39 @@ fn analysis_commands() -> Value {
             "description": "Read the local Decimate value report without running analysis.",
             "schema": IMPACT_SCHEMA_VERSION,
             "flags": ["--format", "--quiet", "--all", "--sort", "--limit"]
+        }
+    ])
+}
+
+fn coverage_commands() -> Value {
+    json!([
+        {
+            "name": "coverage setup",
+            "kind": "coverage-setup",
+            "description": "Plan or write local Dart/Flutter runtime coverage defaults.",
+            "schema": COVERAGE_ANALYSIS_SCHEMA_VERSION,
+            "flags": ["--format", "--config", "--yes", "--non-interactive"]
+        },
+        {
+            "name": "coverage analyze",
+            "kind": "runtime-coverage",
+            "description": "Analyze local V8 or Istanbul runtime coverage.",
+            "schema": COVERAGE_ANALYSIS_SCHEMA_VERSION,
+            "flags": ["--format", "--config", "--runtime-coverage", "--cloud", "--repo", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--top"]
+        },
+        {
+            "name": "coverage upload-inventory",
+            "kind": "coverage-upload-inventory",
+            "description": "Build a local Dart source inventory upload dry-run packet.",
+            "schema": COVERAGE_ANALYSIS_SCHEMA_VERSION,
+            "flags": ["--format", "--config", "--repo", "--dry-run"]
+        },
+        {
+            "name": "coverage upload-source-maps",
+            "kind": "coverage-upload-source-maps",
+            "description": "Build a source-map upload dry-run packet.",
+            "schema": COVERAGE_ANALYSIS_SCHEMA_VERSION,
+            "flags": ["--format", "--config", "--dir", "--git-sha", "--repo", "--strip-path", "--dry-run"]
         }
     ])
 }
@@ -375,6 +402,11 @@ fn task_matrix() -> Value {
             "intent": "guard commits",
             "command": "decimate hooks install --target git --branch origin/main",
             "reason": "Install a Decimate-managed pre-commit hook that runs changed-code audit."
+        },
+        {
+            "intent": "set up runtime coverage",
+            "command": "decimate coverage setup --non-interactive --format json",
+            "reason": "Read-only setup plan; add --yes to create local coverage defaults."
         },
         {
             "intent": "set up CI",

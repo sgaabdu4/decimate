@@ -63,8 +63,11 @@ pub use config::{
     config_schema, load_decimate_config, missing_suppression_reasons_enabled,
 };
 pub use coverage::{
-    COVERAGE_ANALYSIS_SCHEMA_VERSION, CoverageAnalysisReport, coverage_analysis_report,
-    render_coverage_analysis_report,
+    COVERAGE_ANALYSIS_SCHEMA_VERSION, CoverageAnalysisReport, CoverageSetupConfigSummary,
+    CoverageSetupFile, CoverageSetupFileAction, CoverageSetupReport, CoverageSetupSummary,
+    CoverageUploadFile, CoverageUploadReport, CoverageUploadSummary, coverage_analysis_report,
+    coverage_inventory_upload_report, coverage_setup_report, coverage_source_maps_upload_report,
+    render_coverage_analysis_report, render_coverage_setup_report, render_coverage_upload_report,
 };
 pub use decision_surface::{
     DECISION_SURFACE_SCHEMA_VERSION, DecisionSurfaceCategory, DecisionSurfaceDecision,

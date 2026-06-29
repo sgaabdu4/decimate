@@ -5,6 +5,257 @@ use serde_json::{Value, json};
 use tempfile::TempDir;
 
 #[test]
+fn coverage_setup_emits_non_mutating_json_plan() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write_flutter_project(&fixture)?;
+    let mut output = Vec::new();
+    let root = fixture.path().to_string_lossy().into_owned();
+
+    let code = run_from(
+        [
+            "decimate",
+            "coverage",
+            "setup",
+            root.as_str(),
+            "--format",
+            "json",
+            "--non-interactive",
+        ],
+        &mut output,
+    )?;
+
+    let report = serde_json::from_slice::<Value>(&output)?;
+    assert_eq!(code, 0);
+    assert_eq!(report["schema_version"], "decimate.coverage.v1");
+    assert_eq!(report["kind"], "coverage-setup");
+    assert_eq!(report["command"], "coverage setup");
+    assert_eq!(report["applied"], false);
+    assert_eq!(report["non_interactive"], true);
+    assert_eq!(report["summary"]["pubspec"], true);
+    assert_eq!(report["summary"]["flutter"], true);
+    assert_eq!(report["summary"]["dart_files"], 1);
+    assert_eq!(report["files"][0]["path"], ".decimaterc");
+    assert_eq!(report["files"][0]["action"], "would-create");
+    assert!(
+        report["capture_commands"]
+            .as_array()
+            .is_some_and(|commands| commands
+                .iter()
+                .any(|command| command == "flutter test --coverage"))
+    );
+    assert!(!fixture.path().join(".decimaterc").exists());
+
+    Ok(())
+}
+
+#[test]
+fn coverage_setup_yes_writes_defaults_once() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write_flutter_project(&fixture)?;
+    let root = fixture.path().to_string_lossy().into_owned();
+    let mut first_output = Vec::new();
+
+    let code = run_from(
+        [
+            "decimate",
+            "coverage",
+            "setup",
+            root.as_str(),
+            "--yes",
+            "--format",
+            "json",
+        ],
+        &mut first_output,
+    )?;
+
+    let first = serde_json::from_slice::<Value>(&first_output)?;
+    let config_path = fixture.path().join(".decimaterc");
+    let config = fs::read_to_string(&config_path)?;
+    assert_eq!(code, 0);
+    assert_eq!(first["files"][0]["action"], "created");
+    assert!(config.contains("\"runtime_coverage\": \"coverage/coverage-final.json\""));
+
+    let mut second_output = Vec::new();
+    run_from(
+        [
+            "decimate",
+            "coverage",
+            "setup",
+            root.as_str(),
+            "--yes",
+            "--format",
+            "json",
+        ],
+        &mut second_output,
+    )?;
+    let second = serde_json::from_slice::<Value>(&second_output)?;
+    let config_after_second_run = fs::read_to_string(config_path)?;
+    assert_eq!(second["files"][0]["action"], "unchanged");
+    assert_eq!(
+        config_after_second_run.matches("runtime_coverage").count(),
+        1
+    );
+
+    Ok(())
+}
+
+#[test]
+fn coverage_upload_inventory_dry_run_reports_sources() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(&fixture, "lib/main.dart", "void main() {}\n")?;
+    write(&fixture, "test/main_test.dart", "void main() {}\n")?;
+    let root = fixture.path().to_string_lossy().into_owned();
+    let mut output = Vec::new();
+
+    let code = run_from(
+        [
+            "decimate",
+            "coverage",
+            "upload-inventory",
+            root.as_str(),
+            "--dry-run",
+            "--repo",
+            "owner/repo",
+            "--format",
+            "json",
+        ],
+        &mut output,
+    )?;
+
+    let report = serde_json::from_slice::<Value>(&output)?;
+    assert_eq!(code, 0);
+    assert_eq!(report["kind"], "coverage-upload-inventory");
+    assert_eq!(report["dry_run"], true);
+    assert_eq!(report["repo"], "owner/repo");
+    assert_eq!(report["summary"]["mode"], "inventory");
+    assert_eq!(report["summary"]["files"], 1);
+    assert_eq!(report["files"][0]["path"], "lib/main.dart");
+    assert_eq!(report["files"][0]["kind"], "dart-source");
+    assert_eq!(report["files"][0]["resolution_status"], "resolved");
+    assert_eq!(report["files"][0]["mapping_quality"], "high");
+
+    Ok(())
+}
+
+#[test]
+fn coverage_upload_source_maps_dry_run_reports_files() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "dist/app.js.map", "{}\n")?;
+    write(&fixture, "dist/chunks/app.js.map", "{}\n")?;
+    write(&fixture, "dist/app.js", "console.log('x');\n")?;
+    let root = fixture.path().to_string_lossy().into_owned();
+    let mut output = Vec::new();
+
+    let code = run_from(
+        [
+            "decimate",
+            "coverage",
+            "upload-source-maps",
+            root.as_str(),
+            "--dir",
+            "dist",
+            "--git-sha",
+            "0123456789abcdef",
+            "--repo",
+            "owner/repo",
+            "--dry-run",
+            "--format",
+            "json",
+        ],
+        &mut output,
+    )?;
+
+    let report = serde_json::from_slice::<Value>(&output)?;
+    assert_eq!(code, 0);
+    assert_eq!(report["kind"], "coverage-upload-source-maps");
+    assert_eq!(report["git_sha"], "0123456789abcdef");
+    assert_eq!(report["repo"], "owner/repo");
+    assert_eq!(report["strip_path"], true);
+    assert_eq!(report["summary"]["mode"], "source-maps");
+    assert_eq!(report["summary"]["files"], 2);
+    assert_eq!(report["files"][0]["kind"], "source-map");
+
+    Ok(())
+}
+
+#[test]
+fn coverage_upload_source_maps_validates_inputs() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    let root = fixture.path().to_string_lossy().into_owned();
+
+    let bad_sha = run_from(
+        [
+            "decimate",
+            "coverage",
+            "upload-source-maps",
+            root.as_str(),
+            "--dir",
+            "dist",
+            "--git-sha",
+            "not-a-sha",
+            "--repo",
+            "owner/repo",
+            "--dry-run",
+        ],
+        &mut Vec::new(),
+    );
+    assert!(matches!(
+        bad_sha,
+        Err(CliError::CoverageUploadGitSha { .. })
+    ));
+
+    let missing_dir = run_from(
+        [
+            "decimate",
+            "coverage",
+            "upload-source-maps",
+            root.as_str(),
+            "--dir",
+            "missing",
+            "--git-sha",
+            "0123456789abcdef",
+            "--repo",
+            "owner/repo",
+            "--dry-run",
+        ],
+        &mut Vec::new(),
+    );
+    assert!(matches!(
+        missing_dir,
+        Err(CliError::CoverageUploadDir { .. })
+    ));
+
+    Ok(())
+}
+
+#[test]
+fn coverage_cloud_analyze_accepts_repo_then_errors() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    let root = fixture.path().to_string_lossy().into_owned();
+
+    let result = run_from(
+        [
+            "decimate",
+            "coverage",
+            "analyze",
+            root.as_str(),
+            "--cloud",
+            "--repo",
+            "owner/repo",
+            "--format",
+            "json",
+        ],
+        &mut Vec::new(),
+    );
+
+    assert!(matches!(result, Err(CliError::UnsupportedCoverageCloud)));
+
+    Ok(())
+}
+
+#[test]
 fn health_runtime_coverage_parses_istanbul_json() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     write(&fixture, "pubspec.yaml", "name: app\n")?;
@@ -188,6 +439,15 @@ fn health_runtime_coverage_parses_v8_directory() -> Result<(), Box<dyn std::erro
     assert_eq!(runtime["hot_paths"][0]["source_map_confidence"], "resolved");
 
     Ok(())
+}
+
+fn write_flutter_project(fixture: &TempDir) -> Result<(), std::io::Error> {
+    write(
+        fixture,
+        "pubspec.yaml",
+        "name: app\ndependencies:\n  flutter:\n    sdk: flutter\n",
+    )?;
+    write(fixture, "lib/main.dart", "void main() {}\n")
 }
 
 fn has_runtime_finding(runtime: &Value, kind: &str, path: &str) -> bool {
