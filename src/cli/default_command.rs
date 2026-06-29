@@ -15,6 +15,7 @@ const COMMANDS: &[&str] = &[
     "fix",
     "flags",
     "health",
+    "hooks",
     "impact",
     "init",
     "inspect",

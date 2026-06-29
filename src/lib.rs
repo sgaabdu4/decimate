@@ -22,6 +22,7 @@ pub mod feature_flags;
 pub mod fix;
 pub mod graph;
 pub mod health;
+pub mod hooks;
 pub mod impact;
 pub mod init;
 pub mod inspect;
@@ -111,6 +112,10 @@ pub use health::{
     RuntimeCoverageFindingKind, RuntimeCoverageFormat, RuntimeCoverageIntelligence,
     RuntimeCoverageIntelligenceKind, RuntimeCoverageReport, RuntimeHotPath, RuntimeImportance,
     SourceMapConfidence, ThresholdSource, analyze_health,
+};
+pub use hooks::{
+    HOOKS_SCHEMA_VERSION, HookAction, HookFile, HookOptions, HookTarget, HooksError, HooksReport,
+    hooks_status, install_hooks, render_hooks_report, uninstall_hooks,
 };
 pub use impact::{
     IMPACT_SCHEMA_VERSION, ImpactAllReport, ImpactAllSummary, ImpactGate, ImpactProject,

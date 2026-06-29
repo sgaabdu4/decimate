@@ -6,6 +6,7 @@ use crate::coverage::COVERAGE_ANALYSIS_SCHEMA_VERSION;
 use crate::decision_surface::DECISION_SURFACE_SCHEMA_VERSION;
 use crate::explain::EXPLAIN_SCHEMA_VERSION;
 use crate::fix::FIX_SCHEMA_VERSION;
+use crate::hooks::HOOKS_SCHEMA_VERSION;
 use crate::impact::IMPACT_SCHEMA_VERSION;
 use crate::init::INIT_SCHEMA_VERSION;
 use crate::inspect::INSPECT_SCHEMA_VERSION;
@@ -32,6 +33,7 @@ pub fn decimate_schema() -> Value {
             "explain": EXPLAIN_SCHEMA_VERSION,
             "impact": IMPACT_SCHEMA_VERSION,
             "init": INIT_SCHEMA_VERSION,
+            "hooks": HOOKS_SCHEMA_VERSION,
             "ci_template": CI_TEMPLATE_SCHEMA_VERSION,
             "config": CONFIG_SCHEMA_VERSION,
             "coverage": COVERAGE_ANALYSIS_SCHEMA_VERSION,
@@ -225,6 +227,13 @@ fn support_commands() -> Value {
             "flags": ["--format", "--agents", "--force"]
         },
         {
+            "name": "hooks",
+            "kind": "hooks",
+            "description": "Inspect, install, or remove Decimate-managed Git hooks.",
+            "schema": HOOKS_SCHEMA_VERSION,
+            "flags": ["status", "install", "uninstall", "--format", "--target", "--branch", "--force"]
+        },
+        {
             "name": "ci-template",
             "kind": "ci-template",
             "description": "Print or vendor GitHub Actions and GitLab CI templates.",
@@ -357,6 +366,11 @@ fn task_matrix() -> Value {
             "intent": "initialize a Dart or Flutter project",
             "command": "decimate init --agents",
             "reason": "Write agent-first Decimate defaults and optional coding-agent guidance."
+        },
+        {
+            "intent": "guard commits",
+            "command": "decimate hooks install --target git --branch origin/main",
+            "reason": "Install a Decimate-managed pre-commit hook that runs changed-code audit."
         },
         {
             "intent": "set up CI",

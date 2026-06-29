@@ -81,6 +81,13 @@ Exit code `0` means no error-severity findings. Exit code `1` means findings
 were produced. Exit code `2` means command/config/runtime failure. Security gate
 mode can exit `8` for new review-required security candidates.
 
+When `--format json` is present and Decimate cannot produce the requested report,
+stdout is still machine-readable:
+
+```json
+{ "error": true, "message": "coverage analyze requires --runtime-coverage PATH", "exit_code": 2 }
+```
+
 ## Common Workflows
 
 Initialize Decimate defaults in a Dart or Flutter repo:
@@ -92,6 +99,17 @@ decimate init . --agents
 `decimate init` writes `.decimaterc` and, with `--agents`, an `AGENTS.md`
 guide for downstream coding agents. It refuses to overwrite existing files
 unless `--force` is passed.
+
+Install a managed Git pre-commit hook:
+
+```bash
+decimate hooks status . --format json
+decimate hooks install . --target git --branch origin/main --format json
+decimate hooks uninstall . --target git --format json
+```
+
+Hook install refuses to overwrite non-Decimate hooks unless `--force` is passed,
+and uninstall only removes hooks containing Decimate's ownership marker.
 
 Find dead code:
 
@@ -214,6 +232,7 @@ Important schemas:
 - `decimate.inspect.v1`: file/symbol evidence bundles
 - `decimate.fix.v1`: safe-fix preview/apply reports
 - `decimate.init.v1`: project initialization reports
+- `decimate.hooks.v1`: hook status/install/uninstall reports
 - `decimate.decision-surface.v1`: changed-code review questions
 - `decimate.coverage.v1`: focused runtime coverage analysis
 - `decimate.ci-template.v1`: CI template output
@@ -303,6 +322,7 @@ Flutter:
 - bare `decimate` defaults to the full combined static check
 - agent-first JSON reports, actions, schemas, and next steps
 - `decimate init --agents` onboarding for config and agent guidance
+- `decimate hooks install --target git` pre-commit audit hook management
 - dead code, unused exports/types/members, and dependency hygiene
 - cycles, re-export cycles, boundaries, policy packs, and suppressions
 - duplication detection with traceable fingerprints
@@ -330,7 +350,8 @@ Known gaps before claiming full product parity with Fallow:
 - no MCP/server API yet
 - no embedded Node/NAPI-style bindings, because Decimate is not a JS tool
 - no hosted/cloud continuous runtime monitoring
-- no `hooks`, `watch`, `migrate`, telemetry, license, editor, or viz commands yet
+- no `watch`, `migrate`, telemetry, license, editor, or viz commands yet
+- hook parity is Git-only; no managed agent hook target yet
 - no Fallow-style `coverage setup`, source-map upload, inventory upload, or
   cloud runtime workflow yet
 - no Flutter-framework intelligence yet for route collisions, provider wiring,

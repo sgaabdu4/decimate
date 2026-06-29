@@ -19,6 +19,7 @@ fn schema_command_emits_agent_manifest() -> Result<(), Box<dyn std::error::Error
     }));
     assert_eq!(json["schemas"]["coverage"], "decimate.coverage.v1");
     assert_eq!(json["schemas"]["init"], "decimate.init.v1");
+    assert_eq!(json["schemas"]["hooks"], "decimate.hooks.v1");
     assert!(json["commands"].as_array().is_some_and(|commands| {
         commands.iter().any(|command| {
             command["name"] == "coverage analyze"
@@ -122,6 +123,7 @@ fn schema_command_lists_actual_cli_flags() -> Result<(), Box<dyn std::error::Err
         &["--config", "--workspace", "--changed-workspaces"],
     );
     assert_manifest_flags(&json, "init", &["--format", "--agents", "--force"]);
+    assert_manifest_flags(&json, "hooks", &["install", "--target", "--branch"]);
     assert_manifest_omits_flags(&json, "list", &["--section"]);
 
     Ok(())

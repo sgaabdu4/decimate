@@ -37,10 +37,12 @@ mod decision_surface_run;
 mod default_command;
 mod dupes_args;
 mod entry_points;
+mod error_output;
 mod explain_run;
 mod fix_run;
 mod flags_args;
 mod health_args;
+mod hooks_run;
 mod impact_run;
 mod init_run;
 mod inspect_args;
@@ -74,10 +76,12 @@ use decision_surface_run::{
     decision_surface_command, max_decisions_arg, review_command, run_decision_surface,
 };
 use dupes_args::{dupes_command, trace_clone_command};
+pub use error_output::run_from_env;
 use explain_run::{explain_command, run_explain};
 use fix_run::{fix_command, run_fix};
 use flags_args::flags_command;
 use health_args::{health_command, health_command_without_top};
+use hooks_run::{hooks_command, run_hooks};
 use impact_run::{impact_command, run_impact};
 use init_run::{init_command, run_init};
 use inspect_args::inspect_command;
@@ -209,6 +213,9 @@ pub enum CliError {
     /// Project initialization failed.
     #[error(transparent)]
     Init(#[from] crate::InitError),
+    /// Hook management failed.
+    #[error(transparent)]
+    Hooks(#[from] crate::HooksError),
     /// SARIF output is not available for this command.
     #[error("--format sarif is not supported by decimate {command}")]
     UnsupportedSarifFormat { command: &'static str },
@@ -275,23 +282,6 @@ struct TraceSymbolSpec {
     symbol: String,
 }
 
-/// Run Decimate from process arguments and return an exit code.
-#[must_use]
-pub fn run_from_env() -> i32 {
-    match run_from(std::env::args_os(), io::stdout().lock()) {
-        Ok(code) => code,
-        Err(CliError::Clap(error)) => {
-            let code = error.exit_code();
-            let _ = error.print();
-            code
-        }
-        Err(error) => {
-            eprintln!("{error}");
-            1
-        }
-    }
-}
-
 /// Run Decimate from explicit arguments.
 ///
 /// # Errors
@@ -317,6 +307,7 @@ where
         Some(("impact", subcommand)) => return run_impact(subcommand, writer),
         Some(("ci-template", subcommand)) => return run_ci_template(subcommand, writer),
         Some(("init", subcommand)) => return run_init(subcommand, writer),
+        Some(("hooks", subcommand)) => return run_hooks(subcommand, writer),
         Some(("decision-surface", subcommand)) => {
             return run_decision_surface(subcommand, writer, "decision-surface");
         }
@@ -480,6 +471,7 @@ fn command() -> Command {
             .subcommand(explain_command())
             .subcommand(fix_command())
             .subcommand(init_command())
+            .subcommand(hooks_command())
             .subcommand(impact_command())
             .subcommand(ci_template_command())
             .subcommand(review_command())

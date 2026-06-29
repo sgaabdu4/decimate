@@ -91,6 +91,7 @@ Phase 4 exposes the CLI and agent output contract:
 - `decimate explain`
 - `decimate fix`
 - `decimate init`
+- `decimate hooks`
 - `decimate impact`
 - `decimate ci-template`
 - `decimate schema`
@@ -112,11 +113,17 @@ Phase 4 exposes the CLI and agent output contract:
 - `decimate init` emits `decimate.init.v1`, writes `.decimaterc`, optionally
   writes `AGENTS.md` with `--agents`, and refuses to overwrite existing files
   unless `--force` is passed
+- `decimate hooks status|install|uninstall` emits `decimate.hooks.v1`, manages
+  only Decimate-marked Git pre-commit hooks by default, and refuses unmanaged
+  hook overwrite/removal unless `--force` is passed
 - `decimate ci-template github|gitlab` emits `decimate.ci-template.v1` JSON or
   YAML CI templates; `gitlab --vendor` writes scoped local template files only
   with explicit overwrite via `--force`
 - `decimate report-schema --format json` emits the JSON schema for
   analysis reports under `decimate.report.v1`
+- process-level command, config, and runtime failures with `--format json` emit
+  `{"error":true,"message":"...","exit_code":2}` on stdout instead of plain
+  stderr so agents can parse failure states
 - `--config PATH` loads `.decimaterc`, `.decimaterc.json`,
   `.decimaterc.jsonc`, `decimate.toml`, or `.decimate.toml` defaults
 - `--save-baseline PATH` writes current visible findings to
@@ -237,6 +244,8 @@ Current implemented parity:
   plus explicit GitLab vendoring with overwrite protection
 - `decimate init --agents` project onboarding with `.decimaterc`, optional
   `AGENTS.md`, overwrite protection, and `decimate.init.v1` JSON output
+- `decimate hooks install --target git` safe Git pre-commit hook management
+  using Decimate ownership markers and `decimate.hooks.v1` JSON output
 - `decimate list` project metadata JSON for files, entry points, local pub
   packages, and active Dart/Flutter/workspace adapters; `decimate workspaces`
   emits the same schema scoped to local pub packages
