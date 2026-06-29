@@ -360,6 +360,10 @@ fn report_summary(
         duplicate_exports: kind_count(findings, FindingKind::DuplicateExport),
         route_collisions: kind_count(findings, FindingKind::RouteCollision),
         private_widget_classes: kind_count(findings, FindingKind::PrivateWidgetClass),
+        widget_top_level_functions: kind_count(
+            findings,
+            FindingKind::WidgetTopLevelFunctionBoundary,
+        ),
         unused_widget_params: kind_count(findings, FindingKind::UnusedWidgetParam),
         code_duplications: results
             .duplicates
@@ -410,17 +414,14 @@ fn report_summary(
         missing_suppression_reasons: kind_count(findings, FindingKind::MissingSuppressionReason),
         findings: findings_count,
     };
-
     if scoped {
         if let Some(scope) = scope {
             summary.files = project_file_scope_count(project, scope);
         }
         apply_scoped_counts(&mut summary, findings);
     }
-
     summary
 }
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct HealthSummaryCounts {
     files: usize,
@@ -432,7 +433,6 @@ struct HealthSummaryCounts {
     max_crap_score: usize,
     file_scores: usize,
 }
-
 fn health_summary_counts(
     project: &ScannedProject,
     results: &AnalysisResults,
@@ -461,7 +461,6 @@ fn health_summary_counts(
         },
     )
 }
-
 fn project_file_scope_count(project: &ScannedProject, scope: &BTreeSet<String>) -> usize {
     project
         .files
@@ -469,7 +468,6 @@ fn project_file_scope_count(project: &ScannedProject, scope: &BTreeSet<String>) 
         .filter(|file| scope.contains(&format::display_path(&project.root, &file.path)))
         .count()
 }
-
 fn apply_scoped_counts(summary: &mut ReportSummary, findings: &[Finding]) {
     summary.unresolved_dependencies = kind_count(findings, FindingKind::UnresolvedDependency);
     summary.part_of_violations = kind_count(findings, FindingKind::PartOfViolation);
@@ -491,6 +489,8 @@ fn apply_scoped_counts(summary: &mut ReportSummary, findings: &[Finding]) {
     summary.duplicate_exports = kind_count(findings, FindingKind::DuplicateExport);
     summary.route_collisions = kind_count(findings, FindingKind::RouteCollision);
     summary.private_widget_classes = kind_count(findings, FindingKind::PrivateWidgetClass);
+    summary.widget_top_level_functions =
+        kind_count(findings, FindingKind::WidgetTopLevelFunctionBoundary);
     summary.unused_widget_params = kind_count(findings, FindingKind::UnusedWidgetParam);
     summary.code_duplications = kind_count(findings, FindingKind::CodeDuplication);
     summary.complex_functions = complexity_count(findings);
@@ -513,7 +513,6 @@ fn apply_scoped_counts(summary: &mut ReportSummary, findings: &[Finding]) {
     summary.missing_suppression_reasons =
         kind_count(findings, FindingKind::MissingSuppressionReason);
 }
-
 fn file_scope(project: &ScannedProject, results: &AnalysisResults) -> Option<BTreeSet<String>> {
     results.file_scope.as_ref().map(|paths| {
         paths

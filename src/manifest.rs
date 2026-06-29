@@ -282,6 +282,7 @@ fn issue_types() -> Value {
         "duplicate-export",
         "route-collision",
         "private-widget-class",
+        "widget-top-level-function-boundary",
         "unused-widget-param",
         "missing-entry-point",
         "circular-dependency",

@@ -179,7 +179,7 @@ pub use trace::{
 };
 pub use widgets::{
     PrivateWidgetClass, UnusedWidgetParam, WidgetAnalysisError, WidgetClassKind, WidgetReport,
-    analyze_widgets,
+    WidgetTopLevelFunction, analyze_widgets,
 };
 pub use workspace_scope::{
     WorkspaceScopeError, changed_workspace_file_scope, workspace_file_scope,

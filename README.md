@@ -330,6 +330,7 @@ Flutter:
 - health, complexity, CRAP, coverage gaps, hotspots, ownership, and targets
 - Flutter typed and raw GoRouter route-collision checks
 - private Flutter widget class visibility checks
+- top-level Flutter widget helper boundary checks
 - unused Flutter widget constructor field-formal parameter checks
 - feature flag inventory
 - local security candidates with SARIF, surface inventory, and changed-code gates
@@ -359,8 +360,7 @@ Known gaps before claiming full product parity with Fallow:
 - no Fallow-style `coverage setup`, source-map upload, inventory upload, or
   cloud runtime workflow yet
 - broader Flutter-framework intelligence is still partial: provider wiring,
-  widget reachability, top-level widget helper boundaries, and
-  non-field-formal widget API shapes are not complete
+  widget reachability, and non-field-formal widget API shapes are not complete
 - feature flags are inventory-focused and do not yet model owner, expiry, stale
   rollout state, or runtime stale-flag evidence as richly as Fallow
 - security candidates are Dart/Flutter-focused and configurable by category, but

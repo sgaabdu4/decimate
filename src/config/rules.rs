@@ -156,6 +156,10 @@ fn recompute_summary(report: &mut JsonReport) {
     summary.duplicate_exports = kind_count(&report.findings, FindingKind::DuplicateExport);
     summary.route_collisions = kind_count(&report.findings, FindingKind::RouteCollision);
     summary.private_widget_classes = kind_count(&report.findings, FindingKind::PrivateWidgetClass);
+    summary.widget_top_level_functions = kind_count(
+        &report.findings,
+        FindingKind::WidgetTopLevelFunctionBoundary,
+    );
     summary.unused_widget_params = kind_count(&report.findings, FindingKind::UnusedWidgetParam);
     summary.code_duplications = report.clone_groups.len();
     summary.complex_functions = report.complexity.len();
@@ -277,6 +281,7 @@ const fn default_rule_level(kind: FindingKind) -> RuleLevel {
     match kind {
         FindingKind::UnusedDependencyOverride
         | FindingKind::PrivateWidgetClass
+        | FindingKind::WidgetTopLevelFunctionBoundary
         | FindingKind::UnusedWidgetParam => RuleLevel::Warn,
         _ => RuleLevel::Error,
     }

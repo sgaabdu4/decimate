@@ -146,11 +146,77 @@ class _Formatter {}
     Ok(())
 }
 
+#[test]
+fn flags_top_level_widget_helper_functions_in_widget_files()
+-> Result<(), Box<dyn std::error::Error>> {
+    let source = "\
+class App extends StatelessWidget {}
+Widget _buildHeader(BuildContext context) => const SizedBox();
+List<Widget> buildItems() => const [];
+";
+    let helpers = parse_findings(source)?.top_level_functions;
+
+    assert_eq!(helpers.len(), 2);
+    assert_eq!(helpers[0].function_name, "_buildHeader");
+    assert_eq!(helpers[0].return_type.as_deref(), Some("Widget"));
+    assert_eq!(helpers[0].location.line, 2);
+    assert_eq!(helpers[1].function_name, "buildItems");
+    Ok(())
+}
+
+#[test]
+fn flags_top_level_helpers_in_screen_files() -> Result<(), Box<dyn std::error::Error>> {
+    let source = "Widget header(BuildContext context) => const SizedBox();\n";
+    let helpers = parse_findings_at("lib/screens/home_screen.dart", source)?.top_level_functions;
+
+    assert_eq!(helpers.len(), 1);
+    assert_eq!(helpers[0].function_name, "header");
+    Ok(())
+}
+
+#[test]
+fn does_not_flag_methods_local_functions_or_namespaces() -> Result<(), Box<dyn std::error::Error>> {
+    let source = r"
+class App extends StatefulWidget {}
+class _AppState extends State<App> {
+  Widget _buildHeader(BuildContext context) => const SizedBox();
+}
+abstract final class AppParts {
+  static Widget header(BuildContext context) => const SizedBox();
+}
+void container() {
+  Widget _buildLocal(BuildContext context) => const SizedBox();
+}
+";
+    let helpers = parse_findings(source)?.top_level_functions;
+
+    assert!(helpers.is_empty(), "{helpers:?}");
+    Ok(())
+}
+
+#[test]
+fn does_not_flag_main_providers_or_widget_named_configs() -> Result<(), Box<dyn std::error::Error>>
+{
+    let source = r"
+class App extends StatelessWidget {}
+void main() {}
+int count(Ref ref) => 1;
+String title() => 'ok';
+MyWidgetConfig _buildConfig() => MyWidgetConfig();
+WidgetBuilder makeBuilder() => (context) => const SizedBox();
+";
+    let helpers = parse_findings(source)?.top_level_functions;
+
+    assert!(helpers.is_empty(), "{helpers:?}");
+    Ok(())
+}
+
 fn parse_findings(source: &str) -> Result<FileWidgetFindings, WidgetAnalysisError> {
-    let tree = parse_tree(Path::new("lib/widgets.dart"), source)?;
-    Ok(findings_in_source(
-        Path::new("lib/widgets.dart"),
-        tree.root_node(),
-        source,
-    ))
+    parse_findings_at("lib/widgets.dart", source)
+}
+
+fn parse_findings_at(path: &str, source: &str) -> Result<FileWidgetFindings, WidgetAnalysisError> {
+    let path = Path::new(path);
+    let tree = parse_tree(path, source)?;
+    Ok(findings_in_source(path, tree.root_node(), source))
 }

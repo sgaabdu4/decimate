@@ -144,6 +144,36 @@ fn explain_command_emits_private_widget_class_contract() -> Result<(), Box<dyn s
 }
 
 #[test]
+fn explain_command_emits_widget_top_level_function_contract()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut output = Vec::new();
+
+    let code = run_from(
+        [
+            "decimate",
+            "explain",
+            "top-level-widget-helper",
+            "--format",
+            "json",
+        ],
+        &mut output,
+    )?;
+
+    let json = serde_json::from_slice::<Value>(&output)?;
+    assert_eq!(code, 0);
+    assert_eq!(json["id"], "decimate/widget-top-level-function-boundary");
+    assert_eq!(json["issue_type"], "widget-top-level-function-boundary");
+    assert_eq!(json["name"], "Widget top-level function boundary");
+    assert!(json["suppressions"].as_array().is_some_and(|comments| {
+        comments.iter().any(|comment| {
+            comment == "// decimate-ignore-next-line widget-top-level-function-boundary"
+        })
+    }));
+
+    Ok(())
+}
+
+#[test]
 fn explain_command_emits_private_type_leak_contract() -> Result<(), Box<dyn std::error::Error>> {
     let mut output = Vec::new();
 

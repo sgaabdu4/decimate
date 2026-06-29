@@ -10,6 +10,10 @@ use tree_sitter::{Node, Parser};
 use crate::graph::normalize_against;
 use crate::{DeadCodeReport, Location, ScannedProject};
 
+mod top_level;
+
+use top_level::top_level_widget_functions;
+
 /// Flutter widget framework analysis.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WidgetReport {
@@ -19,6 +23,8 @@ pub struct WidgetReport {
     pub unused_params: Vec<UnusedWidgetParam>,
     /// Private Flutter widget classes.
     pub private_widget_classes: Vec<PrivateWidgetClass>,
+    /// Top-level Flutter widget helper functions.
+    pub top_level_functions: Vec<WidgetTopLevelFunction>,
 }
 
 /// A widget constructor field-formal parameter that is not used by the widget.
@@ -46,6 +52,19 @@ pub struct PrivateWidgetClass {
     /// Flutter widget base class.
     pub widget_kind: WidgetClassKind,
     /// Location of the class identifier.
+    pub location: Location,
+}
+
+/// A top-level function that should be owned by a widget class or helper owner.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WidgetTopLevelFunction {
+    /// Dart file containing the function declaration.
+    pub path: PathBuf,
+    /// Top-level function name.
+    pub function_name: String,
+    /// Function return type when declared.
+    pub return_type: Option<String>,
+    /// Location of the function identifier.
     pub location: Location,
 }
 
@@ -124,9 +143,11 @@ pub fn analyze_widgets(
 
     let mut unused_params = Vec::new();
     let mut private_widget_classes = Vec::new();
+    let mut top_level_functions = Vec::new();
     for mut findings in file_findings {
         unused_params.append(&mut findings.unused_params);
         private_widget_classes.append(&mut findings.private_widget_classes);
+        top_level_functions.append(&mut findings.top_level_functions);
     }
     unused_params.sort_by(|left, right| {
         (
@@ -158,11 +179,26 @@ pub fn analyze_widgets(
                 &right.widget_class,
             ))
     });
+    top_level_functions.sort_by(|left, right| {
+        (
+            &left.path,
+            left.location.line,
+            left.location.column,
+            &left.function_name,
+        )
+            .cmp(&(
+                &right.path,
+                right.location.line,
+                right.location.column,
+                &right.function_name,
+            ))
+    });
 
     Ok(WidgetReport {
         analyzed_files: paths.len(),
         unused_params,
         private_widget_classes,
+        top_level_functions,
     })
 }
 
@@ -196,6 +232,7 @@ fn parse_tree(path: &Path, source: &str) -> Result<tree_sitter::Tree, WidgetAnal
 struct FileWidgetFindings {
     unused_params: Vec<UnusedWidgetParam>,
     private_widget_classes: Vec<PrivateWidgetClass>,
+    top_level_functions: Vec<WidgetTopLevelFunction>,
 }
 
 fn findings_in_source(path: &Path, root: Node<'_>, source: &str) -> FileWidgetFindings {
@@ -203,6 +240,10 @@ fn findings_in_source(path: &Path, root: Node<'_>, source: &str) -> FileWidgetFi
     collect_class_declarations(root, &mut classes);
     let states = state_classes_by_widget(&classes, source);
     let mut findings = FileWidgetFindings::default();
+    let has_widget_class = classes
+        .iter()
+        .any(|class| widget_kind(*class, source).is_some());
+    findings.top_level_functions = top_level_widget_functions(path, root, source, has_widget_class);
 
     for class in classes {
         let Some(widget_kind) = widget_kind(class, source) else {

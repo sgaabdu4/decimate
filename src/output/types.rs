@@ -175,6 +175,8 @@ pub struct ReportSummary {
     pub route_collisions: usize,
     /// Private classes extending Flutter widget bases.
     pub private_widget_classes: usize,
+    /// Top-level Flutter widget helper functions.
+    pub widget_top_level_functions: usize,
     /// Flutter widget constructor params that are never read.
     pub unused_widget_params: usize,
     /// Duplicated Dart code clone groups.
@@ -284,6 +286,8 @@ pub enum FindingKind {
     RouteCollision,
     /// Private class extends a Flutter widget base.
     PrivateWidgetClass,
+    /// Top-level function belongs behind a Flutter widget boundary.
+    WidgetTopLevelFunctionBoundary,
     /// Flutter widget constructor param is never read by the widget.
     UnusedWidgetParam,
     /// Missing entry point.

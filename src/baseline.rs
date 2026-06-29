@@ -609,6 +609,10 @@ fn recompute_summary(report: &mut JsonReport) {
     report.summary.route_collisions = kind_count(&report.findings, FindingKind::RouteCollision);
     report.summary.private_widget_classes =
         kind_count(&report.findings, FindingKind::PrivateWidgetClass);
+    report.summary.widget_top_level_functions = kind_count(
+        &report.findings,
+        FindingKind::WidgetTopLevelFunctionBoundary,
+    );
     report.summary.unused_widget_params =
         kind_count(&report.findings, FindingKind::UnusedWidgetParam);
     report.summary.code_duplications = report.clone_groups.len();

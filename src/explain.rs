@@ -275,17 +275,28 @@ const ISSUES: &[IssueExplanation] = &[
     issue!(
         "private-widget-class",
         "decimate/private-widget-class",
-        &[
-            "private-widget-class",
-            "private-widget-classes",
-            "flutter-private-widget-class"
-        ],
+        &["private-widget-class", "flutter-private-widget-class"],
         "Private widget class",
         "A private Dart class extends a Flutter widget base class.",
         "Extracted widgets should be public classes so widget boundaries stay reusable, testable, and discoverable; private State subclasses remain exempt.",
         "class _Header extends StatelessWidget {}",
         "Rename the widget class to a public name or add an explicit suppression when the private widget is intentional.",
         &["// decimate-ignore-next-line private-widget-class"],
+        &["decimate check --format json"],
+    ),
+    issue!(
+        "widget-top-level-function-boundary",
+        "decimate/widget-top-level-function-boundary",
+        &[
+            "widget-top-level-function-boundary",
+            "top-level-widget-helper"
+        ],
+        "Widget top-level function boundary",
+        "A top-level Dart function returns Flutter UI from a widget or screen file.",
+        "Flutter UI helpers should live in widget classes or explicit owning boundaries so dependencies, tests, and reuse stay discoverable.",
+        "Widget _buildHeader(BuildContext context) => const SizedBox();",
+        "Extract the helper to a public widget class or move it behind another explicit owner.",
+        &["// decimate-ignore-next-line widget-top-level-function-boundary"],
         &["decimate check --format json"],
     ),
     issue!(

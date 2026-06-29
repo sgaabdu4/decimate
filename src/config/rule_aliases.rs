@@ -143,6 +143,7 @@ fn all_known_aliases() -> Vec<&'static str> {
         FindingKind::DuplicateExport,
         FindingKind::RouteCollision,
         FindingKind::PrivateWidgetClass,
+        FindingKind::WidgetTopLevelFunctionBoundary,
         FindingKind::UnusedWidgetParam,
         FindingKind::MissingEntryPoint,
         FindingKind::CircularDependency,
@@ -224,6 +225,13 @@ fn cleanup_kind_aliases(kind: FindingKind) -> Option<Vec<&'static str>> {
             "private-widget-classes",
             "flutter-private-widget-class",
             "flutter-private-widget-classes",
+        ]),
+        FindingKind::WidgetTopLevelFunctionBoundary => Some(vec![
+            "decimate/widget-top-level-function-boundary",
+            "widget-top-level-function-boundary",
+            "top-level-widget-helper",
+            "top-level-widget-helpers",
+            "flutter-widget-helper-function",
         ]),
         FindingKind::UnusedWidgetParam => Some(vec![
             "decimate/unused-widget-param",

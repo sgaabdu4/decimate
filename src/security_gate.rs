@@ -418,6 +418,8 @@ fn recompute_summary(report: &mut JsonReport) {
     report.summary.duplicate_exports = kind_count(report, FindingKind::DuplicateExport);
     report.summary.route_collisions = kind_count(report, FindingKind::RouteCollision);
     report.summary.private_widget_classes = kind_count(report, FindingKind::PrivateWidgetClass);
+    report.summary.widget_top_level_functions =
+        kind_count(report, FindingKind::WidgetTopLevelFunctionBoundary);
     report.summary.unused_widget_params = kind_count(report, FindingKind::UnusedWidgetParam);
     report.summary.code_duplications = report.clone_groups.len();
     report.summary.complex_functions = complexity_count(report);

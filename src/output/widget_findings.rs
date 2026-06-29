@@ -2,7 +2,7 @@ use std::path::Path;
 
 use super::format::display_path;
 use super::{Finding, FindingAction, FindingKind, Severity};
-use crate::{PrivateWidgetClass, UnusedWidgetParam, WidgetReport};
+use crate::{PrivateWidgetClass, UnusedWidgetParam, WidgetReport, WidgetTopLevelFunction};
 
 pub(super) fn add_widget_findings(root: &Path, report: &WidgetReport, findings: &mut Vec<Finding>) {
     findings.extend(
@@ -10,6 +10,12 @@ pub(super) fn add_widget_findings(root: &Path, report: &WidgetReport, findings: 
             .private_widget_classes
             .iter()
             .map(|private| private_widget_class_finding(root, private)),
+    );
+    findings.extend(
+        report
+            .top_level_functions
+            .iter()
+            .map(|function| top_level_function_finding(root, function)),
     );
     findings.extend(
         report
@@ -49,6 +55,42 @@ fn private_widget_class_finding(root: &Path, private: &PrivateWidgetClass) -> Fi
             .with_target_symbol(private.widget_class.clone())
             .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
             .with_suppression_comment("// decimate-ignore-next-line private-widget-class"),
+        ],
+    }
+}
+
+fn top_level_function_finding(root: &Path, function: &WidgetTopLevelFunction) -> Finding {
+    let path = display_path(root, &function.path);
+    Finding {
+        rule_id: "decimate/widget-top-level-function-boundary".to_owned(),
+        fingerprint: Some(format!(
+            "widget-top-level-function-boundary:{path}:{}",
+            function.function_name
+        )),
+        kind: FindingKind::WidgetTopLevelFunctionBoundary,
+        severity: Severity::Warning,
+        message: format!(
+            "Top-level Flutter UI helper {} should be extracted to a widget class or moved behind an owning boundary",
+            function.function_name
+        ),
+        path: path.clone(),
+        line: function.location.line,
+        column: function.location.column,
+        safe_to_delete: false,
+        files: Vec::new(),
+        edge: None,
+        actions: vec![
+            FindingAction::new(
+                "extract-widget-helper",
+                "Move this top-level UI helper into a public widget class or another owning boundary",
+                false,
+            )
+            .with_target_path(path.clone())
+            .with_target_symbol(function.function_name.clone())
+            .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
+            .with_suppression_comment(
+                "// decimate-ignore-next-line widget-top-level-function-boundary",
+            ),
         ],
     }
 }
