@@ -308,9 +308,9 @@ const ISSUES: &[IssueExplanation] = &[
             "unused-component-prop"
         ],
         "Unused widget parameter",
-        "A Flutter widget constructor field-formal parameter is never read by the widget or paired State class.",
+        "A Flutter widget constructor parameter is never read by the widget or paired State class.",
         "Stale widget inputs make call sites harder to trust and mirror Fallow's unused component prop cleanup signal.",
-        "const UserCard({required this.subtitle}); where subtitle is never read in UserCard or _UserCardState.",
+        "const UserCard({required String subtitle}) : _subtitle = subtitle; where _subtitle is never read in UserCard or _UserCardState.",
         "Review callers before removing the parameter; Decimate reports this as a warning by default.",
         &["// decimate-ignore-next-line unused-widget-param"],
         &["decimate check --format json"],

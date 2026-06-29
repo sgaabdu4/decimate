@@ -1,0 +1,30 @@
+{
+  "name": "@sgaabdu4/decimate",
+  "version": "0.1.0",
+  "description": "Rust-native codebase intelligence for Dart and Flutter module graphs.",
+  "license": "MIT OR Apache-2.0",
+  "bin": {
+    "decimate": "npm/bin/decimate.js"
+  },
+  "files": [
+    "Cargo.toml",
+    "Cargo.lock",
+    "README.md",
+    "LICENSE-MIT",
+    "LICENSE-APACHE",
+    "src",
+    "npm",
+    "!npm/bin-cache"
+  ],
+  "scripts": {
+    "postinstall": "node npm/scripts/postinstall.js",
+    "pack:check": "npm pack --dry-run",
+    "test:npm": "npm exec --package . -- decimate --help"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

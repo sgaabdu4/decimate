@@ -2,6 +2,7 @@
 /.cargo-home/
 /.rustup-home/
 /.decimate/
+/npm/bin-cache/
 .DS_Store
 *.log
 .env

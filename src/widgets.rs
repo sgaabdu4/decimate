@@ -10,8 +10,10 @@ use tree_sitter::{Node, Parser};
 use crate::graph::normalize_against;
 use crate::{DeadCodeReport, Location, ScannedProject};
 
+mod params;
 mod top_level;
 
+use params::constructor_params;
 use top_level::top_level_widget_functions;
 
 /// Flutter widget framework analysis.
@@ -19,7 +21,7 @@ use top_level::top_level_widget_functions;
 pub struct WidgetReport {
     /// Dart files included in widget analysis.
     pub analyzed_files: usize,
-    /// Widget field-formal parameters that are never read.
+    /// Widget constructor parameters that are never read.
     pub unused_params: Vec<UnusedWidgetParam>,
     /// Private Flutter widget classes.
     pub private_widget_classes: Vec<PrivateWidgetClass>,
@@ -27,7 +29,7 @@ pub struct WidgetReport {
     pub top_level_functions: Vec<WidgetTopLevelFunction>,
 }
 
-/// A widget constructor field-formal parameter that is not used by the widget.
+/// A widget constructor parameter that is not used by the widget.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UnusedWidgetParam {
     /// Dart file containing the widget declaration.
@@ -36,9 +38,9 @@ pub struct UnusedWidgetParam {
     pub widget_class: String,
     /// Flutter widget base class.
     pub widget_kind: WidgetClassKind,
-    /// Constructor field-formal parameter name.
+    /// Constructor parameter name.
     pub param_name: String,
-    /// Location of the field-formal identifier.
+    /// Location of the constructor parameter identifier.
     pub location: Location,
 }
 
@@ -266,12 +268,12 @@ fn findings_in_source(path: &Path, root: Node<'_>, source: &str) -> FileWidgetFi
         let Some(body) = class.child_by_field_name("body") else {
             continue;
         };
-        for param in constructor_field_params(class, &widget_class, source) {
-            if widget_body_uses_param(body, &param.name, source)
+        for param in constructor_params(class, &widget_class, source) {
+            if widget_body_uses_param(body, &param.field_name, source)
                 || states.get(&widget_class).is_some_and(|state_bodies| {
-                    state_bodies
-                        .iter()
-                        .any(|state_body| state_body_uses_param(*state_body, &param.name, source))
+                    state_bodies.iter().any(|state_body| {
+                        state_body_uses_param(*state_body, &param.field_name, source)
+                    })
                 })
             {
                 continue;
@@ -287,12 +289,6 @@ fn findings_in_source(path: &Path, root: Node<'_>, source: &str) -> FileWidgetFi
     }
 
     findings
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct WidgetParamCandidate {
-    name: String,
-    location: Location,
 }
 
 fn collect_class_declarations<'tree>(node: Node<'tree>, classes: &mut Vec<Node<'tree>>) {
@@ -394,81 +390,6 @@ fn simple_type_name(text: &str) -> String {
         .to_owned()
 }
 
-fn constructor_field_params(
-    class: Node<'_>,
-    widget_class: &str,
-    source: &str,
-) -> Vec<WidgetParamCandidate> {
-    let mut signatures = Vec::new();
-    collect_nodes_in(class, CONSTRUCTOR_SIGNATURES, &mut signatures);
-    let mut params = BTreeMap::<String, WidgetParamCandidate>::new();
-    for signature in signatures {
-        if constructor_owner(signature, source).as_deref() != Some(widget_class) {
-            continue;
-        }
-        let Some(parameters) = signature.child_by_field_name("parameters") else {
-            continue;
-        };
-        let mut constructor_params = Vec::new();
-        collect_nodes(parameters, "constructor_param", &mut constructor_params);
-        for param in constructor_params {
-            if !is_named_parameter(param, signature, source) {
-                continue;
-            }
-            let Some(candidate) = field_formal_candidate(param, source) else {
-                continue;
-            };
-            if candidate.name == "key" {
-                continue;
-            }
-            params.entry(candidate.name.clone()).or_insert(candidate);
-        }
-    }
-    params.into_values().collect()
-}
-
-const CONSTRUCTOR_SIGNATURES: &[&str] =
-    &["constructor_signature", "constant_constructor_signature"];
-
-fn constructor_owner(signature: Node<'_>, source: &str) -> Option<String> {
-    field_text(signature, "name", source).and_then(|name| name.split('.').next().map(str::to_owned))
-}
-
-fn is_named_parameter(param: Node<'_>, signature: Node<'_>, source: &str) -> bool {
-    let mut parent = param.parent();
-    while let Some(node) = parent {
-        if same_node(node, signature) {
-            return false;
-        }
-        if node.kind() == "optional_formal_parameters" {
-            return node
-                .utf8_text(source.as_bytes())
-                .ok()
-                .is_some_and(|text| text.trim_start().starts_with('{'));
-        }
-        parent = node.parent();
-    }
-    false
-}
-
-fn field_formal_candidate(param: Node<'_>, source: &str) -> Option<WidgetParamCandidate> {
-    let text = param.utf8_text(source.as_bytes()).ok()?;
-    let offset = text.find("this.")? + "this.".len();
-    let name = text[offset..]
-        .chars()
-        .take_while(|character| character.is_ascii_alphanumeric() || matches!(character, '_' | '$'))
-        .collect::<String>();
-    if name.is_empty() {
-        return None;
-    }
-    let min_byte = param.start_byte() + offset;
-    let location = identifier_after(param, &name, min_byte, source).map_or_else(
-        || param.start_position().into(),
-        |node| node.start_position().into(),
-    );
-    Some(WidgetParamCandidate { name, location })
-}
-
 fn widget_body_uses_param(body: Node<'_>, name: &str, source: &str) -> bool {
     let mut found = false;
     visit_named(body, &mut |node| {
@@ -505,6 +426,9 @@ const BODY_USAGE_SKIP_ANCESTORS: &[&str] = &[
     "redirecting_factory_constructor_signature",
     "constructor_param",
     "super_formal_parameter",
+    "initializers",
+    "initializer_list_entry",
+    "field_initializer",
     "type",
     "typed_identifier",
 ];
@@ -541,55 +465,12 @@ fn is_widget_member_access(node: Node<'_>, name: &str, source: &str) -> bool {
     )
 }
 
-fn collect_nodes_in<'tree>(node: Node<'tree>, kinds: &[&str], nodes: &mut Vec<Node<'tree>>) {
-    if kinds.contains(&node.kind()) {
-        nodes.push(node);
-    }
-    let mut cursor = node.walk();
-    for child in node.named_children(&mut cursor) {
-        collect_nodes_in(child, kinds, nodes);
-    }
-}
-
-fn collect_nodes<'tree>(node: Node<'tree>, kind: &str, nodes: &mut Vec<Node<'tree>>) {
-    if node.kind() == kind {
-        nodes.push(node);
-    }
-    let mut cursor = node.walk();
-    for child in node.named_children(&mut cursor) {
-        collect_nodes(child, kind, nodes);
-    }
-}
-
 fn visit_named(node: Node<'_>, visitor: &mut impl FnMut(Node<'_>)) {
     visitor(node);
     let mut cursor = node.walk();
     for child in node.named_children(&mut cursor) {
         visit_named(child, visitor);
     }
-}
-
-fn identifier_after<'tree>(
-    node: Node<'tree>,
-    name: &str,
-    min_byte: usize,
-    source: &str,
-) -> Option<Node<'tree>> {
-    if node.kind() == "identifier"
-        && node.start_byte() >= min_byte
-        && node.utf8_text(source.as_bytes()).ok() == Some(name)
-    {
-        return Some(node);
-    }
-    let mut cursor = node.walk();
-    node.named_children(&mut cursor)
-        .find_map(|child| identifier_after(child, name, min_byte, source))
-}
-
-fn field_text(node: Node<'_>, field_name: &str, source: &str) -> Option<String> {
-    node.child_by_field_name(field_name)
-        .and_then(|child| child.utf8_text(source.as_bytes()).ok())
-        .map(str::to_owned)
 }
 
 fn name_field_of(parent: Node<'_>, child: Node<'_>) -> bool {

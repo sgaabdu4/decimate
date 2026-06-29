@@ -25,7 +25,7 @@ fn check_reports_unused_widget_field_formal() -> Result<(), Box<dyn std::error::
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
     assert_eq!(json["verdict"], "pass");
-    assert_eq!(json["summary"]["unused_widget_params"], 1);
+    assert_eq!(json["summary"]["unused_widget_params"], 2);
 
     let finding = unused_widget_param_finding(&json);
     assert_eq!(finding["kind"], "unused-widget-param");
@@ -49,6 +49,8 @@ fn check_reports_unused_widget_field_formal() -> Result<(), Box<dyn std::error::
     assert_no_widget_param_for(&json, "count");
     assert_no_widget_param_for(&json, "label");
     assert_no_widget_param_for(&json, "key");
+    assert_widget_param_for(&json, "UnusedExplicit.unused");
+    assert_no_widget_param_for(&json, "usedExplicit");
 
     Ok(())
 }
@@ -167,6 +169,7 @@ void main() {
   UsedViaState(count: 1);
   Parent(label: 'child');
   UnusedFieldFormal(unused: 'x', used: 'y');
+  UnusedExplicit(unused: 'x', usedExplicit: 'y');
 }
 ",
     )?;
@@ -208,6 +211,18 @@ class Child extends StatelessWidget {
   final String label;
   Widget build(BuildContext context) => Text(label);
 }
+
+class UnusedExplicit extends StatelessWidget {
+  const UnusedExplicit({
+    super.key,
+    required String unused,
+    required String usedExplicit,
+  })  : unused = unused,
+        usedExplicit = usedExplicit;
+  final String unused;
+  final String usedExplicit;
+  Widget build(BuildContext context) => Text(usedExplicit);
+}
 ",
     )?;
     Ok(fixture)
@@ -231,6 +246,15 @@ fn assert_no_widget_param_for(json: &Value, param: &str) {
                 || finding["actions"][0]["target_symbol"]
                     .as_str()
                     .is_none_or(|symbol| !symbol.ends_with(&format!(".{param}")))
+        })
+    }));
+}
+
+fn assert_widget_param_for(json: &Value, target_symbol: &str) {
+    assert!(json["findings"].as_array().is_some_and(|findings| {
+        findings.iter().any(|finding| {
+            finding["rule_id"] == "decimate/unused-widget-param"
+                && finding["actions"][0]["target_symbol"] == target_symbol
         })
     }));
 }

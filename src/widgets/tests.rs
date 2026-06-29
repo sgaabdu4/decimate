@@ -22,6 +22,67 @@ class UserCard extends StatelessWidget {
 }
 
 #[test]
+fn flags_unused_explicit_widget_constructor_params() -> Result<(), Box<dyn std::error::Error>> {
+    let source = r"
+class UserCard extends StatelessWidget {
+  const UserCard({super.key, required String unused, required String used})
+      : unused = unused,
+        used = used;
+  final String unused;
+  final String used;
+  Widget build(BuildContext context) => Text(used);
+}
+";
+    let unused = parse_findings(source)?.unused_params;
+
+    assert_eq!(unused.len(), 1);
+    assert_eq!(unused[0].widget_class, "UserCard");
+    assert_eq!(unused[0].param_name, "unused");
+    assert_eq!(unused[0].location.line, 3);
+    Ok(())
+}
+
+#[test]
+fn respects_explicit_params_used_through_backing_fields_and_state()
+-> Result<(), Box<dyn std::error::Error>> {
+    let source = r"
+class UserCard extends StatelessWidget {
+  const UserCard({super.key, required String label}) : _label = label;
+  final String _label;
+  Widget build(BuildContext context) => Text(_label);
+}
+class CounterCard extends StatefulWidget {
+  const CounterCard({super.key, required int count}) : _count = count;
+  final int _count;
+  State<CounterCard> createState() => _CounterCardState();
+}
+class _CounterCardState extends State<CounterCard> {
+  Widget build(BuildContext context) => Text('${widget._count}');
+}
+";
+    let unused = parse_findings(source)?.unused_params;
+
+    assert!(unused.is_empty(), "{unused:?}");
+    Ok(())
+}
+
+#[test]
+fn flags_explicit_params_when_backing_field_is_unused() -> Result<(), Box<dyn std::error::Error>> {
+    let source = r"
+class UserCard extends StatelessWidget {
+  const UserCard({super.key, required String subtitle}) : _subtitle = subtitle;
+  final String _subtitle;
+  Widget build(BuildContext context) => const SizedBox();
+}
+";
+    let unused = parse_findings(source)?.unused_params;
+
+    assert_eq!(unused.len(), 1);
+    assert_eq!(unused[0].param_name, "subtitle");
+    Ok(())
+}
+
+#[test]
 fn respects_widget_and_state_usages() -> Result<(), Box<dyn std::error::Error>> {
     let source = r"
 class UsedInBuild extends StatelessWidget {

@@ -78,6 +78,16 @@ Install from GitHub after cloning is not required:
 cargo install --git https://github.com/sgaabdu4/decimate
 ```
 
+Run through npm/npx:
+
+```bash
+npx --package @sgaabdu4/decimate decimate check . --format json
+```
+
+The npm package exposes the executable as `decimate`. The unscoped npm package
+name `decimate` is already owned by an unrelated GeoJSON package, so public npm
+installs use the scoped package name unless that package name is transferred.
+
 Exit code `0` means no error-severity findings. Exit code `1` means findings
 were produced. Exit code `2` means command/config/runtime failure. Security gate
 mode can exit `8` for new review-required security candidates.
@@ -331,7 +341,7 @@ Flutter:
 - Flutter typed and raw GoRouter route-collision checks
 - private Flutter widget class visibility checks
 - top-level Flutter widget helper boundary checks
-- unused Flutter widget constructor field-formal parameter checks
+- unused Flutter widget constructor parameter checks
 - feature flag inventory
 - local security candidates with SARIF, surface inventory, and changed-code gates
 - changed-code audit and advisory decision-surface review
@@ -359,8 +369,8 @@ Known gaps before claiming full product parity with Fallow:
 - hook parity is Git-only; no managed agent hook target yet
 - no Fallow-style `coverage setup`, source-map upload, inventory upload, or
   cloud runtime workflow yet
-- broader Flutter-framework intelligence is still partial: provider wiring,
-  widget reachability, and non-field-formal widget API shapes are not complete
+- broader Flutter-framework intelligence is still partial: provider wiring and
+  widget reachability are not complete
 - feature flags are inventory-focused and do not yet model owner, expiry, stale
   rollout state, or runtime stale-flag evidence as richly as Fallow
 - security candidates are Dart/Flutter-focused and configurable by category, but
