@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tree_sitter::{Node, Parser, TreeCursor};
+use tree_sitter::{Node, TreeCursor};
 
 mod directives;
 mod members;
@@ -298,12 +298,10 @@ pub fn extract_dart_file(path: impl AsRef<Path>) -> Result<DartFile, ExtractErro
 /// produce a tree, or finds Dart syntax errors.
 pub fn extract_dart_source(path: impl AsRef<Path>, source: &str) -> Result<DartFile, ExtractError> {
     let path = path.as_ref().to_path_buf();
-    let tree = parse_tree(&path, source)?;
-    let root = tree.root_node();
-
-    if root.has_error() {
-        return Err(ExtractError::Syntax { path });
-    }
+    let parsed =
+        crate::dart_parser::parse_dart_source_strict(&path, source).map_err(extract_parse_error)?;
+    let root = parsed.tree().root_node();
+    let source = parsed.source();
 
     let mut library = None;
     let mut part_of = None;
@@ -384,14 +382,14 @@ pub fn extract_dart_source(path: impl AsRef<Path>, source: &str) -> Result<DartF
     })
 }
 
-fn parse_tree(path: &Path, source: &str) -> Result<tree_sitter::Tree, ExtractError> {
-    let mut parser = Parser::new();
-    parser.set_language(&tree_sitter_dart::LANGUAGE.into())?;
-    parser
-        .parse(source, None)
-        .ok_or_else(|| ExtractError::ParseCancelled {
-            path: path.to_path_buf(),
-        })
+fn extract_parse_error(error: crate::dart_parser::DartParseError) -> ExtractError {
+    match error {
+        crate::dart_parser::DartParseError::Language(source) => ExtractError::Language(source),
+        crate::dart_parser::DartParseError::ParseCancelled { path } => {
+            ExtractError::ParseCancelled { path }
+        }
+        crate::dart_parser::DartParseError::Syntax { path } => ExtractError::Syntax { path },
+    }
 }
 
 fn push_class_declaration(

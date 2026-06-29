@@ -68,17 +68,12 @@ fn reachability_facts(path: &Path) -> Result<FileReachabilityFacts, WidgetAnalys
         path: path.to_path_buf(),
         source,
     })?;
-    let tree = parse_tree(path, &source)?;
-    let root = tree.root_node();
-    if root.has_error() {
-        return Err(WidgetAnalysisError::Syntax {
-            path: path.to_path_buf(),
-        });
-    }
+    let parsed = parse_tree(path, &source)?;
+    let root = parsed.tree().root_node();
 
     Ok(FileReachabilityFacts {
-        widgets: widget_classes(path, root, &source),
-        object_constructors: object_constructor_names(root, &source),
+        widgets: widget_classes(path, root, parsed.source()),
+        object_constructors: object_constructor_names(root, parsed.source()),
     })
 }
 
@@ -325,8 +320,8 @@ void main() {
   DeadCard.route;
 }
 ";
-        let tree = parse_tree(Path::new("lib/widgets.dart"), source)?;
-        let names = object_constructor_names(tree.root_node(), source);
+        let parsed = parse_tree(Path::new("lib/widgets.dart"), source)?;
+        let names = object_constructor_names(parsed.tree().root_node(), parsed.source());
 
         assert_eq!(
             names,

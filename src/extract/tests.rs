@@ -328,6 +328,60 @@ class Alias = Object with Trackable;
 }
 
 #[test]
+fn parses_modern_dart_primary_constructor_syntax() -> Result<(), ExtractError> {
+    let source = "\
+extension type UserId(int value) implements int {}
+
+class Point(var int x, var int y);
+
+enum Color(final String hex) {
+  red('#FF0000'),
+  blue('#0000FF');
+}
+
+void useModern() {
+  final Color color = .red;
+  final point = Point(1, 2);
+  final (:name, :age) = (name: 'Ada', age: 37);
+  switch ((name, age)) {
+    case ('Ada', final years):
+      print('$color $point $years');
+  }
+}
+";
+
+    let extracted = extract_dart_source("lib/modern.dart", source)?;
+
+    assert_eq!(
+        extracted
+            .declarations
+            .iter()
+            .map(|declaration| (declaration.kind, declaration.name.as_str()))
+            .collect::<Vec<_>>(),
+        vec![
+            (DeclarationKind::ExtensionType, "UserId"),
+            (DeclarationKind::Class, "Point"),
+            (DeclarationKind::Enum, "Color"),
+            (DeclarationKind::Function, "useModern"),
+        ]
+    );
+    assert!(
+        extracted
+            .references
+            .iter()
+            .any(|reference| reference.name == "Color")
+    );
+    assert!(
+        extracted
+            .references
+            .iter()
+            .any(|reference| reference.name == "Point")
+    );
+
+    Ok(())
+}
+
+#[test]
 fn excludes_typedef_names_from_identifier_references() -> Result<(), ExtractError> {
     let source = "\
 typedef UsedAlias = String;

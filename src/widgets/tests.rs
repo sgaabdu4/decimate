@@ -341,6 +341,10 @@ fn parse_findings(source: &str) -> Result<FileWidgetFindings, WidgetAnalysisErro
 
 fn parse_findings_at(path: &str, source: &str) -> Result<FileWidgetFindings, WidgetAnalysisError> {
     let path = Path::new(path);
-    let tree = parse_tree(path, source)?;
-    Ok(findings_in_source(path, tree.root_node(), source))
+    let parsed = parse_tree(path, source)?;
+    Ok(findings_in_source(
+        path,
+        parsed.tree().root_node(),
+        parsed.source(),
+    ))
 }

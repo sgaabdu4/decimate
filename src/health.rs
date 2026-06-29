@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use tree_sitter::{Node, Parser};
+use tree_sitter::Node;
 
 use crate::graph::normalize_against;
 use crate::{Location, ScannedProject};
@@ -131,9 +131,6 @@ pub fn analyze_health(
 fn collect_project_functions(
     project: &ScannedProject,
 ) -> Result<(Vec<FunctionMetrics>, usize), HealthError> {
-    let mut parser = Parser::new();
-    parser.set_language(&tree_sitter_dart::LANGUAGE.into())?;
-
     let mut functions = Vec::new();
     let mut analyzed_files = 0;
     for file in &project.files {
@@ -146,13 +143,27 @@ fn collect_project_functions(
             path: path.clone(),
             source,
         })?;
-        let tree = parser
-            .parse(&source, None)
-            .ok_or_else(|| HealthError::ParseCancelled { path: path.clone() })?;
-        collect_functions(tree.root_node(), &source, &path, &mut functions);
+        let parsed = crate::dart_parser::parse_dart_source_lossy(&path, &source)
+            .map_err(health_parse_error)?;
+        collect_functions(
+            parsed.tree().root_node(),
+            parsed.source(),
+            &path,
+            &mut functions,
+        );
     }
 
     Ok((functions, analyzed_files))
+}
+
+fn health_parse_error(error: crate::dart_parser::DartParseError) -> HealthError {
+    match error {
+        crate::dart_parser::DartParseError::Language(source) => HealthError::Language(source),
+        crate::dart_parser::DartParseError::ParseCancelled { path } => {
+            HealthError::ParseCancelled { path }
+        }
+        crate::dart_parser::DartParseError::Syntax { path } => HealthError::ParseCancelled { path },
+    }
 }
 
 fn max_cyclomatic_complexity(functions: &[FunctionMetrics]) -> usize {

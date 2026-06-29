@@ -6,7 +6,7 @@ use glob::Pattern;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use thiserror::Error;
-use tree_sitter::{Node, Parser};
+use tree_sitter::Node;
 
 use crate::graph::normalize_against;
 use crate::{DartFile, DependencyKind, Location, ScannedProject};
@@ -527,15 +527,10 @@ fn extract_calls(path: &Path) -> Result<Vec<CallSite>, PolicyError> {
         path: path.to_path_buf(),
         source,
     })?;
-    let mut parser = Parser::new();
-    parser.set_language(&tree_sitter_dart::LANGUAGE.into())?;
-    let tree = parser
-        .parse(&source, None)
-        .ok_or_else(|| PolicyError::ParseCancelled {
-            path: path.to_path_buf(),
-        })?;
+    let parsed =
+        crate::dart_parser::parse_dart_source_lossy(path, &source).map_err(policy_parse_error)?;
     let mut calls = Vec::new();
-    collect_calls(tree.root_node(), &source, &mut calls);
+    collect_calls(parsed.tree().root_node(), parsed.source(), &mut calls);
     calls.sort_by(|left, right| {
         (left.location.line, left.location.column, &left.callee).cmp(&(
             right.location.line,
@@ -545,6 +540,16 @@ fn extract_calls(path: &Path) -> Result<Vec<CallSite>, PolicyError> {
     });
     calls.dedup();
     Ok(calls)
+}
+
+fn policy_parse_error(error: crate::dart_parser::DartParseError) -> PolicyError {
+    match error {
+        crate::dart_parser::DartParseError::Language(source) => PolicyError::Language(source),
+        crate::dart_parser::DartParseError::ParseCancelled { path } => {
+            PolicyError::ParseCancelled { path }
+        }
+        crate::dart_parser::DartParseError::Syntax { path } => PolicyError::ParseCancelled { path },
+    }
 }
 
 fn collect_calls(node: Node<'_>, source: &str, calls: &mut Vec<CallSite>) {

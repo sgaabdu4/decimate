@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tree_sitter::{Node, Parser};
+use tree_sitter::Node;
 
 use crate::graph::normalize_against;
 use crate::{DeadCodeReport, Location, ScannedProject};
@@ -264,25 +264,29 @@ fn analyze_file(path: &Path) -> Result<FileWidgetFindings, WidgetAnalysisError> 
         path: path.to_path_buf(),
         source,
     })?;
-    let tree = parse_tree(path, &source)?;
-    let root = tree.root_node();
-    if root.has_error() {
-        return Err(WidgetAnalysisError::Syntax {
-            path: path.to_path_buf(),
-        });
-    }
+    let parsed = parse_tree(path, &source)?;
+    let root = parsed.tree().root_node();
 
-    Ok(findings_in_source(path, root, &source))
+    Ok(findings_in_source(path, root, parsed.source()))
 }
 
-fn parse_tree(path: &Path, source: &str) -> Result<tree_sitter::Tree, WidgetAnalysisError> {
-    let mut parser = Parser::new();
-    parser.set_language(&tree_sitter_dart::LANGUAGE.into())?;
-    parser
-        .parse(source, None)
-        .ok_or_else(|| WidgetAnalysisError::ParseCancelled {
-            path: path.to_path_buf(),
-        })
+fn parse_tree<'source>(
+    path: &Path,
+    source: &'source str,
+) -> Result<crate::dart_parser::ParsedDart<'source>, WidgetAnalysisError> {
+    crate::dart_parser::parse_dart_source_strict(path, source).map_err(widget_parse_error)
+}
+
+fn widget_parse_error(error: crate::dart_parser::DartParseError) -> WidgetAnalysisError {
+    match error {
+        crate::dart_parser::DartParseError::Language(source) => {
+            WidgetAnalysisError::Language(source)
+        }
+        crate::dart_parser::DartParseError::ParseCancelled { path } => {
+            WidgetAnalysisError::ParseCancelled { path }
+        }
+        crate::dart_parser::DartParseError::Syntax { path } => WidgetAnalysisError::Syntax { path },
+    }
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

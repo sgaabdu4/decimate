@@ -12,6 +12,7 @@ pub mod ci_template;
 pub mod cli;
 pub mod config;
 pub mod coverage;
+pub(crate) mod dart_parser;
 pub mod decision_surface;
 pub mod dependencies;
 pub(crate) mod dependency_scripts;
