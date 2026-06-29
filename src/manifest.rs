@@ -280,6 +280,7 @@ fn issue_types() -> Value {
         "unused-enum-member",
         "unused-class-member",
         "duplicate-export",
+        "route-collision",
         "missing-entry-point",
         "circular-dependency",
         "re-export-cycle",

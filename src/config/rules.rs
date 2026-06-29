@@ -154,6 +154,7 @@ fn recompute_summary(report: &mut JsonReport) {
     summary.unused_enum_members = kind_count(&report.findings, FindingKind::UnusedEnumMember);
     summary.unused_class_members = kind_count(&report.findings, FindingKind::UnusedClassMember);
     summary.duplicate_exports = kind_count(&report.findings, FindingKind::DuplicateExport);
+    summary.route_collisions = kind_count(&report.findings, FindingKind::RouteCollision);
     summary.code_duplications = report.clone_groups.len();
     summary.complex_functions = report.complexity.len();
     summary.coverage_gaps = kind_count(&report.findings, FindingKind::CoverageGap);

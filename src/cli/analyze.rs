@@ -7,7 +7,8 @@ use crate::{
     SymbolAnalysisOptions, analyze_dependency_hygiene, analyze_health, analyze_security,
     check_architecture_boundaries, detect_boundary_call_violations, detect_boundary_coverage,
     detect_cycles, detect_duplicates, detect_feature_flags, detect_policy_violations,
-    detect_re_export_cycles, find_dead_code, load_policy_pack, missing_suppression_reasons_enabled,
+    detect_re_export_cycles, detect_route_collisions, find_dead_code, load_policy_pack,
+    missing_suppression_reasons_enabled,
 };
 
 use super::entry_points::{entry_points_for_check, entry_points_for_dead_code};
@@ -33,6 +34,7 @@ pub(super) fn analyze_project(
         health: analyze_project_health(project, request)?,
         feature_flags: analyze_project_flags(project, request)?,
         security: analyze_project_security(project, request)?,
+        routes: analyze_project_routes(project, request.command),
         file_scope: None,
         require_suppression_reasons: missing_suppression_reasons_enabled(&request.rules),
         dead_code,
@@ -337,6 +339,26 @@ fn analyze_project_security(
         | ReportCommand::Dupes
         | ReportCommand::Health
         | ReportCommand::Flags => Ok(None),
+        ReportCommand::TraceFile
+        | ReportCommand::TraceSymbol
+        | ReportCommand::TraceDependency
+        | ReportCommand::TraceClone
+        | ReportCommand::Inspect => unreachable!("trace commands do not use AnalysisResults"),
+    }
+}
+
+fn analyze_project_routes(
+    project: &ScannedProject,
+    command: ReportCommand,
+) -> Option<crate::RouteCollisionReport> {
+    match command {
+        ReportCommand::Check | ReportCommand::Audit => Some(detect_route_collisions(project)),
+        ReportCommand::DeadCode
+        | ReportCommand::Cycles
+        | ReportCommand::Dupes
+        | ReportCommand::Health
+        | ReportCommand::Flags
+        | ReportCommand::Security => None,
         ReportCommand::TraceFile
         | ReportCommand::TraceSymbol
         | ReportCommand::TraceDependency

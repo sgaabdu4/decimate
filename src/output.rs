@@ -8,6 +8,7 @@ mod graph_findings;
 mod health_findings;
 mod human;
 mod next_steps;
+mod route_findings;
 mod runtime_coverage;
 mod security_findings;
 mod security_sarif;
@@ -35,6 +36,7 @@ use health_findings::{
 };
 pub use human::render_human_report;
 use next_steps::next_steps;
+use route_findings::add_route_findings;
 pub use runtime_coverage::{
     JsonRuntimeBlastRadius, JsonRuntimeCoverage, JsonRuntimeCoverageActionable,
     JsonRuntimeCoverageFinding, JsonRuntimeCoverageIntelligence, JsonRuntimeCoverageProvenance,
@@ -56,7 +58,7 @@ pub use types::{
 use crate::{
     BoundaryCallViolation, BoundaryCoverageGap, BoundaryViolation, DeadCodeReport, DependencyCycle,
     DependencyHygieneReport, DuplicateCodeReport, FeatureFlagReport, HealthReport, PolicyViolation,
-    ReExportCycle, SecurityReport, SymbolReport, scan::ScannedProject,
+    ReExportCycle, RouteCollisionReport, SecurityReport, SymbolReport, scan::ScannedProject,
 };
 
 /// Stable JSON schema version for agent consumers.
@@ -95,6 +97,8 @@ pub struct AnalysisResults {
     pub feature_flags: Option<FeatureFlagReport>,
     /// Security candidate report, when run.
     pub security: Option<SecurityReport>,
+    /// Flutter typed route collisions, when run.
+    pub routes: Option<RouteCollisionReport>,
     /// Root-normalized files used to scope report findings, when any.
     pub file_scope: Option<Vec<std::path::PathBuf>>,
     /// Whether suppression comments must include justification text.
@@ -282,6 +286,9 @@ fn report_findings(
     if let Some(security) = &results.security {
         add_security_findings(&project.root, security, &mut findings);
     }
+    if let Some(routes) = &results.routes {
+        add_route_findings(&project.root, routes, &mut findings);
+    }
 
     let mut findings = filter_suppressed_findings(
         &project.root,
@@ -352,6 +359,7 @@ fn report_summary(
         unused_enum_members: kind_count(findings, FindingKind::UnusedEnumMember),
         unused_class_members: kind_count(findings, FindingKind::UnusedClassMember),
         duplicate_exports: kind_count(findings, FindingKind::DuplicateExport),
+        route_collisions: kind_count(findings, FindingKind::RouteCollision),
         code_duplications: results
             .duplicates
             .as_ref()
@@ -480,6 +488,7 @@ fn apply_scoped_counts(summary: &mut ReportSummary, findings: &[Finding]) {
     summary.unused_enum_members = kind_count(findings, FindingKind::UnusedEnumMember);
     summary.unused_class_members = kind_count(findings, FindingKind::UnusedClassMember);
     summary.duplicate_exports = kind_count(findings, FindingKind::DuplicateExport);
+    summary.route_collisions = kind_count(findings, FindingKind::RouteCollision);
     summary.code_duplications = kind_count(findings, FindingKind::CodeDuplication);
     summary.complex_functions = complexity_count(findings);
     summary.coverage_gaps = kind_count(findings, FindingKind::CoverageGap);

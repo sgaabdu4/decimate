@@ -141,6 +141,7 @@ fn all_known_aliases() -> Vec<&'static str> {
         FindingKind::UnusedEnumMember,
         FindingKind::UnusedClassMember,
         FindingKind::DuplicateExport,
+        FindingKind::RouteCollision,
         FindingKind::MissingEntryPoint,
         FindingKind::CircularDependency,
         FindingKind::ReExportCycle,
@@ -244,6 +245,13 @@ fn graph_kind_aliases(kind: FindingKind) -> Option<Vec<&'static str>> {
             "decimate/re-export-cycle",
             "re-export-cycle",
             "re-export-cycles",
+        ]),
+        FindingKind::RouteCollision => Some(vec![
+            "decimate/route-collision",
+            "route-collision",
+            "route-collisions",
+            "flutter-route-collision",
+            "flutter-route-collisions",
         ]),
         FindingKind::BoundaryViolation => Some(vec![
             "decimate/boundary-violation",

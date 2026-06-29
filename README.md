@@ -30,6 +30,7 @@ Decimate currently reports:
 - unused enum constants and private class-like members
 - private Dart library types leaking through public signatures
 - duplicate public exports
+- typed GoRouter route path and name collisions
 - circular dependencies and export-only barrel cycles
 - invalid `part` / `part of` relationships
 - unresolved local imports, exports, parts, and augmentations
@@ -327,6 +328,7 @@ Flutter:
 - cycles, re-export cycles, boundaries, policy packs, and suppressions
 - duplication detection with traceable fingerprints
 - health, complexity, CRAP, coverage gaps, hotspots, ownership, and targets
+- Flutter typed GoRouter route-collision checks
 - feature flag inventory
 - local security candidates with SARIF, surface inventory, and changed-code gates
 - changed-code audit and advisory decision-surface review
@@ -354,8 +356,8 @@ Known gaps before claiming full product parity with Fallow:
 - hook parity is Git-only; no managed agent hook target yet
 - no Fallow-style `coverage setup`, source-map upload, inventory upload, or
   cloud runtime workflow yet
-- no Flutter-framework intelligence yet for route collisions, provider wiring,
-  widget reachability, or unused widget API shapes
+- no broader Flutter-framework intelligence yet for provider wiring, widget
+  reachability, or unused widget API shapes
 - feature flags are inventory-focused and do not yet model owner, expiry, stale
   rollout state, or runtime stale-flag evidence as richly as Fallow
 - security candidates are Dart/Flutter-focused and configurable by category, but

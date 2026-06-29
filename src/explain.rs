@@ -264,6 +264,18 @@ const ISSUES: &[IssueExplanation] = &[
         &["decimate trace-symbol --format json --symbol <file>:<symbol>"],
     ),
     issue!(
+        "route-collision",
+        "decimate/route-collision",
+        &["route-collision"],
+        "Route collision",
+        "Two typed GoRouter route declarations resolve to the same path pattern or route name.",
+        "go_router_builder aggregates typed routes into generated route tables, so duplicate identities can make navigation ambiguous or fail generation.",
+        "@TypedGoRoute<UserRoute>(path: '/users/:id') and @TypedGoRoute<MemberRoute>(path: '/users/:userId') describe the same path shape.",
+        "Rename one route or change one path segment after checking deep-link compatibility.",
+        &["// decimate-ignore-next-line route-collision"],
+        &["decimate inspect --format json --file <path>"],
+    ),
+    issue!(
         "missing-entry-point",
         "decimate/missing-entry-point",
         &["missing-entry-point", "missing-entry-points"],

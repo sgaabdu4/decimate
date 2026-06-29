@@ -8,12 +8,15 @@ use tree_sitter::{Node, Parser, TreeCursor};
 mod directives;
 mod members;
 mod references;
+mod routes;
 mod signatures;
 use directives::{
     extract_directive, extract_library_name, extract_part_directive, extract_part_of_directive,
 };
 use members::push_class_like_members;
 use references::extract_identifier_references;
+pub use routes::DartRouteDeclaration;
+use routes::extract_route_declarations;
 pub use signatures::SignatureReference;
 use signatures::extract_signature_references;
 
@@ -77,6 +80,8 @@ pub struct DartFile {
     pub references: Vec<IdentifierReference>,
     /// Type references from public declaration signatures, excluding bodies.
     pub signature_references: Vec<SignatureReference>,
+    /// Typed `GoRouter` route declarations found in metadata.
+    pub routes: Vec<DartRouteDeclaration>,
 }
 
 /// A Dart `library` directive.
@@ -309,6 +314,7 @@ pub fn extract_dart_source(path: impl AsRef<Path>, source: &str) -> Result<DartF
     let mut members = Vec::new();
     let references = extract_identifier_references(root, source);
     let signature_references = extract_signature_references(root, source);
+    let routes = extract_route_declarations(root, source);
 
     let mut cursor = root.walk();
     for child in root.named_children(&mut cursor) {
@@ -374,6 +380,7 @@ pub fn extract_dart_source(path: impl AsRef<Path>, source: &str) -> Result<DartF
         members,
         references,
         signature_references,
+        routes,
     })
 }
 

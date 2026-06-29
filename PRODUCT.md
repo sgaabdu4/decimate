@@ -168,6 +168,7 @@ Parity areas:
 - Graph issues: unresolved imports/exports/parts/augmentations, invalid Dart
   `part of` relationships, circular dependencies, re-export cycles, duplicate
   exports, and architecture boundary violations.
+- Flutter framework checks: typed GoRouter route path and name collisions.
 - Duplication: strict, mild, weak, and semantic clone detection with traceable
   fingerprints, top-N filtering, and clone tracing.
 - Health: cyclomatic/cognitive/CRAP complexity, file scores, hotspots,
@@ -227,6 +228,9 @@ Current implemented parity:
   `show`/`hide`, suppressions, rule config, JSON schema, and explain coverage
 - `decimate/duplicate-export` findings for public barrel APIs that expose the
   same top-level symbol from multiple files
+- `decimate/route-collision` findings for typed GoRouter routes that resolve to
+  the same path pattern or route name, with parameter-name normalization and
+  nested route path joining
 - separate `decimate/re-export-cycle` findings for barrel export loops
 - read-only file, symbol, dependency, and clone trace JSON envelopes for
   deletion review, using `kind` discriminators and `decimate.trace.v1`

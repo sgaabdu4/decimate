@@ -33,6 +33,7 @@ pub(crate) mod package_map;
 pub mod policy;
 pub mod project_list;
 pub mod report_schema;
+pub mod routes;
 pub mod scan;
 pub mod security;
 pub(crate) mod security_gate;
@@ -85,9 +86,9 @@ pub use explain::{
 };
 pub use extract::{
     DartCombinator, DartCombinatorKind, DartExport, DartFile, DartImport, DartLibrary, DartPart,
-    DartPartOf, DeclarationKind, ExtractError, IdentifierReference, Location, MemberDeclaration,
-    MemberKind, SignatureReference, SourceRange, TopLevelDeclaration, extract_dart_file,
-    extract_dart_source,
+    DartPartOf, DartRouteDeclaration, DeclarationKind, ExtractError, IdentifierReference, Location,
+    MemberDeclaration, MemberKind, SignatureReference, SourceRange, TopLevelDeclaration,
+    extract_dart_file, extract_dart_source,
 };
 pub use feature_flags::{
     FeatureFlag, FeatureFlagConfidence, FeatureFlagError, FeatureFlagOccurrence,
@@ -156,6 +157,10 @@ pub use project_list::{
     ProjectListReport, ProjectListSection, ProjectListSummary, project_list_report,
 };
 pub use report_schema::report_schema;
+pub use routes::{
+    RouteCollision, RouteCollisionDeclaration, RouteCollisionKind, RouteCollisionReport,
+    detect_route_collisions,
+};
 pub use scan::{ScanError, ScanOptions, ScannedProject, scan_project, scan_project_with_options};
 pub use security::{
     AttackSurfaceEntry, SecurityCandidate, SecurityCategory, SecurityConfidence, SecurityError,

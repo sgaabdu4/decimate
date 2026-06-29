@@ -171,6 +171,8 @@ pub struct ReportSummary {
     pub unused_class_members: usize,
     /// Public API symbols exported from multiple declarations.
     pub duplicate_exports: usize,
+    /// Typed `GoRouter` route path or name collisions.
+    pub route_collisions: usize,
     /// Duplicated Dart code clone groups.
     pub code_duplications: usize,
     /// Dart source files included in health analysis.
@@ -274,6 +276,8 @@ pub enum FindingKind {
     UnusedClassMember,
     /// Public API entry exposes multiple declarations with the same name.
     DuplicateExport,
+    /// Typed `GoRouter` routes declare the same path or route name.
+    RouteCollision,
     /// Missing entry point.
     MissingEntryPoint,
     /// Strongly connected dependency component.

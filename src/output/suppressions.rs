@@ -285,6 +285,7 @@ const fn kind_key(kind: FindingKind) -> &'static str {
         FindingKind::UnusedEnumMember => "unused-enum-member",
         FindingKind::UnusedClassMember => "unused-class-member",
         FindingKind::DuplicateExport => "duplicate-export",
+        FindingKind::RouteCollision => "route-collision",
         FindingKind::MissingEntryPoint => "missing-entry-point",
         FindingKind::CircularDependency => "circular-dependency",
         FindingKind::ReExportCycle => "re-export-cycle",

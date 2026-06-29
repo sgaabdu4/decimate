@@ -183,6 +183,7 @@ fn scoped_project(
         health: None,
         feature_flags: None,
         security: None,
+        routes: None,
         file_scope: None,
         require_suppression_reasons: false,
     };
