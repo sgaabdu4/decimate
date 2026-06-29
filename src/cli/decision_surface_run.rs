@@ -1,5 +1,4 @@
 use std::io::Write;
-use std::path::PathBuf;
 
 use clap::{Arg, ArgMatches, Command, value_parser};
 
@@ -9,6 +8,7 @@ use crate::decision_surface::{
 };
 use crate::scan::{ScanOptions, scan_project_with_options};
 
+use super::common_args::{config_arg, format_arg, root_arg, root_flag_arg, root_path};
 use super::{CliError, OutputFormat};
 
 pub(super) fn decision_surface_command() -> Command {
@@ -37,28 +37,10 @@ pub(super) fn max_decisions_arg() -> Arg {
 fn decision_surface_command_named(name: &'static str, about: &'static str) -> Command {
     Command::new(name)
         .about(about)
-        .arg(
-            Arg::new("root")
-                .value_name("ROOT")
-                .help("Project root")
-                .default_value(".")
-                .value_parser(value_parser!(PathBuf)),
-        )
-        .arg(
-            Arg::new("format")
-                .long("format")
-                .value_name("FORMAT")
-                .help("Output format")
-                .default_value("human")
-                .value_parser(["human", "json"]),
-        )
-        .arg(
-            Arg::new("config")
-                .long("config")
-                .value_name("PATH")
-                .help("Decimate config file")
-                .value_parser(value_parser!(PathBuf)),
-        )
+        .arg(root_arg())
+        .arg(root_flag_arg())
+        .arg(format_arg())
+        .arg(config_arg())
         .arg(
             Arg::new("base")
                 .long("base")
@@ -74,10 +56,7 @@ pub(super) fn run_decision_surface<W: Write>(
     mut writer: W,
     command: &str,
 ) -> Result<i32, CliError> {
-    let root = subcommand
-        .get_one::<PathBuf>("root")
-        .cloned()
-        .unwrap_or_else(|| PathBuf::from("."));
+    let root = root_path(subcommand);
     let config = super::load_config(&root, subcommand)?;
     let project = scan_project_with_options(
         &root,

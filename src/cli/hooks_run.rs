@@ -8,7 +8,7 @@ use crate::hooks::{
     HookOptions, HookTarget, hooks_status, install_hooks, render_hooks_report, uninstall_hooks,
 };
 
-use super::common_args::{format_arg, root_arg};
+use super::common_args::{format_arg, root_arg, root_flag_arg, root_path};
 use super::{CliError, OutputFormat, output_format};
 
 pub(super) fn hooks_command() -> Command {
@@ -40,6 +40,7 @@ fn hook_subcommand(name: &'static str, about: &'static str) -> Command {
     Command::new(name)
         .about(about)
         .arg(root_arg())
+        .arg(root_flag_arg())
         .arg(format_arg())
         .arg(target_arg())
         .arg(branch_arg())
@@ -54,10 +55,7 @@ where
     W: Write,
     F: FnOnce(&PathBuf, &HookOptions) -> Result<crate::HooksReport, crate::HooksError>,
 {
-    let root = subcommand
-        .get_one::<PathBuf>("root")
-        .cloned()
-        .unwrap_or_else(|| PathBuf::from("."));
+    let root = root_path(subcommand);
     let report = operation(&root, &hook_options(subcommand))?;
     match output_format(subcommand, &DecimateConfig::default()) {
         OutputFormat::Json => {

@@ -70,7 +70,8 @@ use boundary_args::boundary_command;
 use ci_template_run::{ci_template_command, run_ci_template};
 use command_name::report_command_from_name;
 use common_args::{
-    audit_baseline_arg, baseline_command, report_command, scan_command, symbol_options_command,
+    audit_baseline_arg, baseline_command, report_command, root_path, scan_command,
+    symbol_options_command,
 };
 use config_run::{config_command, run_config};
 use coverage_run::{coverage_command, run_coverage};
@@ -511,10 +512,7 @@ fn request_from_matches(matches: &ArgMatches) -> Result<CommandRequest, CliError
 
     let command = report_command_from_name(name);
 
-    let root = subcommand
-        .get_one::<PathBuf>("root")
-        .cloned()
-        .unwrap_or_else(|| PathBuf::from("."));
+    let root = root_path(subcommand);
     let config = load_config(&root, subcommand)?;
     let security_cli = security_cli_options(command, subcommand);
     let format = if security_cli.ci {

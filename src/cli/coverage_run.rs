@@ -12,7 +12,7 @@ use crate::output::json_runtime_coverage;
 use crate::scan::{ScanOptions, scan_project_with_options};
 use crate::{HealthOptions, LowTrafficThreshold};
 
-use super::common_args::{config_arg, format_arg, root_arg};
+use super::common_args::{config_arg, format_arg, root_arg, root_flag_arg, root_path};
 use super::health_args::runtime_coverage_args;
 use super::{CliError, OutputFormat, load_config, output_format};
 
@@ -41,6 +41,7 @@ fn coverage_setup_command() -> Command {
     Command::new("setup")
         .about("Plan or write local runtime coverage defaults")
         .arg(root_arg())
+        .arg(root_flag_arg())
         .arg(format_arg())
         .arg(config_arg())
         .arg(
@@ -62,6 +63,7 @@ fn coverage_analyze_command() -> Command {
         Command::new("analyze")
             .about("Analyze local V8 or Istanbul runtime coverage")
             .arg(root_arg())
+            .arg(root_flag_arg())
             .arg(format_arg())
             .arg(config_arg())
             .arg(
@@ -86,6 +88,7 @@ fn coverage_upload_inventory_command() -> Command {
     Command::new("upload-inventory")
         .about("Build a local source inventory upload dry-run packet")
         .arg(root_arg())
+        .arg(root_flag_arg())
         .arg(format_arg())
         .arg(config_arg())
         .arg(repo_arg(false))
@@ -96,6 +99,7 @@ fn coverage_upload_source_maps_command() -> Command {
     Command::new("upload-source-maps")
         .about("Build a source-map upload dry-run packet")
         .arg(root_arg())
+        .arg(root_flag_arg())
         .arg(format_arg())
         .arg(config_arg())
         .arg(
@@ -326,13 +330,6 @@ fn coverage_health_options(subcommand: &ArgMatches, mut options: HealthOptions) 
         options.top = Some(*top);
     }
     options
-}
-
-fn root_path(subcommand: &ArgMatches) -> PathBuf {
-    subcommand
-        .get_one::<PathBuf>("root")
-        .cloned()
-        .unwrap_or_else(|| PathBuf::from("."))
 }
 
 fn resolve_path(root: &Path, path: &Path) -> PathBuf {

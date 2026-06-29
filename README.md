@@ -86,6 +86,7 @@ Run through npm/npx:
 
 ```bash
 npx @sgaabdu4/decimate check . --format json
+npx @sgaabdu4/decimate check --root . --format json
 npx --package @sgaabdu4/decimate decimate check . --format json
 ```
 
@@ -93,6 +94,10 @@ The npm package exposes the executable as `decimate`. The unscoped npm package
 name `decimate` is already owned by an unrelated GeoJSON package, so
 `npx decimate` cannot safely target this project unless that package name is
 transferred. Public npm installs use `@sgaabdu4/decimate`.
+
+Root-aware commands accept both the existing positional `ROOT` form
+(`decimate check .`) and the Fallow-style `--root ROOT` form
+(`decimate check --root .`).
 
 Exit code `0` means no error-severity findings. Exit code `1` means findings
 were produced. Exit code `2` means command/config/runtime failure. Security gate

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use clap::{Arg, ArgAction, Command, value_parser};
+use clap::{Arg, ArgAction, ArgMatches, Command, value_parser};
 
 use super::regression_args::regression_command;
 
@@ -17,6 +17,7 @@ pub(super) fn report_command(command: Command) -> Command {
 fn scan_command_with_format(command: Command, format: Arg) -> Command {
     command
         .arg(root_arg())
+        .arg(root_flag_arg())
         .arg(format)
         .arg(config_arg())
         .arg(entry_arg())
@@ -40,6 +41,24 @@ pub(super) fn root_arg() -> Arg {
         .help("Project root")
         .default_value(".")
         .value_parser(value_parser!(PathBuf))
+}
+
+pub(super) fn root_flag_arg() -> Arg {
+    Arg::new("root-flag")
+        .long("root")
+        .value_name("ROOT")
+        .help("Project root")
+        .value_parser(value_parser!(PathBuf))
+}
+
+pub(super) fn root_path(matches: &ArgMatches) -> PathBuf {
+    matches
+        .try_get_one::<PathBuf>("root-flag")
+        .ok()
+        .flatten()
+        .or_else(|| matches.try_get_one::<PathBuf>("root").ok().flatten())
+        .cloned()
+        .unwrap_or_else(|| PathBuf::from("."))
 }
 
 pub(super) fn format_arg() -> Arg {

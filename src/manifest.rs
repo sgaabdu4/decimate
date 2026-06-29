@@ -68,77 +68,77 @@ fn analysis_commands() -> Value {
             "kind": "combined",
             "description": "Run all enabled graph, symbol, dependency, duplicate, health, flag, and security checks.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks"]
         },
         {
             "name": "audit",
             "kind": "audit",
             "description": "Run changed-code graph checks scoped from a Git base ref.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--brief", "--base", "--dead-code-baseline", "--health-baseline", "--dupes-baseline", "--max-decisions", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks"]
+            "flags": ["--root", "--brief", "--base", "--dead-code-baseline", "--health-baseline", "--dupes-baseline", "--max-decisions", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks"]
         },
         {
             "name": "review",
             "kind": "decision-surface",
             "description": "Review changed-code structural decisions without failing CI.",
             "schema": DECISION_SURFACE_SCHEMA_VERSION,
-            "flags": ["--base", "--format", "--config", "--max-decisions"]
+            "flags": ["--root", "--base", "--format", "--config", "--max-decisions"]
         },
         {
             "name": "decision-surface",
             "kind": "decision-surface",
             "description": "Surface changed-code structural decisions for reviewer judgment.",
             "schema": DECISION_SURFACE_SCHEMA_VERSION,
-            "flags": ["--base", "--format", "--config", "--max-decisions"]
+            "flags": ["--root", "--base", "--format", "--config", "--max-decisions"]
         },
         {
             "name": "dead-code",
             "kind": "dead-code",
             "description": "Find unreachable Dart files and conservative symbol-level dead code.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--include-entry-exports", "--private-type-leaks"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--include-entry-exports", "--private-type-leaks"]
         },
         {
             "name": "cycles",
             "kind": "cycles",
             "description": "Find import/export/part/augment dependency cycles.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline"]
         },
         {
             "name": "dupes",
             "kind": "dupes",
             "description": "Find duplicated Dart code blocks.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--no-ignore-imports"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--no-ignore-imports"]
         },
         {
             "name": "health",
             "kind": "health",
             "description": "Find complex functions, coverage gaps, hotspots, and refactoring targets.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--top"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--top"]
         },
         {
             "name": "flags",
             "kind": "flags",
             "description": "Inventory Dart and Flutter feature flag patterns.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--top"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--top"]
         },
         {
             "name": "security",
             "kind": "security",
             "description": "Surface local deterministic security review candidates.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--top", "--surface", "--sarif-file", "--ci", "--fail-on-issues", "--summary", "--gate", "--diff-file", "--diff-stdin", "--changed-since"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--top", "--surface", "--sarif-file", "--ci", "--fail-on-issues", "--summary", "--gate", "--diff-file", "--diff-stdin", "--changed-since"]
         },
         {
             "name": "impact",
             "kind": "impact",
             "description": "Read the local Decimate value report without running analysis.",
             "schema": IMPACT_SCHEMA_VERSION,
-            "flags": ["--format", "--quiet", "--all", "--sort", "--limit"]
+            "flags": ["--root", "--format", "--quiet", "--all", "--sort", "--limit"]
         }
     ])
 }
@@ -150,28 +150,28 @@ fn coverage_commands() -> Value {
             "kind": "coverage-setup",
             "description": "Plan or write local Dart/Flutter runtime coverage defaults.",
             "schema": COVERAGE_ANALYSIS_SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--yes", "--non-interactive"]
+            "flags": ["--root", "--format", "--config", "--yes", "--non-interactive"]
         },
         {
             "name": "coverage analyze",
             "kind": "runtime-coverage",
             "description": "Analyze local V8 or Istanbul runtime coverage.",
             "schema": COVERAGE_ANALYSIS_SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--runtime-coverage", "--cloud", "--repo", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--top"]
+            "flags": ["--root", "--format", "--config", "--runtime-coverage", "--cloud", "--repo", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--top"]
         },
         {
             "name": "coverage upload-inventory",
             "kind": "coverage-upload-inventory",
             "description": "Build a local Dart source inventory upload dry-run packet.",
             "schema": COVERAGE_ANALYSIS_SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--repo", "--dry-run"]
+            "flags": ["--root", "--format", "--config", "--repo", "--dry-run"]
         },
         {
             "name": "coverage upload-source-maps",
             "kind": "coverage-upload-source-maps",
             "description": "Build a source-map upload dry-run packet.",
             "schema": COVERAGE_ANALYSIS_SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--dir", "--git-sha", "--repo", "--strip-path", "--dry-run"]
+            "flags": ["--root", "--format", "--config", "--dir", "--git-sha", "--repo", "--strip-path", "--dry-run"]
         }
     ])
 }
@@ -183,14 +183,14 @@ fn evidence_commands() -> Value {
             "kind": "inspect",
             "description": "Compose one evidence bundle for a Dart file or top-level symbol.",
             "schema": INSPECT_SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--file", "--symbol"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--symbol"]
         },
         {
             "name": "trace-file",
             "kind": "trace-file",
             "description": "Trace one Dart file's graph evidence.",
             "schema": TRACE_SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--file"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file"]
         },
         {
             "name": "trace",
@@ -204,21 +204,21 @@ fn evidence_commands() -> Value {
             "kind": "trace-symbol",
             "description": "Trace one top-level symbol's declaration, references, and re-export chains.",
             "schema": TRACE_SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--file", "--symbol"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--symbol"]
         },
         {
             "name": "trace-dependency",
             "kind": "trace-dependency",
             "description": "Trace one pub dependency declaration and Dart import/export usage.",
             "schema": TRACE_SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--dependency"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--dependency"]
         },
         {
             "name": "trace-clone",
             "kind": "trace-clone",
             "description": "Trace one duplicate-code group by fingerprint or file line.",
             "schema": TRACE_SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--no-ignore-imports", "--fingerprint"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--no-ignore-imports", "--fingerprint"]
         }
     ])
 }
@@ -230,14 +230,14 @@ fn support_commands() -> Value {
             "kind": "list",
             "description": "List Decimate project structure and active Dart/Flutter adapters.",
             "schema": PROJECT_LIST_SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--files", "--entry-points", "--workspaces", "--plugins", "--boundaries", "--file", "--workspace", "--changed-workspaces"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--files", "--entry-points", "--workspaces", "--plugins", "--boundaries", "--file", "--workspace", "--changed-workspaces"]
         },
         {
             "name": "workspaces",
             "kind": "list",
             "description": "List discovered local pub packages.",
             "schema": PROJECT_LIST_SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces"]
         },
         {
             "name": "explain",
@@ -251,21 +251,21 @@ fn support_commands() -> Value {
             "kind": "fix",
             "description": "Plan or apply safe auto-fixes.",
             "schema": FIX_SCHEMA_VERSION,
-            "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--action", "--apply", "--confirm"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--action", "--apply", "--confirm"]
         },
         {
             "name": "init",
             "kind": "init",
             "description": "Create Decimate config and optional AGENTS.md guidance.",
             "schema": INIT_SCHEMA_VERSION,
-            "flags": ["--format", "--agents", "--force"]
+            "flags": ["--root", "--format", "--agents", "--force"]
         },
         {
             "name": "hooks",
             "kind": "hooks",
             "description": "Inspect, install, or remove Decimate-managed Git hooks.",
             "schema": HOOKS_SCHEMA_VERSION,
-            "flags": ["status", "install", "uninstall", "--format", "--target", "--branch", "--force"]
+            "flags": ["status", "install", "uninstall", "--root", "--format", "--target", "--branch", "--force"]
         },
         {
             "name": "ci-template",
@@ -273,6 +273,13 @@ fn support_commands() -> Value {
             "description": "Print or vendor GitHub Actions and GitLab CI templates.",
             "schema": CI_TEMPLATE_SCHEMA_VERSION,
             "flags": ["--format", "--vendor", "--root", "--force"]
+        },
+        {
+            "name": "config",
+            "kind": "config",
+            "description": "Print the resolved Decimate configuration.",
+            "schema": CONFIG_SCHEMA_VERSION,
+            "flags": ["--root", "--format", "--config", "--path"]
         },
         {
             "name": "schema",

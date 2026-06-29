@@ -4,7 +4,7 @@ use std::path::Path;
 use clap::{Arg, Command};
 use serde::Serialize;
 
-use super::common_args::{config_arg, format_arg, root_arg};
+use super::common_args::{config_arg, format_arg, root_arg, root_flag_arg, root_path};
 use super::{CliError, OutputFormat, load_config, output_format};
 use crate::config::{CONFIG_SCHEMA_VERSION, DecimateConfig};
 
@@ -12,6 +12,7 @@ pub(super) fn config_command() -> Command {
     Command::new("config")
         .about("Print the resolved Decimate configuration")
         .arg(root_arg())
+        .arg(root_flag_arg())
         .arg(format_arg())
         .arg(config_arg())
         .arg(
@@ -26,10 +27,7 @@ pub(super) fn run_config<W: Write>(
     subcommand: &clap::ArgMatches,
     mut writer: W,
 ) -> Result<i32, CliError> {
-    let root = subcommand
-        .get_one::<std::path::PathBuf>("root")
-        .cloned()
-        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let root = root_path(subcommand);
     let config = load_config(&root, subcommand)?;
 
     if subcommand.get_flag("path") {

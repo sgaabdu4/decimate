@@ -2,7 +2,7 @@ use std::io::Write;
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
 
-use super::common_args::{config_arg, entry_arg, format_arg, root_arg};
+use super::common_args::{config_arg, entry_arg, format_arg, root_arg, root_flag_arg, root_path};
 use super::entry_points::entry_points_for_check;
 use super::{CliError, OutputFormat, entry_points, load_config, output_format};
 use crate::{
@@ -14,6 +14,7 @@ pub(super) fn list_command() -> Command {
     Command::new("list")
         .about("List Decimate project structure")
         .arg(root_arg())
+        .arg(root_flag_arg())
         .arg(format_arg())
         .arg(config_arg())
         .arg(entry_arg())
@@ -42,6 +43,7 @@ pub(super) fn workspaces_command() -> Command {
     Command::new("workspaces")
         .about("List discovered local pub packages")
         .arg(root_arg())
+        .arg(root_flag_arg())
         .arg(format_arg())
         .arg(config_arg())
         .arg(entry_arg())
@@ -74,10 +76,7 @@ fn run_list_with_options<W: Write>(
     command_name: &str,
     options: &ProjectListOptions,
 ) -> Result<i32, CliError> {
-    let root = subcommand
-        .get_one::<std::path::PathBuf>("root")
-        .cloned()
-        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let root = root_path(subcommand);
     let config = load_config(&root, subcommand)?;
     let format = output_format(subcommand, &config);
     let explicit_entries = entry_points(subcommand, &config);

@@ -42,10 +42,7 @@ pub(super) fn fix_command() -> Command {
 }
 
 pub(super) fn run_fix<W: Write>(subcommand: &ArgMatches, mut writer: W) -> Result<i32, CliError> {
-    let root = subcommand
-        .get_one::<std::path::PathBuf>("root")
-        .cloned()
-        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let root = super::common_args::root_path(subcommand);
     let config = super::load_config(&root, subcommand)?;
     if super::report_output_format(subcommand, &config) == super::ReportOutputFormat::Sarif {
         return Err(CliError::UnsupportedSarifFormat { command: "fix" });

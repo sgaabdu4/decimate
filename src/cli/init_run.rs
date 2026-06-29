@@ -1,18 +1,18 @@
 use std::io::Write;
-use std::path::PathBuf;
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
 
 use crate::config::DecimateConfig;
 use crate::init::{InitOptions, init_project, render_init_report};
 
-use super::common_args::{format_arg, root_arg};
+use super::common_args::{format_arg, root_arg, root_flag_arg, root_path};
 use super::{CliError, OutputFormat, output_format};
 
 pub(super) fn init_command() -> Command {
     Command::new("init")
         .about("Create Decimate config and optional agent guidance")
         .arg(root_arg())
+        .arg(root_flag_arg())
         .arg(format_arg())
         .arg(
             Arg::new("agents")
@@ -29,10 +29,7 @@ pub(super) fn init_command() -> Command {
 }
 
 pub(super) fn run_init<W: Write>(subcommand: &ArgMatches, mut writer: W) -> Result<i32, CliError> {
-    let root = subcommand
-        .get_one::<PathBuf>("root")
-        .cloned()
-        .unwrap_or_else(|| PathBuf::from("."));
+    let root = root_path(subcommand);
     let report = init_project(
         &root,
         InitOptions {

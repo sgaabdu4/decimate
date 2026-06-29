@@ -1,5 +1,4 @@
 use std::io::Write;
-use std::path::PathBuf;
 
 use clap::{Arg, ArgAction, ArgMatches, Command, value_parser};
 
@@ -7,13 +6,14 @@ use crate::impact::{
     ImpactSort, impact_all_report, impact_report, render_impact_all_report, render_impact_report,
 };
 
-use super::common_args::{format_arg, root_arg};
+use super::common_args::{format_arg, root_arg, root_flag_arg, root_path};
 use super::{CliError, OutputFormat};
 
 pub(super) fn impact_command() -> Command {
     Command::new("impact")
         .about("Show Decimate's local value report")
         .arg(root_arg())
+        .arg(root_flag_arg())
         .arg(format_arg())
         .arg(
             Arg::new("quiet")
@@ -61,10 +61,7 @@ pub(super) fn run_impact<W: Write>(
             }
         }
     } else {
-        let root = subcommand
-            .get_one::<PathBuf>("root")
-            .cloned()
-            .unwrap_or_else(|| PathBuf::from("."));
+        let root = root_path(subcommand);
         let report = impact_report(root);
         match output_format(subcommand) {
             OutputFormat::Json => serde_json::to_writer_pretty(&mut writer, &report)?,

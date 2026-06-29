@@ -141,7 +141,7 @@ fn schema_command_lists_actual_cli_flags() -> Result<(), Box<dyn std::error::Err
     assert_manifest_flags(
         &json,
         "check",
-        &["--baseline", "--max-crap", "--min-occurrences"],
+        &["--root", "--baseline", "--max-crap", "--min-occurrences"],
     );
     assert_manifest_flags(
         &json,
@@ -169,6 +169,7 @@ fn schema_command_lists_actual_cli_flags() -> Result<(), Box<dyn std::error::Err
         &["--min-occurrences", "--fingerprint"],
     );
     assert_manifest_flags(&json, "trace", &["--root", "--format"]);
+    assert_manifest_flags(&json, "config", &["--root", "--format", "--path"]);
     assert_manifest_flags(
         &json,
         "coverage upload-source-maps",
