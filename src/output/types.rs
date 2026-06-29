@@ -173,6 +173,8 @@ pub struct ReportSummary {
     pub duplicate_exports: usize,
     /// Typed `GoRouter` route path or name collisions.
     pub route_collisions: usize,
+    /// Flutter widget constructor params that are never read.
+    pub unused_widget_params: usize,
     /// Duplicated Dart code clone groups.
     pub code_duplications: usize,
     /// Dart source files included in health analysis.
@@ -278,6 +280,8 @@ pub enum FindingKind {
     DuplicateExport,
     /// Typed `GoRouter` routes declare the same path or route name.
     RouteCollision,
+    /// Flutter widget constructor param is never read by the widget.
+    UnusedWidgetParam,
     /// Missing entry point.
     MissingEntryPoint,
     /// Strongly connected dependency component.

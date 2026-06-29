@@ -23,7 +23,7 @@ use crate::scan::{ScanError, ScanOptions, scan_project_with_options};
 use crate::{
     BoundaryCallRule, BoundaryRule, DependencyHygieneError, DuplicateCodeError, DuplicateOptions,
     FeatureFlagError, FeatureFlagOptions, HealthError, HealthOptions, PolicyError, SecurityError,
-    SecurityOptions,
+    SecurityOptions, WidgetAnalysisError,
 };
 
 mod analyze;
@@ -130,6 +130,9 @@ pub enum CliError {
     /// Security candidate analysis failed.
     #[error(transparent)]
     Security(#[from] SecurityError),
+    /// Flutter widget parameter analysis failed.
+    #[error(transparent)]
+    Widgets(#[from] WidgetAnalysisError),
     /// Security top truncation cannot safely run before changed-line scoping.
     #[error(
         "security --top cannot be combined with --gate, --diff-file, --diff-stdin, or --changed-since"

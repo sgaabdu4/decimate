@@ -329,6 +329,7 @@ Flutter:
 - duplication detection with traceable fingerprints
 - health, complexity, CRAP, coverage gaps, hotspots, ownership, and targets
 - Flutter typed and raw GoRouter route-collision checks
+- unused Flutter widget constructor field-formal parameter checks
 - feature flag inventory
 - local security candidates with SARIF, surface inventory, and changed-code gates
 - changed-code audit and advisory decision-surface review
@@ -356,8 +357,8 @@ Known gaps before claiming full product parity with Fallow:
 - hook parity is Git-only; no managed agent hook target yet
 - no Fallow-style `coverage setup`, source-map upload, inventory upload, or
   cloud runtime workflow yet
-- no broader Flutter-framework intelligence yet for provider wiring, widget
-  reachability, or unused widget API shapes
+- broader Flutter-framework intelligence is still partial: provider wiring,
+  widget reachability, and non-field-formal widget API shapes are not complete
 - feature flags are inventory-focused and do not yet model owner, expiry, stale
   rollout state, or runtime stale-flag evidence as richly as Fallow
 - security candidates are Dart/Flutter-focused and configurable by category, but

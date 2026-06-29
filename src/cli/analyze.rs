@@ -5,10 +5,10 @@ use crate::output::{AnalysisResults, ReportCommand};
 use crate::scan::ScannedProject;
 use crate::{
     SymbolAnalysisOptions, analyze_dependency_hygiene, analyze_health, analyze_security,
-    check_architecture_boundaries, detect_boundary_call_violations, detect_boundary_coverage,
-    detect_cycles, detect_duplicates, detect_feature_flags, detect_policy_violations,
-    detect_re_export_cycles, detect_route_collisions, find_dead_code, load_policy_pack,
-    missing_suppression_reasons_enabled,
+    analyze_widgets, check_architecture_boundaries, detect_boundary_call_violations,
+    detect_boundary_coverage, detect_cycles, detect_duplicates, detect_feature_flags,
+    detect_policy_violations, detect_re_export_cycles, detect_route_collisions, find_dead_code,
+    load_policy_pack, missing_suppression_reasons_enabled,
 };
 
 use super::entry_points::{entry_points_for_check, entry_points_for_dead_code};
@@ -35,6 +35,7 @@ pub(super) fn analyze_project(
         feature_flags: analyze_project_flags(project, request)?,
         security: analyze_project_security(project, request)?,
         routes: analyze_project_routes(project, request.command),
+        widgets: analyze_project_widgets(project, request.command, dead_code.as_ref())?,
         file_scope: None,
         require_suppression_reasons: missing_suppression_reasons_enabled(&request.rules),
         dead_code,
@@ -359,6 +360,29 @@ fn analyze_project_routes(
         | ReportCommand::Health
         | ReportCommand::Flags
         | ReportCommand::Security => None,
+        ReportCommand::TraceFile
+        | ReportCommand::TraceSymbol
+        | ReportCommand::TraceDependency
+        | ReportCommand::TraceClone
+        | ReportCommand::Inspect => unreachable!("trace commands do not use AnalysisResults"),
+    }
+}
+
+fn analyze_project_widgets(
+    project: &ScannedProject,
+    command: ReportCommand,
+    dead_code: Option<&crate::DeadCodeReport>,
+) -> Result<Option<crate::WidgetReport>, CliError> {
+    match command {
+        ReportCommand::Check | ReportCommand::Audit => {
+            Ok(Some(analyze_widgets(project, dead_code)?))
+        }
+        ReportCommand::DeadCode
+        | ReportCommand::Cycles
+        | ReportCommand::Dupes
+        | ReportCommand::Health
+        | ReportCommand::Flags
+        | ReportCommand::Security => Ok(None),
         ReportCommand::TraceFile
         | ReportCommand::TraceSymbol
         | ReportCommand::TraceDependency

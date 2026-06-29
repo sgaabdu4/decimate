@@ -39,6 +39,7 @@ pub mod security;
 pub(crate) mod security_gate;
 pub mod symbols;
 pub mod trace;
+pub mod widgets;
 pub mod workspace_scope;
 
 pub use baseline::{
@@ -175,6 +176,9 @@ pub use trace::{
     DependencyTraceReport, FileTraceReport, SymbolTraceReport, TraceDeclaration, TraceDependency,
     TraceDependencyDirective, TracePubspecDependency, TraceReference, render_dependency_trace,
     render_file_trace, render_symbol_trace, trace_dependency, trace_file, trace_symbol,
+};
+pub use widgets::{
+    UnusedWidgetParam, WidgetAnalysisError, WidgetClassKind, WidgetReport, analyze_widgets,
 };
 pub use workspace_scope::{
     WorkspaceScopeError, changed_workspace_file_scope, workspace_file_scope,

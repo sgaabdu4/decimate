@@ -15,7 +15,14 @@ mod security_sarif;
 mod suppressions;
 mod symbol_findings;
 mod types;
+mod widget_findings;
 
+use crate::{
+    BoundaryCallViolation, BoundaryCoverageGap, BoundaryViolation, DeadCodeReport, DependencyCycle,
+    DependencyHygieneReport, DuplicateCodeReport, FeatureFlagReport, HealthReport, PolicyViolation,
+    ReExportCycle, RouteCollisionReport, SecurityReport, SymbolReport, WidgetReport,
+    scan::ScannedProject,
+};
 use dependency_findings::add_dependency_hygiene_findings;
 pub use duplication_findings::{JsonCloneGroup, JsonCloneInstance};
 use duplication_findings::{add_duplication_findings, json_clone_groups};
@@ -54,16 +61,10 @@ pub use types::{
     Finding, FindingAction, FindingEdge, FindingKind, JsonReport, NextStep, ReportCommand,
     ReportSummary, Severity, Verdict,
 };
-
-use crate::{
-    BoundaryCallViolation, BoundaryCoverageGap, BoundaryViolation, DeadCodeReport, DependencyCycle,
-    DependencyHygieneReport, DuplicateCodeReport, FeatureFlagReport, HealthReport, PolicyViolation,
-    ReExportCycle, RouteCollisionReport, SecurityReport, SymbolReport, scan::ScannedProject,
-};
+use widget_findings::add_widget_findings;
 
 /// Stable JSON schema version for agent consumers.
 pub const SCHEMA_VERSION: &str = "decimate.report.v1";
-/// Stable trace schema version for read-only evidence commands.
 pub const TRACE_SCHEMA_VERSION: &str = "decimate.trace.v1";
 
 /// Analysis values to serialize.
@@ -91,17 +92,12 @@ pub struct AnalysisResults {
     pub dependency_hygiene: Option<DependencyHygieneReport>,
     /// Code duplication report, when run.
     pub duplicates: Option<DuplicateCodeReport>,
-    /// Code health report, when run.
     pub health: Option<HealthReport>,
-    /// Feature flag report, when run.
     pub feature_flags: Option<FeatureFlagReport>,
-    /// Security candidate report, when run.
     pub security: Option<SecurityReport>,
-    /// Flutter typed route collisions, when run.
     pub routes: Option<RouteCollisionReport>,
-    /// Root-normalized files used to scope report findings, when any.
+    pub widgets: Option<WidgetReport>,
     pub file_scope: Option<Vec<std::path::PathBuf>>,
-    /// Whether suppression comments must include justification text.
     pub require_suppression_reasons: bool,
 }
 
@@ -289,6 +285,9 @@ fn report_findings(
     if let Some(routes) = &results.routes {
         add_route_findings(&project.root, routes, &mut findings);
     }
+    if let Some(widgets) = &results.widgets {
+        add_widget_findings(&project.root, widgets, &mut findings);
+    }
 
     let mut findings = filter_suppressed_findings(
         &project.root,
@@ -360,6 +359,7 @@ fn report_summary(
         unused_class_members: kind_count(findings, FindingKind::UnusedClassMember),
         duplicate_exports: kind_count(findings, FindingKind::DuplicateExport),
         route_collisions: kind_count(findings, FindingKind::RouteCollision),
+        unused_widget_params: kind_count(findings, FindingKind::UnusedWidgetParam),
         code_duplications: results
             .duplicates
             .as_ref()
@@ -489,6 +489,7 @@ fn apply_scoped_counts(summary: &mut ReportSummary, findings: &[Finding]) {
     summary.unused_class_members = kind_count(findings, FindingKind::UnusedClassMember);
     summary.duplicate_exports = kind_count(findings, FindingKind::DuplicateExport);
     summary.route_collisions = kind_count(findings, FindingKind::RouteCollision);
+    summary.unused_widget_params = kind_count(findings, FindingKind::UnusedWidgetParam);
     summary.code_duplications = kind_count(findings, FindingKind::CodeDuplication);
     summary.complex_functions = complexity_count(findings);
     summary.coverage_gaps = kind_count(findings, FindingKind::CoverageGap);

@@ -46,9 +46,21 @@ fn report_schema_types_inventory_arrays() -> Result<(), Box<dyn std::error::Erro
         &json["$defs"]["finding"]["properties"]["kind"]["enum"],
         "route-collision",
     );
+    assert_array_contains(
+        &json["$defs"]["finding"]["properties"]["kind"]["enum"],
+        "unused-widget-param",
+    );
     assert_array_contains(&json["$defs"]["summary"]["required"], "route_collisions");
+    assert_array_contains(
+        &json["$defs"]["summary"]["required"],
+        "unused_widget_params",
+    );
     assert_eq!(
         json["$defs"]["summary"]["properties"]["route_collisions"]["type"],
+        "integer"
+    );
+    assert_eq!(
+        json["$defs"]["summary"]["properties"]["unused_widget_params"]["type"],
         "integer"
     );
 

@@ -142,6 +142,7 @@ fn all_known_aliases() -> Vec<&'static str> {
         FindingKind::UnusedClassMember,
         FindingKind::DuplicateExport,
         FindingKind::RouteCollision,
+        FindingKind::UnusedWidgetParam,
         FindingKind::MissingEntryPoint,
         FindingKind::CircularDependency,
         FindingKind::ReExportCycle,
@@ -215,6 +216,15 @@ fn cleanup_kind_aliases(kind: FindingKind) -> Option<Vec<&'static str>> {
             "decimate/duplicate-export",
             "duplicate-export",
             "duplicate-exports",
+        ]),
+        FindingKind::UnusedWidgetParam => Some(vec![
+            "decimate/unused-widget-param",
+            "unused-widget-param",
+            "unused-widget-params",
+            "unused-component-prop",
+            "unused-component-props",
+            "flutter-unused-widget-param",
+            "flutter-unused-widget-params",
         ]),
         FindingKind::StaleSuppression => Some(vec![
             "decimate/stale-suppression",

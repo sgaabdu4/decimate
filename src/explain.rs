@@ -157,6 +157,24 @@ macro_rules! issue {
     };
 }
 
+macro_rules! next_line_suppressions {
+    ($rule:literal) => {
+        &[
+            concat!("// decimate-ignore-next-line ", $rule),
+            concat!("// fallow-ignore-next-line ", $rule),
+        ]
+    };
+}
+
+macro_rules! file_suppressions {
+    ($rule:literal) => {
+        &[
+            concat!("// decimate-ignore-file ", $rule),
+            concat!("// fallow-ignore-file ", $rule),
+        ]
+    };
+}
+
 const ISSUES: &[IssueExplanation] = &[
     issue!(
         "unused-file",
@@ -167,10 +185,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Decimate follows import/export/part/augment edges and reports files outside that graph.",
         "lib/old_screen.dart is not imported by any reachable library.",
         "Trace the file before deletion; generated or externally loaded files should be configured as entry points or ignored.",
-        &[
-            "// decimate-ignore-next-line unused-file",
-            "// fallow-ignore-next-line unused-file"
-        ],
+        next_line_suppressions!("unused-file"),
         &["decimate trace-file --format json --file <path>"],
     ),
     issue!(
@@ -182,10 +197,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Dart library privacy is based on leading underscores, so public declarations are candidates for API cleanup.",
         "class LegacyApi {} is public but never referenced or re-exported from live code.",
         "Run `decimate trace-symbol` before editing; do not delete public API without a fix preview.",
-        &[
-            "// decimate-ignore-next-line unused-export",
-            "// fallow-ignore-next-line unused-export"
-        ],
+        next_line_suppressions!("unused-export"),
         &["decimate trace-symbol --format json --symbol <file>:<symbol>"],
     ),
     issue!(
@@ -197,10 +209,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Dart typedef declarations are public API when not private, but stale aliases hide real type ownership and migration cleanup.",
         "typedef LegacyId = String; is declared in live code but no reachable file uses LegacyId.",
         "Run `decimate trace-symbol` before editing; aliases used by external APIs should be exported intentionally or suppressed.",
-        &[
-            "// decimate-ignore-next-line unused-type",
-            "// fallow-ignore-next-line unused-type"
-        ],
+        next_line_suppressions!("unused-type"),
         &["decimate trace-symbol --format json --symbol <file>:<type-alias>"],
     ),
     issue!(
@@ -212,10 +221,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Dart identifiers starting with `_` are private to their library, including `part` files, so exposing them through public API signatures makes downstream use impossible or misleading.",
         "class Api extends _Hidden {} is public while _Hidden is a private class in the same Dart library.",
         "Rename the private type, hide the declaration from the public surface, or change the signature to a public type. This rule is opt-in with `--private-type-leaks` or `rules.private-type-leak`.",
-        &[
-            "// decimate-ignore-next-line private-type-leak",
-            "// fallow-ignore-next-line private-type-leak"
-        ],
+        next_line_suppressions!("private-type-leak"),
         &["decimate check --format json --private-type-leaks"],
     ),
     issue!(
@@ -227,10 +233,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Enum constants are declarations and can become stale after feature or state cleanup.",
         "enum Mode { live, legacy } where legacy is never read.",
         "Review serialization and external contracts before removing the member.",
-        &[
-            "// decimate-ignore-next-line unused-enum-member",
-            "// fallow-ignore-next-line unused-enum-member"
-        ],
+        next_line_suppressions!("unused-enum-member"),
         &["decimate trace-symbol --format json --symbol <file>:<enum>"],
     ),
     issue!(
@@ -242,10 +245,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Dart private names are library-scoped, including `part` files, so unused private members are cleanup candidates.",
         "void _legacyHandler() {} is never called in the library.",
         "Check reflection, generated bindings, and framework callbacks before removal.",
-        &[
-            "// decimate-ignore-next-line unused-class-member",
-            "// fallow-ignore-next-line unused-class-member"
-        ],
+        next_line_suppressions!("unused-class-member"),
         &["decimate trace-symbol --format json --symbol <file>:<class>"],
     ),
     issue!(
@@ -257,10 +257,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Importers may receive an ambiguous API surface when barrels expose duplicate declarations.",
         "lib/app.dart exports src/a.dart and src/b.dart, both declaring Api.",
         "Rename, hide, or narrow one export path after reviewing the public API.",
-        &[
-            "// decimate-ignore-file duplicate-export",
-            "// fallow-ignore-file duplicate-export"
-        ],
+        file_suppressions!("duplicate-export"),
         &["decimate trace-symbol --format json --symbol <file>:<symbol>"],
     ),
     issue!(
@@ -274,6 +271,22 @@ const ISSUES: &[IssueExplanation] = &[
         "Rename one route or change one path segment after checking deep-link compatibility.",
         &["// decimate-ignore-next-line route-collision"],
         &["decimate inspect --format json --file <path>"],
+    ),
+    issue!(
+        "unused-widget-param",
+        "decimate/unused-widget-param",
+        &[
+            "unused-widget-param",
+            "unused-widget-params",
+            "unused-component-prop"
+        ],
+        "Unused widget parameter",
+        "A Flutter widget constructor field-formal parameter is never read by the widget or paired State class.",
+        "Stale widget inputs make call sites harder to trust and mirror Fallow's unused component prop cleanup signal.",
+        "const UserCard({required this.subtitle}); where subtitle is never read in UserCard or _UserCardState.",
+        "Review callers before removing the parameter; Decimate reports this as a warning by default.",
+        &["// decimate-ignore-next-line unused-widget-param"],
+        &["decimate check --format json"],
     ),
     issue!(
         "missing-entry-point",
@@ -300,10 +313,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Cycles make ownership and initialization order harder to reason about.",
         "lib/a.dart imports lib/b.dart while lib/b.dart imports lib/a.dart.",
         "Move shared contracts behind a lower-level module or invert the dependency.",
-        &[
-            "// decimate-ignore-next-line circular-dependency",
-            "// fallow-ignore-next-line circular-dependency"
-        ],
+        next_line_suppressions!("circular-dependency"),
         &["decimate trace-file --format json --file <path>"],
     ),
     issue!(
@@ -315,10 +325,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Re-export loops can silently confuse API exposure and duplicate-export analysis.",
         "lib/a.dart exports b.dart and lib/b.dart exports a.dart.",
         "Break the barrel loop and expose symbols from a single public owner.",
-        &[
-            "// decimate-ignore-file re-export-cycle",
-            "// fallow-ignore-file re-export-cycle"
-        ],
+        file_suppressions!("re-export-cycle"),
         &["decimate cycles --format json"],
     ),
     issue!(
@@ -330,10 +337,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Decimate treats imports and exports as ownership edges between Dart files.",
         "lib/domain/order.dart imports lib/ui/order_card.dart.",
         "Move the dependency behind an allowed boundary or invert the ownership.",
-        &[
-            "// decimate-ignore-next-line boundary-violation",
-            "// fallow-ignore-next-line boundary-violation"
-        ],
+        next_line_suppressions!("boundary-violation"),
         &["decimate trace-file --format json --file <path>"],
     ),
     issue!(
@@ -368,10 +372,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Boundary call checks catch ownership leaks that happen through platform, framework, or service calls instead of imports alone.",
         "lib/ui/page.dart calls SystemChrome.setPreferredOrientations while lib/ui forbids SystemChrome.*.",
         "Move the call into the owning boundary or expose a smaller allowed abstraction.",
-        &[
-            "// decimate-ignore-next-line boundary-call-violation",
-            "// fallow-ignore-next-line boundary-call-violation"
-        ],
+        next_line_suppressions!("boundary-call-violation"),
         &["decimate check --format json --boundary-call lib/ui:SystemChrome.*"],
     ),
     issue!(
@@ -383,10 +384,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Rule packs let teams enforce project-specific ownership rules without embedding project code in Decimate.",
         "A policy pack bans dart:io imports or Process.* calls from app code.",
         "Change the import or call to comply with the pack, or suppress the exact scoped rule after owner review.",
-        &[
-            "// decimate-ignore-next-line policy-violation",
-            "// fallow-ignore-next-line policy-violation"
-        ],
+        next_line_suppressions!("policy-violation"),
         &[
             "decimate check --format json --policy-pack policy.jsonc",
             "decimate config-schema --format json"
@@ -406,10 +404,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Broken graph edges hide real reachability and cleanup evidence.",
         "import 'src/missing.dart'; points at no file.",
         "Fix the URI, add the file, or adjust package resolution.",
-        &[
-            "// decimate-ignore-next-line unresolved-import",
-            "// fallow-ignore-next-line unresolved-import"
-        ],
+        next_line_suppressions!("unresolved-import"),
         &["decimate trace-file --format json --file <path>"],
     ),
     issue!(
@@ -421,10 +416,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Invalid library membership corrupts reachability and private-library symbol analysis.",
         "part 'src/model.g.dart'; resolves, but the target says part of app.other; or has no part of directive.",
         "Update either the library's part directive or the part file's part of directive.",
-        &[
-            "// decimate-ignore-next-line part-of-violation",
-            "// fallow-ignore-next-line part-of-violation"
-        ],
+        next_line_suppressions!("part-of-violation"),
         &["decimate inspect --format json --file <part-file>"],
     ),
     issue!(
@@ -533,10 +525,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Duplicated blocks increase maintenance cost and can drift during fixes.",
         "Two widgets contain the same validation branch block.",
         "Trace the clone group and extract shared behavior only when the abstraction has a real owner.",
-        &[
-            "// decimate-ignore-next-line code-duplication",
-            "// fallow-ignore-next-line code-duplication"
-        ],
+        next_line_suppressions!("code-duplication"),
         &["decimate trace-clone --format json --fingerprint dup:<id>"],
     ),
     issue!(
@@ -553,10 +542,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Branch-heavy Dart functions are harder to test, review, and safely change.",
         "A route builder nests loops and conditionals in one function.",
         "Run health with `--complexity-breakdown`, then split branches into named policy or helper owners.",
-        &[
-            "// decimate-ignore-next-line complexity",
-            "// fallow-ignore-next-line complexity"
-        ],
+        next_line_suppressions!("complexity"),
         &["decimate health --format json --complexity-breakdown"],
     ),
     issue!(
@@ -573,10 +559,7 @@ const ISSUES: &[IssueExplanation] = &[
         "LCOV-backed gaps identify code that is reachable to static analysis but unexercised by tests.",
         "lib/src/parser.dart appears in LCOV with DA lines all at zero hits.",
         "Add or run tests that execute the file, then refresh LCOV.",
-        &[
-            "// decimate-ignore-file coverage-gaps",
-            "// fallow-ignore-file coverage-gaps"
-        ],
+        file_suppressions!("coverage-gaps"),
         &["decimate health --format json --coverage-gaps --coverage coverage/lcov.info"],
     ),
     issue!(
@@ -588,10 +571,7 @@ const ISSUES: &[IssueExplanation] = &[
         "CRAP combines complexity and coverage to find functions that are risky to modify.",
         "route() has several branches and 0% LCOV line coverage.",
         "Reduce branching or add targeted tests covering the function.",
-        &[
-            "// decimate-ignore-next-line complexity",
-            "// fallow-ignore-next-line complexity"
-        ],
+        next_line_suppressions!("complexity"),
         &["decimate health --format json --coverage coverage/lcov.info --max-crap 30"],
     ),
     issue!(
@@ -632,10 +612,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Flag inventories help find stale rollout logic and risky config gates.",
         "bool.fromEnvironment('NEW_FLOW') gates production behavior.",
         "Review owner, rollout state, and dead-code traces before deleting flag branches.",
-        &[
-            "// decimate-ignore-next-line feature-flag",
-            "// fallow-ignore-next-line feature-flag"
-        ],
+        next_line_suppressions!("feature-flag"),
         &["decimate flags --format json"],
     ),
     issue!(
@@ -660,10 +637,7 @@ const ISSUES: &[IssueExplanation] = &[
         "Decimate surfaces candidates for agent verification; it does not prove exploitability.",
         "HttpClient.badCertificateCallback or an http:// URL appears in reachable code.",
         "Verify source, sink, reachability, and product intent before changing code.",
-        &[
-            "// decimate-ignore-next-line security-sink",
-            "// fallow-ignore-next-line security-sink"
-        ],
+        next_line_suppressions!("security-sink"),
         &["decimate security --format json --surface"],
     ),
     issue!(
