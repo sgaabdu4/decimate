@@ -42,7 +42,7 @@ fn route_collision_finding(root: &Path, collision: &RouteCollision) -> Option<Fi
         kind: FindingKind::RouteCollision,
         severity: Severity::Error,
         message: format!(
-            "Typed GoRouter route {label} {} is declared by {} routes",
+            "GoRouter route {label} {} is declared by {} routes",
             collision.value,
             collision.declarations.len()
         ),
@@ -55,7 +55,7 @@ fn route_collision_finding(root: &Path, collision: &RouteCollision) -> Option<Fi
         actions: vec![
             FindingAction::new(
                 "review-route-collision",
-                "Rename or move one typed route so generated GoRouter paths remain unique",
+                "Rename or move one route so GoRouter paths remain unique",
                 false,
             )
             .with_target_path(path.clone())

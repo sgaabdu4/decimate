@@ -5,7 +5,7 @@ use tree_sitter::Node;
 
 use super::{Location, field_text};
 
-/// A typed `GoRouter` route declaration found in Dart metadata.
+/// A `GoRouter` route declaration found in Dart metadata or route trees.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DartRouteDeclaration {
     /// Generic route data class, such as `HomeRoute`.
@@ -51,7 +51,173 @@ pub(super) fn extract_route_declarations(
             );
         }
     }
+    collect_raw_route_declarations(root, source, &constants, &mut routes);
     routes
+}
+
+fn collect_raw_route_declarations(
+    root: Node<'_>,
+    source: &str,
+    constants: &BTreeMap<String, String>,
+    routes: &mut Vec<DartRouteDeclaration>,
+) {
+    collect_raw_routes_in(root, source, constants, None, true, routes);
+}
+
+fn collect_raw_routes_in(
+    node: Node<'_>,
+    source: &str,
+    constants: &BTreeMap<String, String>,
+    parent_path: Option<&str>,
+    parent_resolved: bool,
+    routes: &mut Vec<DartRouteDeclaration>,
+) {
+    if is_object_constructor(node)
+        && let Some(route_kind) = raw_route_constructor_kind(node, source)
+    {
+        let next_parent = match route_kind {
+            RawRouteKind::GoRoute => collect_go_route(
+                node,
+                source,
+                constants,
+                parent_path,
+                parent_resolved,
+                routes,
+            ),
+            RawRouteKind::RouteContainer => None,
+        };
+        let next_parent_resolved = match route_kind {
+            RawRouteKind::GoRoute => next_parent.is_some(),
+            RawRouteKind::RouteContainer => parent_resolved,
+        };
+        for child_routes_arg in route_child_argument_nodes(node, source) {
+            collect_raw_routes_in(
+                child_routes_arg,
+                source,
+                constants,
+                next_parent.as_deref().or(parent_path),
+                next_parent_resolved,
+                routes,
+            );
+        }
+        return;
+    }
+
+    let mut cursor = node.walk();
+    for child in node.named_children(&mut cursor) {
+        collect_raw_routes_in(
+            child,
+            source,
+            constants,
+            parent_path,
+            parent_resolved,
+            routes,
+        );
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RawRouteKind {
+    GoRoute,
+    RouteContainer,
+}
+
+fn is_object_constructor(node: Node<'_>) -> bool {
+    matches!(
+        node.kind(),
+        "call_expression" | "constructor_invocation" | "const_object_expression" | "new_expression"
+    )
+}
+
+fn raw_route_constructor_kind(node: Node<'_>, source: &str) -> Option<RawRouteKind> {
+    let route_type = constructor_type_name(node, source)?;
+    if route_type.split('.').any(|segment| segment == "GoRoute") {
+        return Some(RawRouteKind::GoRoute);
+    }
+    if route_type.split('.').any(|segment| {
+        matches!(
+            segment,
+            "ShellRoute" | "StatefulShellRoute" | "StatefulShellBranch"
+        )
+    }) {
+        return Some(RawRouteKind::RouteContainer);
+    }
+    None
+}
+
+fn constructor_type_name(node: Node<'_>, source: &str) -> Option<String> {
+    let arguments = node.child_by_field_name("arguments")?;
+    let prefix = source.get(node.start_byte()..arguments.start_byte())?;
+    let route_type = prefix
+        .trim()
+        .strip_prefix("const ")
+        .or_else(|| prefix.trim().strip_prefix("new "))
+        .unwrap_or(prefix.trim())
+        .split('<')
+        .next()
+        .unwrap_or("")
+        .replace(' ', "");
+    (!route_type.is_empty()).then_some(route_type)
+}
+
+fn route_child_argument_nodes<'a>(node: Node<'a>, source: &str) -> Vec<Node<'a>> {
+    ["routes", "branches"]
+        .into_iter()
+        .filter_map(|name| named_argument_node(node, name, source))
+        .collect()
+}
+
+fn collect_go_route(
+    node: Node<'_>,
+    source: &str,
+    constants: &BTreeMap<String, String>,
+    parent_path: Option<&str>,
+    parent_resolved: bool,
+    routes: &mut Vec<DartRouteDeclaration>,
+) -> Option<String> {
+    let path_node = named_argument_node(node, "path", source)?;
+    let path_expression = expression_text_from_named_argument(path_node, source)?;
+    let path_segment = resolve_path_expression(&path_expression, constants);
+    let full_path = path_segment
+        .as_deref()
+        .filter(|_| parent_resolved)
+        .map(|segment| join_route_path(parent_path, segment));
+    let name = named_argument_node(node, "name", source)
+        .and_then(|name_node| expression_text_from_named_argument(name_node, source))
+        .and_then(|value| unquote_dart_string(value.trim()));
+    routes.push(DartRouteDeclaration {
+        route_class: "GoRoute".to_owned(),
+        path: full_path.clone(),
+        path_expression,
+        name,
+        location: node.start_position().into(),
+    });
+    full_path
+}
+
+fn named_argument_node<'a>(node: Node<'a>, name: &str, source: &str) -> Option<Node<'a>> {
+    let arguments = node.child_by_field_name("arguments")?;
+    let mut cursor = arguments.walk();
+    arguments.named_children(&mut cursor).find(|child| {
+        child.kind() == "named_argument" && named_argument_label(*child, source) == Some(name)
+    })
+}
+
+fn named_argument_label<'a>(node: Node<'a>, source: &'a str) -> Option<&'a str> {
+    let mut cursor = node.walk();
+    node.named_children(&mut cursor)
+        .find(|child| child.kind() == "label")
+        .and_then(|label| label.utf8_text(source.as_bytes()).ok())
+        .map(str::trim)
+        .and_then(|label| label.strip_suffix(':'))
+}
+
+fn expression_text_from_named_argument(node: Node<'_>, source: &str) -> Option<String> {
+    let mut cursor = node.walk();
+    node.named_children(&mut cursor)
+        .find(|child| child.kind() != "label")
+        .and_then(|expression| expression.utf8_text(source.as_bytes()).ok())
+        .map(str::to_owned)
 }
 
 fn collect_string_constants(root: Node<'_>, source: &str) -> BTreeMap<String, String> {
@@ -454,7 +620,7 @@ class HomeRoute extends GoRouteData {}
     }
 
     #[test]
-    fn ignores_comments_strings_and_untyped_go_route_calls()
+    fn ignores_comments_strings_and_extracts_raw_go_route_calls()
     -> Result<(), Box<dyn std::error::Error>> {
         let source = r#"
 // @TypedGoRoute<FakeRoute>(path: '/settings')
@@ -465,8 +631,10 @@ class RealRoute extends GoRouteData {}
 "#;
         let file = extract_dart_source("lib/routes.dart", source)?;
 
-        assert_eq!(file.routes.len(), 1);
+        assert_eq!(file.routes.len(), 2);
         assert_eq!(file.routes[0].route_class, "RealRoute");
+        assert_eq!(file.routes[1].route_class, "GoRoute");
+        assert_eq!(file.routes[1].path.as_deref(), Some("/settings"));
         Ok(())
     }
 
@@ -483,6 +651,41 @@ class HomeRoute extends GoRouteData {}
         let file = extract_dart_source("lib/routes.dart", source)?;
 
         assert_eq!(file.routes[0].path.as_deref(), Some("/home"));
+        Ok(())
+    }
+
+    #[test]
+    fn extracts_raw_go_routes_and_nested_full_paths() -> Result<(), Box<dyn std::error::Error>> {
+        let source = "
+final router = GoRouter(
+  routes: [
+    ShellRoute(
+      routes: [
+        GoRoute(
+          path: '/home',
+          name: 'home',
+          routes: [
+            GoRoute(path: 'details', builder: (_, _) => const SizedBox()),
+          ],
+          builder: (_, _, child) => child,
+        ),
+      ],
+      builder: (_, _, child) => child,
+    ),
+  ],
+);
+";
+        let file = extract_dart_source("lib/routes.dart", source)?;
+
+        let raw_routes = file
+            .routes
+            .iter()
+            .filter(|route| route.route_class == "GoRoute")
+            .collect::<Vec<_>>();
+        assert_eq!(raw_routes.len(), 2);
+        assert_eq!(raw_routes[0].path.as_deref(), Some("/home"));
+        assert_eq!(raw_routes[0].name.as_deref(), Some("home"));
+        assert_eq!(raw_routes[1].path.as_deref(), Some("/home/details"));
         Ok(())
     }
 }

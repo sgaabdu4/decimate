@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{DartRouteDeclaration, Location, scan::ScannedProject};
 
-/// Typed `GoRouter` route collision analysis.
+/// `GoRouter` route collision analysis.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RouteCollisionReport {
     /// Duplicate route paths or names.
@@ -27,9 +27,9 @@ pub struct RouteCollision {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum RouteCollisionKind {
-    /// Two or more typed routes resolve to the same path pattern.
+    /// Two or more routes resolve to the same path pattern.
     Path,
-    /// Two or more typed routes use the same route name.
+    /// Two or more routes use the same route name.
     Name,
 }
 
@@ -44,14 +44,14 @@ pub struct RouteCollisionDeclaration {
     pub location: Location,
 }
 
-/// Detect duplicate typed `GoRouter` paths and names.
+/// Detect duplicate `GoRouter` paths and names.
 #[must_use]
 pub fn detect_route_collisions(project: &ScannedProject) -> RouteCollisionReport {
     let mut path_groups = BTreeMap::<String, CollisionGroup>::new();
     let mut name_groups = BTreeMap::<String, CollisionGroup>::new();
 
     for file in &project.files {
-        if is_generated_dart(&file.path) {
+        if is_generated_dart(&file.path) || is_test_dart(&file.path) {
             continue;
         }
         for route in &file.routes {
@@ -172,6 +172,17 @@ fn is_generated_dart(path: &Path) -> bool {
         })
 }
 
+fn is_test_dart(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.ends_with("_test.dart"))
+        || path.components().any(|component| {
+            component.as_os_str().to_str().is_some_and(|segment| {
+                matches!(segment, "test" | "integration_test" | "test_driver")
+            })
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use crate::extract_dart_source;
@@ -235,6 +246,25 @@ class UserRoute extends GoRouteData {}
 class OrderRoute extends GoRouteData {}
 ";
         let project = test_project(&[("lib/routes.dart", source)])?;
+
+        let report = detect_route_collisions(&project);
+
+        assert!(report.collisions.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn skips_test_route_fixtures() -> Result<(), Box<dyn std::error::Error>> {
+        let project = test_project(&[
+            (
+                "test/app_router_test.dart",
+                "final routes = [GoRoute(path: '/settings', builder: (_, _) => const SizedBox())];",
+            ),
+            (
+                "integration_test/app_flow_test.dart",
+                "final routes = [GoRoute(path: '/settings', builder: (_, _) => const SizedBox())];",
+            ),
+        ])?;
 
         let report = detect_route_collisions(&project);
 

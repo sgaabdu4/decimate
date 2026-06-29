@@ -107,6 +107,56 @@ fn route_collision_rule_can_warn_or_turn_off() -> Result<(), Box<dyn std::error:
     Ok(())
 }
 
+#[test]
+fn check_command_reports_raw_go_route_collisions() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(
+        &fixture,
+        "lib/router.dart",
+        r"
+final router = GoRouter(
+  routes: [
+    ShellRoute(
+      routes: [
+        GoRoute(path: '/settings', builder: (_, _) => const SizedBox()),
+      ],
+      builder: (_, _, child) => child,
+    ),
+    GoRoute(path: '/settings', builder: (_, _) => const SizedBox()),
+  ],
+);
+",
+    )?;
+    let mut output = Vec::new();
+
+    let code = run_from(
+        [
+            "decimate",
+            "check",
+            fixture.path().to_str().unwrap_or("."),
+            "--format",
+            "json",
+        ],
+        &mut output,
+    )?;
+
+    let json = serde_json::from_slice::<Value>(&output)?;
+    assert_eq!(code, 1);
+    assert_eq!(json["summary"]["route_collisions"], 1);
+    assert!(json["findings"].as_array().is_some_and(|findings| {
+        findings.iter().any(|finding| {
+            finding["rule_id"] == "decimate/route-collision"
+                && finding["message"]
+                    .as_str()
+                    .is_some_and(|message| message.contains("GoRouter route path /settings"))
+                && finding["actions"][0]["target_symbol"] == "GoRoute"
+        })
+    }));
+
+    Ok(())
+}
+
 fn write(fixture: &TempDir, path: &str, source: &str) -> Result<(), std::io::Error> {
     let path = fixture.path().join(path);
     if let Some(parent) = path.parent() {

@@ -30,7 +30,7 @@ Decimate currently reports:
 - unused enum constants and private class-like members
 - private Dart library types leaking through public signatures
 - duplicate public exports
-- typed GoRouter route path and name collisions
+- typed and raw GoRouter route path and name collisions
 - circular dependencies and export-only barrel cycles
 - invalid `part` / `part of` relationships
 - unresolved local imports, exports, parts, and augmentations
@@ -328,7 +328,7 @@ Flutter:
 - cycles, re-export cycles, boundaries, policy packs, and suppressions
 - duplication detection with traceable fingerprints
 - health, complexity, CRAP, coverage gaps, hotspots, ownership, and targets
-- Flutter typed GoRouter route-collision checks
+- Flutter typed and raw GoRouter route-collision checks
 - feature flag inventory
 - local security candidates with SARIF, surface inventory, and changed-code gates
 - changed-code audit and advisory decision-surface review
