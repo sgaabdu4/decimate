@@ -1,0 +1,691 @@
+use std::ffi::OsString;
+use std::fs::File;
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
+
+use clap::{Arg, ArgAction, ArgMatches, Command, parser::ValueSource};
+use thiserror::Error;
+
+use crate::WorkspaceScopeError;
+use crate::baseline::{
+    BaselineError, RegressionTolerance, apply_baseline_to_report, baseline_from_report,
+    compare_regression_baseline, load_baseline, load_regression_baseline,
+    regression_baseline_from_report, save_baseline as write_baseline,
+    save_regression_baseline as write_regression_baseline,
+};
+use crate::changed_scope::{ChangedScopeError, changed_file_scope};
+use crate::config::{
+    ConfigError, DecimateConfig, IgnoreDependencyOverrideRule, RuleConfig, apply_rules_to_report,
+    load_decimate_config,
+};
+use crate::output::{ReportCommand, build_json_report, render_human_report, render_sarif_report};
+use crate::scan::{ScanError, ScanOptions, scan_project_with_options};
+use crate::{
+    BoundaryCallRule, BoundaryRule, DependencyHygieneError, DuplicateCodeError, DuplicateOptions,
+    FeatureFlagError, FeatureFlagOptions, HealthError, HealthOptions, PolicyError, SecurityError,
+    SecurityOptions,
+};
+
+mod analyze;
+mod analyzer_options;
+mod boundary_args;
+mod ci_template_run;
+mod common_args;
+mod config_run;
+mod coverage_run;
+mod decision_surface_run;
+mod dupes_args;
+mod entry_points;
+mod explain_run;
+mod fix_run;
+mod flags_args;
+mod health_args;
+mod impact_run;
+mod inspect_args;
+mod inspect_run;
+mod list_run;
+mod mode_args;
+mod output_format;
+mod regression_args;
+mod request_args;
+mod schema_commands;
+mod scope_args;
+mod security_args;
+mod security_gate_run;
+mod security_summary_run;
+mod summary_args;
+mod trace_args;
+mod trace_run;
+use crate::security_gate::{SecurityDiffSource, SecurityGateMode};
+use analyze::analyze_project;
+use analyzer_options::{
+    duplicate_options_for, feature_flag_options_for, health_options_for, security_options_for,
+};
+use boundary_args::boundary_command;
+use ci_template_run::{ci_template_command, run_ci_template};
+use common_args::{
+    audit_baseline_arg, baseline_command, report_command, scan_command, symbol_options_command,
+};
+use config_run::{config_command, run_config};
+use coverage_run::{coverage_command, run_coverage};
+use decision_surface_run::{
+    decision_surface_command, max_decisions_arg, review_command, run_decision_surface,
+};
+use dupes_args::{dupes_command, trace_clone_command};
+use explain_run::{explain_command, run_explain};
+use fix_run::{fix_command, run_fix};
+use flags_args::flags_command;
+use health_args::{health_command, health_command_without_top};
+use impact_run::{impact_command, run_impact};
+use inspect_args::inspect_command;
+use inspect_run::run_inspect_request;
+use list_run::{list_command, run_list, run_workspaces, workspaces_command};
+use output_format::{
+    OutputFormat, ReportOutputFormat, output_format, output_format_value, report_output_format,
+};
+use regression_args::{
+    regression_baseline_path, regression_request_args, save_regression_baseline_path,
+};
+use request_args::{boundary_rules, trace_request_args};
+use schema_commands::{
+    config_schema_command, manifest_command, report_schema_command, rule_pack_schema_command,
+    run_config_schema, run_manifest, run_report_schema, run_rule_pack_schema,
+};
+use security_args::{
+    SecurityCliOptions, SecurityIssueMode, SecuritySummaryMode, security_cli_options,
+    security_command,
+};
+use security_gate_run::apply_security_gate;
+use trace_args::{trace_dependency_command, trace_file_command, trace_symbol_command};
+use trace_run::run_trace_request;
+
+/// CLI execution errors.
+#[derive(Debug, Error)]
+pub enum CliError {
+    /// Argument parsing failed.
+    #[error(transparent)]
+    Clap(#[from] clap::Error),
+    /// Project scanning failed.
+    #[error(transparent)]
+    Scan(#[from] ScanError),
+    /// Dependency hygiene analysis failed.
+    #[error(transparent)]
+    DependencyHygiene(#[from] DependencyHygieneError),
+    /// Duplicate-code analysis failed.
+    #[error(transparent)]
+    DuplicateCode(#[from] DuplicateCodeError),
+    /// Health analysis failed.
+    #[error(transparent)]
+    Health(#[from] HealthError),
+    /// Feature flag analysis failed.
+    #[error(transparent)]
+    FeatureFlags(#[from] FeatureFlagError),
+    /// Security candidate analysis failed.
+    #[error(transparent)]
+    Security(#[from] SecurityError),
+    /// Security top truncation cannot safely run before changed-line scoping.
+    #[error(
+        "security --top cannot be combined with --gate, --diff-file, --diff-stdin, or --changed-since"
+    )]
+    UnsupportedSecurityTopScope,
+    /// Security review gate could not be applied.
+    #[error(transparent)]
+    SecurityGate(#[from] crate::security_gate::SecurityGateError),
+    /// Changed-file scope could not be computed.
+    #[error(transparent)]
+    ChangedScope(#[from] ChangedScopeError),
+    /// Workspace scope could not be computed.
+    #[error(transparent)]
+    WorkspaceScope(#[from] WorkspaceScopeError),
+    /// Decimate config could not be loaded.
+    #[error(transparent)]
+    Config(#[from] ConfigError),
+    /// Decimate rule config could not be applied.
+    #[error(transparent)]
+    Rule(#[from] crate::config::RuleError),
+    /// Finding baseline could not be loaded or saved.
+    #[error(transparent)]
+    Baseline(#[from] BaselineError),
+    /// Regression tolerance syntax was invalid.
+    #[error("invalid regression tolerance {value:?}; expected COUNT or PERCENT like 2 or 10%")]
+    Tolerance {
+        /// Raw tolerance value.
+        value: String,
+    },
+    /// JSON rendering failed.
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
+    /// Output writing failed.
+    #[error(transparent)]
+    Io(#[from] io::Error),
+    /// Boundary rule syntax was invalid.
+    #[error("invalid boundary rule {value:?}; expected FROM:DISALLOW")]
+    BoundaryRule {
+        /// Raw boundary argument.
+        value: String,
+    },
+    /// Boundary call rule syntax was invalid.
+    #[error("invalid boundary call rule {value:?}; expected FROM:PATTERN")]
+    BoundaryCallRule {
+        /// Raw boundary call argument.
+        value: String,
+    },
+    /// Policy pack loading or analysis failed.
+    #[error(transparent)]
+    Policy(#[from] PolicyError),
+    /// Trace-file target was missing after argument parsing.
+    #[error("trace-file requires --file PATH")]
+    MissingTraceFile,
+    /// Trace-dependency package was missing after argument parsing.
+    #[error("trace-dependency requires --dependency PACKAGE")]
+    MissingTraceDependency,
+    /// Inspect target was missing after argument parsing.
+    #[error("inspect requires --file PATH or --symbol FILE:SYMBOL")]
+    MissingInspectTarget,
+    /// Symbol trace syntax was invalid.
+    #[error("invalid trace symbol {value:?}; expected FILE:SYMBOL or --file FILE --symbol SYMBOL")]
+    TraceSymbol {
+        /// Raw symbol trace argument.
+        value: String,
+    },
+    /// Dead-code analysis did not have any entry points.
+    #[error("no entry points provided and no default Dart entry points found under {root}")]
+    MissingEntryPoints {
+        /// Project root.
+        root: PathBuf,
+    },
+    /// Focused runtime coverage analysis requires a local coverage path.
+    #[error("coverage analyze requires --runtime-coverage PATH")]
+    MissingRuntimeCoverage,
+    /// Cloud runtime coverage is not implemented yet.
+    #[error("cloud runtime coverage is not supported yet; provide --runtime-coverage PATH")]
+    UnsupportedCoverageCloud,
+    /// CI template generation failed.
+    #[error(transparent)]
+    CiTemplate(#[from] crate::CiTemplateError),
+    /// SARIF output is not available for this command.
+    #[error("--format sarif is not supported by decimate {command}")]
+    UnsupportedSarifFormat { command: &'static str },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CommandRequest {
+    command: ReportCommand,
+    root: PathBuf,
+    format: ReportOutputFormat,
+    entry_points: Vec<PathBuf>,
+    production: bool,
+    symbol_options: SymbolRequestOptions,
+    boundaries: Vec<BoundaryRule>,
+    boundary_coverage: bool,
+    boundary_calls: Vec<BoundaryCallRule>,
+    policy_packs: Vec<PathBuf>,
+    audit_base: Option<String>,
+    file_paths: Vec<PathBuf>,
+    workspace_patterns: Vec<String>,
+    changed_workspaces: Option<String>,
+    changed_since: Option<String>,
+    baseline_paths: Vec<PathBuf>,
+    security_sarif_file: Option<PathBuf>,
+    security_gate: Option<SecurityGateMode>,
+    security_diff: Option<SecurityDiffSource>,
+    security_changed_since: Option<String>,
+    security_issue_mode: SecurityIssueMode,
+    security_summary_mode: SecuritySummaryMode,
+    save_baseline: Option<PathBuf>,
+    regression_baseline: Option<PathBuf>,
+    save_regression_baseline: Option<PathBuf>,
+    regression_tolerance: RegressionTolerance,
+    fail_on_regression: bool,
+    trace_file: Option<PathBuf>,
+    trace_symbol: Option<TraceSymbolSpec>,
+    trace_dependency: Option<String>,
+    trace_clone: Option<String>,
+    duplicate_options: DuplicateOptions,
+    health_options: HealthOptions,
+    feature_flag_options: FeatureFlagOptions,
+    security_options: SecurityOptions,
+    scan_options: ScanOptions,
+    ignore_dependencies: Vec<String>,
+    ignore_dependency_overrides: Vec<IgnoreDependencyOverrideRule>,
+    rules: RuleConfig,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct SymbolRequestOptions {
+    include_entry_exports: bool,
+    private_type_leaks: bool,
+}
+
+impl CommandRequest {
+    fn entry_point_mode(&self) -> entry_points::EntryPointMode {
+        mode_args::production_mode(self.production)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TraceSymbolSpec {
+    file: PathBuf,
+    symbol: String,
+}
+
+/// Run Decimate from process arguments and return an exit code.
+#[must_use]
+pub fn run_from_env() -> i32 {
+    match run_from(std::env::args_os(), io::stdout().lock()) {
+        Ok(code) => code,
+        Err(CliError::Clap(error)) => {
+            let code = error.exit_code();
+            let _ = error.print();
+            code
+        }
+        Err(error) => {
+            eprintln!("{error}");
+            1
+        }
+    }
+}
+
+/// Run Decimate from explicit arguments.
+///
+/// # Errors
+///
+/// Returns [`CliError`] for invalid arguments, scan failures, or output errors.
+pub fn run_from<I, T, W>(args: I, writer: W) -> Result<i32, CliError>
+where
+    I: IntoIterator<Item = T>,
+    T: Into<OsString> + Clone,
+    W: Write,
+{
+    let matches = command().try_get_matches_from(args)?;
+    match matches.subcommand() {
+        Some(("config-schema", _)) => return run_config_schema(writer),
+        Some(("report-schema", _)) => return run_report_schema(writer),
+        Some(("rule-pack-schema", _)) => return run_rule_pack_schema(writer),
+        Some(("schema", _)) => return run_manifest(writer),
+        Some(("config", subcommand)) => return run_config(subcommand, writer),
+        Some(("list", subcommand)) => return run_list(subcommand, writer),
+        Some(("workspaces", subcommand)) => return run_workspaces(subcommand, writer),
+        Some(("explain", subcommand)) => return run_explain(subcommand, writer),
+        Some(("fix", subcommand)) => return run_fix(subcommand, writer),
+        Some(("impact", subcommand)) => return run_impact(subcommand, writer),
+        Some(("ci-template", subcommand)) => return run_ci_template(subcommand, writer),
+        Some(("decision-surface", subcommand)) => {
+            return run_decision_surface(subcommand, writer, "decision-surface");
+        }
+        Some(("review", subcommand)) => return run_decision_surface(subcommand, writer, "review"),
+        Some(("coverage", subcommand)) => return run_coverage(subcommand, writer),
+        Some(("audit", subcommand)) if subcommand.get_flag("brief") => {
+            return run_decision_surface(subcommand, writer, "audit --brief");
+        }
+        _ => {}
+    }
+    let request = request_from_matches(&matches)?;
+    run_request(&request, writer)
+}
+
+fn run_request<W: Write>(request: &CommandRequest, mut writer: W) -> Result<i32, CliError> {
+    let project = scan_project_with_options(&request.root, &request.scan_options)?;
+    if matches!(
+        request.command,
+        ReportCommand::TraceFile
+            | ReportCommand::TraceSymbol
+            | ReportCommand::TraceDependency
+            | ReportCommand::TraceClone
+    ) {
+        return run_trace_request(request, &project, writer);
+    }
+    if request.command == ReportCommand::Inspect {
+        return run_inspect_request(request, &project, writer);
+    }
+
+    let mut results = analyze_project(&project, request)?;
+    if request.command == ReportCommand::Audit {
+        let Some(base) = request.audit_base.as_deref() else {
+            unreachable!("clap requires --base for audit");
+        };
+        results.file_scope = Some(changed_file_scope(&project, base)?);
+    }
+    scope_args::apply_report_scope(&project, &mut results, request)?;
+    let mut report = build_json_report(&project, &results);
+    apply_rules_to_report(&mut report, &request.rules)?;
+    for path in &request.baseline_paths {
+        let baseline = load_baseline(resolve_report_path(&project.root, path))?;
+        apply_baseline_to_report(&mut report, &baseline);
+    }
+    let regressed = if let Some(path) = &request.regression_baseline {
+        let baseline = load_regression_baseline(resolve_report_path(&project.root, path))?;
+        compare_regression_baseline(&report, &baseline, request.regression_tolerance).regressed()
+    } else {
+        false
+    };
+    if let Some(path) = &request.save_baseline {
+        let baseline = baseline_from_report(&report);
+        write_baseline(resolve_report_path(&project.root, path), &baseline)?;
+    }
+    if let Some(path) = &request.save_regression_baseline {
+        let baseline = regression_baseline_from_report(&report);
+        write_regression_baseline(resolve_report_path(&project.root, path), &baseline)?;
+    }
+    apply_security_gate(&project, request, &mut report)?;
+    if let Some(path) = &request.security_sarif_file {
+        let mut file = File::create(resolve_report_path(&project.root, path))?;
+        serde_json::to_writer_pretty(&mut file, &render_sarif_report(&report))?;
+        writeln!(file)?;
+    }
+    let code = security_summary_run::exit_code(request, &report, regressed);
+    security_summary_run::apply_security_summary(request, &mut report);
+
+    match request.format {
+        ReportOutputFormat::Human => writer.write_all(render_human_report(&report).as_bytes())?,
+        ReportOutputFormat::Json => {
+            serde_json::to_writer_pretty(&mut writer, &report)?;
+            writeln!(writer)?;
+        }
+        ReportOutputFormat::Sarif => {
+            serde_json::to_writer_pretty(&mut writer, &render_sarif_report(&report))?;
+            writeln!(writer)?;
+        }
+    }
+
+    Ok(code)
+}
+
+fn command() -> Command {
+    schema_subcommands(
+        Command::new("decimate")
+            .about("Rust-native Dart and Flutter module-graph intelligence")
+            .subcommand_required(true)
+            .arg_required_else_help(true)
+            .subcommand(symbol_options_command(dupes_command(
+                health_command_without_top(boundary_command(baseline_command(
+                    Command::new("check").about("Run all enabled graph checks"),
+                ))),
+            )))
+            .subcommand(symbol_options_command(dupes_command(
+                health_command_without_top(boundary_command(report_command(
+                    Command::new("audit")
+                        .about("Run changed-code graph checks")
+                        .arg(
+                            Arg::new("brief")
+                                .long("brief")
+                                .help("Emit a Fallow-style advisory review brief and always exit 0")
+                                .action(ArgAction::SetTrue),
+                        )
+                        .arg(
+                            Arg::new("base")
+                                .long("base")
+                                .value_name("REF")
+                                .help("Git ref used to scope changed files")
+                                .required(true),
+                        )
+                        .arg(audit_baseline_arg(
+                            "dead-code-baseline",
+                            "Dead-code baseline file",
+                        ))
+                        .arg(audit_baseline_arg(
+                            "health-baseline",
+                            "Health baseline file",
+                        ))
+                        .arg(audit_baseline_arg(
+                            "dupes-baseline",
+                            "Duplicate-code baseline file",
+                        ))
+                        .arg(max_decisions_arg()),
+                ))),
+            )))
+            .subcommand(symbol_options_command(baseline_command(
+                Command::new("dead-code").about("Find Dart files unreachable from entry points"),
+            )))
+            .subcommand(baseline_command(
+                Command::new("cycles").about("Find circular file dependencies"),
+            ))
+            .subcommand(dupes_command(baseline_command(
+                Command::new("dupes").about("Find duplicated Dart code blocks"),
+            )))
+            .subcommand(health_command(baseline_command(
+                Command::new("health").about("Find complex Dart functions and methods"),
+            )))
+            .subcommand(flags_command(baseline_command(
+                Command::new("flags").about("Find Dart and Flutter feature flag patterns"),
+            )))
+            .subcommand(security_command(baseline_command(
+                Command::new("security")
+                    .about("Find unverified Dart and Flutter security candidates"),
+            )))
+            .subcommand(trace_file_command(scan_command(
+                Command::new("trace-file").about("Trace one Dart file"),
+            )))
+            .subcommand(trace_symbol_command(scan_command(
+                Command::new("trace-symbol").about("Trace one top-level Dart symbol"),
+            )))
+            .subcommand(trace_dependency_command(scan_command(
+                Command::new("trace-dependency").about("Trace one pub dependency"),
+            )))
+            .subcommand(trace_clone_command(dupes_command(scan_command(
+                Command::new("trace-clone").about("Trace one duplicate code group"),
+            ))))
+            .subcommand(inspect_command(scan_command(
+                Command::new("inspect").about("Compose one evidence bundle for a file or symbol"),
+            )))
+            .subcommand(list_command())
+            .subcommand(workspaces_command())
+            .subcommand(explain_command())
+            .subcommand(fix_command())
+            .subcommand(impact_command())
+            .subcommand(ci_template_command())
+            .subcommand(review_command())
+            .subcommand(decision_surface_command())
+            .subcommand(coverage_command())
+            .subcommand(config_command()),
+    )
+}
+
+fn schema_subcommands(command: Command) -> Command {
+    command
+        .subcommand(manifest_command())
+        .subcommand(config_schema_command())
+        .subcommand(report_schema_command())
+        .subcommand(rule_pack_schema_command())
+}
+
+fn request_from_matches(matches: &ArgMatches) -> Result<CommandRequest, CliError> {
+    let Some((name, subcommand)) = matches.subcommand() else {
+        unreachable!("clap requires a subcommand");
+    };
+
+    let command = report_command_from_name(name);
+
+    let root = subcommand
+        .get_one::<PathBuf>("root")
+        .cloned()
+        .unwrap_or_else(|| PathBuf::from("."));
+    let config = load_config(&root, subcommand)?;
+    let security_cli = security_cli_options(command, subcommand);
+    let format = if security_cli.ci {
+        ReportOutputFormat::Sarif
+    } else {
+        report_output_format(subcommand, &config)
+    };
+    let entry_points = entry_points(subcommand, &config);
+    let production = mode_args::production(subcommand, &config);
+    let symbol_options = SymbolRequestOptions {
+        include_entry_exports: mode_args::include_entry_exports(subcommand, &config),
+        private_type_leaks: mode_args::private_type_leaks(subcommand, &config),
+    };
+    let mut boundaries = config.boundaries.clone();
+    boundaries.extend(boundary_rules(command, subcommand)?);
+    let boundary_calls = request_args::boundary_call_rules(command, subcommand, &config)?;
+    let policy_packs = request_args::policy_pack_paths(command, subcommand, &config);
+    let boundary_coverage = subcommand
+        .try_get_one::<bool>("boundary-coverage")
+        .ok()
+        .flatten()
+        .copied()
+        .unwrap_or_default()
+        || config.boundary_coverage;
+    let audit_base = audit_base_for(command, subcommand);
+    let file_paths = scope_args::file_paths(command, subcommand);
+    let workspace_patterns = scope_args::workspace_patterns(command, subcommand);
+    let changed_workspaces = scope_args::changed_workspaces(command, subcommand);
+    let changed_since = scope_args::changed_since(command, subcommand);
+    let baseline_paths = baseline_paths(command, subcommand);
+    let save_baseline = if supports_global_baseline(command) {
+        subcommand.get_one::<PathBuf>("save-baseline").cloned()
+    } else {
+        None
+    };
+    let regression = regression_request_args(command, subcommand)?;
+    let regression_baseline = regression_baseline_path(command, subcommand);
+    let save_regression_baseline = save_regression_baseline_path(command, subcommand);
+    let trace = trace_request_args(command, subcommand)?;
+    let duplicate_options = duplicate_options_for(command, subcommand, &config);
+    let health_options = health_options_for(command, subcommand, &config);
+    let feature_flag_options = feature_flag_options_for(command, subcommand, &config);
+    let security_options = security_options_for(command, subcommand, &config);
+    validate_security_cli(&security_cli, &security_options)?;
+    Ok(CommandRequest {
+        command,
+        root,
+        format,
+        entry_points,
+        production,
+        symbol_options,
+        boundaries,
+        boundary_coverage,
+        boundary_calls,
+        policy_packs,
+        audit_base,
+        file_paths,
+        workspace_patterns,
+        changed_workspaces,
+        changed_since,
+        baseline_paths,
+        security_issue_mode: security_cli.issue_mode(),
+        security_summary_mode: security_cli.summary_mode(),
+        security_sarif_file: security_cli.sarif_file,
+        security_gate: security_cli.gate,
+        security_diff: security_cli.diff,
+        security_changed_since: security_cli.changed_since,
+        save_baseline,
+        regression_baseline,
+        save_regression_baseline,
+        regression_tolerance: regression.tolerance,
+        fail_on_regression: regression.fail_on_regression,
+        trace_file: trace.file,
+        trace_symbol: trace.symbol,
+        trace_dependency: trace.dependency,
+        trace_clone: trace.clone,
+        duplicate_options,
+        health_options,
+        feature_flag_options,
+        security_options,
+        scan_options: ScanOptions {
+            ignore_patterns: config.ignore_patterns.clone(),
+        },
+        ignore_dependencies: config.ignore_dependencies.clone(),
+        ignore_dependency_overrides: config.ignore_dependency_overrides.clone(),
+        rules: config.rules.clone(),
+    })
+}
+
+fn validate_security_cli(
+    security_cli: &SecurityCliOptions,
+    security_options: &SecurityOptions,
+) -> Result<(), CliError> {
+    if security_options.top.is_some()
+        && (security_cli.gate.is_some()
+            || security_cli.diff.is_some()
+            || security_cli.changed_since.is_some())
+    {
+        return Err(CliError::UnsupportedSecurityTopScope);
+    }
+    Ok(())
+}
+
+fn audit_base_for(command: ReportCommand, subcommand: &ArgMatches) -> Option<String> {
+    if command == ReportCommand::Audit {
+        subcommand.get_one::<String>("base").cloned()
+    } else {
+        None
+    }
+}
+
+fn report_command_from_name(name: &str) -> ReportCommand {
+    match name {
+        "check" => ReportCommand::Check,
+        "audit" => ReportCommand::Audit,
+        "dead-code" => ReportCommand::DeadCode,
+        "cycles" => ReportCommand::Cycles,
+        "dupes" => ReportCommand::Dupes,
+        "health" => ReportCommand::Health,
+        "flags" => ReportCommand::Flags,
+        "security" => ReportCommand::Security,
+        "trace-file" => ReportCommand::TraceFile,
+        "trace-symbol" => ReportCommand::TraceSymbol,
+        "trace-dependency" => ReportCommand::TraceDependency,
+        "trace-clone" => ReportCommand::TraceClone,
+        "inspect" => ReportCommand::Inspect,
+        _ => unreachable!("clap rejects unknown subcommands"),
+    }
+}
+
+fn baseline_paths(command: ReportCommand, subcommand: &ArgMatches) -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+    if supports_global_baseline(command) {
+        if let Some(path) = subcommand.get_one::<PathBuf>("baseline") {
+            paths.push(path.clone());
+        }
+    }
+    if command == ReportCommand::Audit {
+        for id in ["dead-code-baseline", "health-baseline", "dupes-baseline"] {
+            if let Some(path) = subcommand.get_one::<PathBuf>(id) {
+                paths.push(path.clone());
+            }
+        }
+    }
+    paths
+}
+
+fn supports_global_baseline(command: ReportCommand) -> bool {
+    matches!(
+        command,
+        ReportCommand::Check
+            | ReportCommand::DeadCode
+            | ReportCommand::Cycles
+            | ReportCommand::Dupes
+            | ReportCommand::Health
+            | ReportCommand::Flags
+            | ReportCommand::Security
+    )
+}
+
+fn resolve_report_path(root: &Path, path: &Path) -> PathBuf {
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        root.join(path)
+    }
+}
+
+fn load_config(root: &Path, subcommand: &ArgMatches) -> Result<DecimateConfig, ConfigError> {
+    load_decimate_config(
+        root,
+        subcommand
+            .get_one::<PathBuf>("config")
+            .map(std::path::PathBuf::as_path),
+    )
+}
+
+fn entry_points(subcommand: &ArgMatches, config: &DecimateConfig) -> Vec<PathBuf> {
+    if subcommand.value_source("entry") == Some(ValueSource::CommandLine) {
+        return subcommand
+            .get_many::<PathBuf>("entry")
+            .map(|values| values.cloned().collect())
+            .unwrap_or_default();
+    }
+    config.entry_points.clone()
+}
+
+#[cfg(test)]
+mod tests;

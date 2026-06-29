@@ -1,0 +1,372 @@
+# Decimate Product Contract
+
+Decimate is a Rust-native codebase intelligence tool for Dart and Flutter.
+It analyzes repositories as module graphs, not as a linter or type checker.
+
+## Principles
+
+- Treat Dart code as graph data: files, declarations, imports, exports, parts,
+  and library augmentations.
+- Do not evaluate variables, types, or inner function logic.
+- Keep outputs deterministic and agent-readable.
+- Prefer fast structural parsing over semantic analysis.
+
+## Phase Scope
+
+Phase 1 extracts syntax facts from one `.dart` file:
+
+- `import` directives
+- `export` directives
+- import/export `show` and `hide` combinators
+- import prefixes and deferred import markers
+- `part` directives
+- `library augment` directives
+- all branch URIs from conditional imports and exports
+- top-level class, mixin, extension, and extension type declarations
+- top-level enum declarations
+- top-level typedef declarations
+- top-level variable declarations
+- top-level function-like declarations
+- class-like member declarations for fields, constructors, getters, setters,
+  methods, operators, and enum constants
+- syntactic identifier and type-identifier references, excluding directive
+  metadata and obvious declaration-name positions
+
+Phase 2 builds a directed module graph:
+
+- nodes are Dart files
+- edges are resolved `import`, `export`, `part`, and `library augment`
+  dependencies
+- dependency edges preserve import prefixes, deferred markers, and `show`/`hide`
+  combinators for later symbol visibility propagation
+- `part` and `library augment` directives are modeled as file dependencies
+- conditional import/export branches are modeled as possible file dependencies
+- relative URIs resolve from the importing file's directory
+- `package:` URIs prefer Pub's `.dart_tool/package_config.json` when present,
+  including `rootUri` and `packageUri`
+- `package:` URIs resolve to local pub workspace/path packages when present
+- scan roots expand through local path dependencies and pub workspace members
+
+Phase 3 runs graph intelligence algorithms:
+
+- dead code reachability from caller-supplied entry points
+- first conservative unused-export analysis for reachable public top-level
+  declarations with no reachable syntactic references
+- conservative unused-member analysis for non-public-api enum constants and
+  private class-like fields, getters, setters, and methods
+- public library `export` chains count as public API reachability and respect
+  `show`/`hide` combinators
+- circular dependency detection via strongly connected components
+- export-only cycle detection for barrel/re-export loops
+- architecture boundary rules over graph edges
+- structural Dart health analysis for cyclomatic and cognitive function
+  complexity
+- feature flag inventory for Dart compile-time environment reads, native
+  process-environment gates, Firebase Remote Config calls, and LaunchDarkly-style
+  variation calls
+- unverified security candidate inventory for hardcoded secrets, cleartext
+  transport, TLS bypasses, risky WebView surfaces, process execution, dynamic
+  SQL, and plain secret storage
+
+Phase 4 exposes the CLI and agent output contract:
+
+- `decimate check`
+- `decimate audit`
+- `decimate review`
+- `decimate decision-surface`
+- `decimate dead-code`
+- `decimate cycles`
+- `decimate dupes`
+- `decimate health`
+- `decimate flags`
+- `decimate security`
+- `decimate trace-file`
+- `decimate trace-symbol`
+- `decimate trace-dependency`
+- `decimate trace-clone`
+- `decimate inspect`
+- `decimate list`
+- `decimate workspaces`
+- `decimate explain`
+- `decimate fix`
+- `decimate impact`
+- `decimate ci-template`
+- `decimate schema`
+- `decimate config`
+- `decimate config-schema`
+- `decimate report-schema`
+- analysis commands with `--format json` emit `decimate.report.v1`
+- trace commands with `--format json` emit `decimate.trace.v1`
+- `decimate inspect --format json` emits `decimate.inspect.v1`
+- `decimate schema --format json` emits `decimate.schema.v1` with commands,
+  issue types, schema versions, and an agent task matrix
+- `decimate decision-surface --format json --base REF` emits
+  `decimate.decision-surface.v1` as an advisory, always-zero review envelope
+- `decimate review` and `decimate audit --brief` emit the same advisory
+  decision-surface envelope and always exit 0
+- `decimate impact --format json --quiet` emits `decimate.impact.v1` as a
+  read-only local value report, enabling `.decimate/impact.jsonl` history when
+  present
+- `decimate ci-template github|gitlab` emits `decimate.ci-template.v1` JSON or
+  YAML CI templates; `gitlab --vendor` writes scoped local template files only
+  with explicit overwrite via `--force`
+- `decimate report-schema --format json` emits the JSON schema for
+  analysis reports under `decimate.report.v1`
+- `--config PATH` loads `.decimaterc`, `.decimaterc.json`,
+  `.decimaterc.jsonc`, `decimate.toml`, or `.decimate.toml` defaults
+- `--save-baseline PATH` writes current visible findings to
+  `decimate.baseline.v1`
+- `--baseline PATH` suppresses findings already captured in a saved baseline
+- `--save-regression-baseline PATH` writes current visible finding counts to
+  `decimate.regression-baseline.v1`
+- `--regression-baseline PATH`, `--fail-on-regression`, and `--tolerance`
+  provide count-based regression gates
+- `decimate audit` accepts per-analysis baseline inputs with
+  `--dead-code-baseline`, `--health-baseline`, and `--dupes-baseline`
+- JSON findings include paths, line/column locations, `safe_to_delete`, and `actions`
+- JSON reports include read-only `next_steps` for trace-before-delete workflows
+- `decimate audit --base REF` runs full graph analysis and reports only findings
+  anchored to files changed since the Git ref or their related files
+- findings respect `// decimate-ignore-next-line ...` and
+  `// fallow-ignore-next-line ...` inline suppressions
+- simple one-line unused top-level declarations can emit safe
+  `remove-declaration` fix actions; multi-line declarations remain trace-only
+
+## Fallow Parity Target
+
+Decimate must become Fallow-equivalent for Dart and Flutter, adapted to Dart
+semantics from the official Dart docs:
+
+- Dart libraries are the privacy boundary; identifiers beginning with `_` are
+  private to the library.
+- `import`, `export`, `part`, and `library augment` directives define the
+  module graph.
+- `show`, `hide`, prefixes, deferred imports, conditional imports/exports, and
+  `part` files affect symbol visibility and reachability.
+- `pubspec.yaml` owns package dependencies, `dev_dependencies`, and
+  `dependency_overrides`.
+- Pub workspaces can share dependency resolution across multiple packages.
+
+Parity areas:
+
+- Dead code: unused files, exports, types, enum members, class members, stale
+  suppressions, private type leak checks, traces, and safe fix actions.
+- Dependency hygiene: unused dependencies, unlisted dependencies, dev/test-only
+  placement, dependency overrides, and workspace placement.
+- Graph issues: unresolved imports/exports/parts/augmentations, invalid Dart
+  `part of` relationships, circular dependencies, re-export cycles, duplicate
+  exports, and architecture boundary violations.
+- Duplication: strict, mild, weak, and semantic clone detection with traceable
+  fingerprints, top-N filtering, and clone tracing.
+- Health: cyclomatic/cognitive/CRAP complexity, file scores, hotspots,
+  ownership, refactoring targets, coverage gaps, and explanations.
+- Audit: changed-code gates, baselines, regression tolerance, CI review
+  envelopes, and next-step suggestions.
+- Feature flags: env gates, SDK/config flag calls, stale-flag evidence,
+  rollout owner review, and top-N flag inventory.
+- Fix: dry-run and confirmed apply flows for safe unused exports/dependencies.
+- Config: suppressions, workspaces, public packages, cache settings, and
+  broader rule-pack controls.
+- Security candidates: deterministic local review candidates for Dart/Flutter
+  sinks and hardcoded secrets, never verified vulnerability claims.
+- Runtime coverage: local Dart/Flutter coverage ingestion for hot paths,
+  cleanup confidence, and coverage gaps; cloud/runtime agent capture remains
+  future work.
+- Integrations: schema output, CI templates, MCP/server API, editor-ready JSON
+  contracts, and impact reporting.
+
+Current implemented parity:
+
+- file-level dead code reachability
+- circular dependency detection
+- simple directory boundary rules, opt-in boundary coverage checks for unzoned
+  Dart library files, forbidden direct boundary-call checks, and
+  `decimate list --boundaries` boundary inventory
+- declarative policy rule packs for banned Dart import/export URI patterns and
+  direct call patterns, plus `decimate rule-pack-schema`
+- stale suppression detection and opt-in missing suppression reason checks
+- unresolved local dependency findings
+- `decimate/part-of-violation` findings for resolved `part` files whose
+  `part of` directive is missing, orphaned, or points at a different library
+- Dart `part` files, `library augment` directives, and conditional
+  import/export branches in the module graph
+- Pub `.dart_tool/package_config.json` resolution for local package graph edges
+- import/export visibility metadata for `show`, `hide`, prefixes, and deferred imports
+- import/export visibility metadata preserved on graph dependency edges
+- top-level symbol extraction for classes, mixins, extensions, extension types,
+  enums, typedefs, variables, and function-like declarations
+- class-like member extraction for fields, constructors, getters, setters,
+  methods, operators, and enum constants
+- conservative `decimate/unused-enum-member` and
+  `decimate/unused-class-member` findings for reachable Dart libraries,
+  including same-library `part` reference handling, suppressions, rule config,
+  baselines, and JSON schema coverage
+- syntactic reference extraction for identifiers and type identifiers
+- a `SymbolIndex` owner plus conservative `decimate/unused-export` and
+  `decimate/unused-type` findings for reachable non-entry, non-generated,
+  public top-level declarations and typedefs
+- Fallow-style `--include-entry-exports` for `check`, `audit`, and `dead-code`,
+  plus `includeEntryExports` config, to opt into unused public declarations in
+  entry libraries while keeping Dart `main` protected
+- public export-chain protection for package barrel APIs, including `show`/`hide`
+- opt-in `decimate/private-type-leak` API hygiene for exported signatures that
+  expose same-library private Dart types, including `part` libraries,
+  `show`/`hide`, suppressions, rule config, JSON schema, and explain coverage
+- `decimate/duplicate-export` findings for public barrel APIs that expose the
+  same top-level symbol from multiple files
+- separate `decimate/re-export-cycle` findings for barrel export loops
+- read-only file, symbol, dependency, and clone trace JSON envelopes for
+  deletion review, using `kind` discriminators and `decimate.trace.v1`
+- `decimate inspect` evidence bundles for one file or top-level symbol,
+  combining trace output with a file-scoped `check` report
+- `decimate schema` machine-readable command and issue manifest for agents
+- `decimate decision-surface` advisory changed-code questions for coupling,
+  public API contracts, and Pub dependency ownership
+- Fallow-compatible `decimate review` and `decimate audit --brief` aliases for
+  advisory decision-surface output that always exits 0
+- `decimate impact --format json --quiet` read-only local value report,
+  including disabled zero-count output, `.decimate/impact.jsonl` local-history
+  aggregation, and `--all` rollup shape
+- `decimate ci-template` read-only GitHub Actions and GitLab CI template output,
+  plus explicit GitLab vendoring with overwrite protection
+- `decimate list` project metadata JSON for files, entry points, local pub
+  packages, and active Dart/Flutter/workspace adapters; `decimate workspaces`
+  emits the same schema scoped to local pub packages
+- `decimate explain` read-only issue explanations with Fallow-compatible
+  aliases such as `unused exports`, `fallow/unused-export`, `complexity`, and
+  `code duplication`
+- `decimate fix` safe-fix planning with dry-run JSON by default and explicit
+  `--apply --confirm` mutation for auto-fixable stale suppressions and dead
+  Dart files, simple unused pub dependencies, and simple one-line unused
+  top-level Dart declarations
+- finding `actions` include Fallow-style `type`, `auto_fixable`, optional
+  read-only `command` plus argv, target metadata, config hints, and suppression
+  comments
+- pub dependency hygiene for runtime unused packages and unlisted packages
+- pub dependency placement hygiene for unused `dev_dependencies`, runtime
+  dependencies imported only from dev/test files, and `dev_dependencies`
+  imported from `lib/` or `bin/`
+- typed dependency finding kinds and summary counts for
+  `decimate/unused-dev-dependency`, `decimate/test-only-dependency`, and
+  `decimate/unused-dependency-override`,
+  `decimate/misconfigured-dependency-override`
+- conservative non-Dart tooling usage for dependency traces and unused-dev
+  checks from Dart/Flutter config files such as `build.yaml`,
+  `analysis_options.yaml`, workflow YAML, and tool scripts
+- lockfile-backed `dependency_overrides` hygiene for overrides absent from the
+  resolved `pubspec.lock` package graph
+- misconfigured `dependency_overrides` hygiene for invalid package keys and
+  empty override values
+- Fallow-style `ignoreDependencyOverrides` config entries for intentional
+  `dependency_overrides` by package and optional source file
+- Fallow-style `ignoreDependencies` config entries for intentional pub
+  dependency hygiene exceptions
+- unused dependency reports include a read-only `trace-dependency` next step
+- code duplication findings with stable `dup:<id>` fingerprints and read-only
+  `trace-clone` next steps
+- code health findings for high cyclomatic and cognitive complexity, including
+  `--complexity-breakdown`, `--max-cyclomatic`, `--max-cognitive`, `--top`, and
+  read-only `complexity-breakdown` next steps
+- LCOV-backed health findings for `decimate/coverage-gap` and
+  `decimate/high-crap-score`, including `--coverage`, `--coverage-gaps`,
+  `--max-crap`, config defaults, rule controls, baselines, regression counts,
+  and JSON schema coverage
+- Fallow-style `health.thresholdOverrides` for local cyclomatic, cognitive, and
+  CRAP ceilings, with `threshold_overrides`, `effective_thresholds`, and
+  `threshold_source` JSON output for agent review
+- local `--runtime-coverage` ingestion for Istanbul `coverage-final.json`,
+  V8 JSON files, and V8 JSON directories, with Fallow-style thresholds
+  `--min-invocations-hot`, `--min-observation-volume`, and
+  `--low-traffic-threshold`, plus a `runtime_coverage` JSON block containing
+  `verdict`, `signals`, `summary`, `findings`, `hot_paths`,
+  `coverage_intelligence`, `blast_radius`, `importance`, `actionable`,
+  `provenance`, `watermark`, and `warnings`
+- runtime coverage intelligence includes stable IDs, hot-path review rows,
+  low-traffic cleanup rows, coverage-unavailable rows, direct graph caller blast
+  radius, and traffic-weighted importance scores for agent prioritization
+- focused `decimate coverage analyze --runtime-coverage <path> --format json`
+  output using the `decimate.coverage.v1` runtime coverage envelope
+- file health scoring with `--file-scores`, low-score
+  `decimate/health-hotspot` findings via `--hotspots`, and prioritized
+  `decimate/refactoring-target` findings via `--targets`, including
+  `--min-score`, config defaults, rule controls, baselines, regression counts,
+  and JSON schema coverage
+- CODEOWNERS-backed `decimate health --ownership` metadata for file scores,
+  hotspots, and refactoring targets, including GitLab-style section names and
+  config-driven `health.ownership`
+- `decimate flags` inventory for `bool.fromEnvironment`,
+  `String.fromEnvironment`, `int.fromEnvironment`, `Platform.environment`,
+  Firebase Remote Config `get*` calls, and LaunchDarkly-style `*Variation` calls,
+  with `--top`, grouped `feature_flags`, occurrence locations, and
+  non-autofixable `decimate/feature-flag` findings
+- `decimate security` inventory for hardcoded secret-shaped literals, remote
+  `http://` network sinks, certificate-validation bypasses, unrestricted or
+  file-backed WebView surfaces, shell/dynamic process execution, dynamic raw SQL,
+  and secret-like writes to plain local storage, with `--top`, `--surface`,
+  `--format sarif`, `--sarif-file`, `--ci`, `--fail-on-issues`, `--summary`,
+  `--gate new --changed-since REF`, `--diff-file PATCH`, `--diff-stdin`,
+  grouped `security_candidates`, config-level `security.categories` filtering,
+  redacted evidence, and non-autofixable `decimate/security-*` findings;
+  changed-line gates exit `8` when new review-required candidates are present
+- `decimate check` and `decimate audit` include feature flag and security
+  candidate findings in the same report envelope, with focused commands still
+  available for targeted inventories
+- inline `decimate-ignore-next-line` and Fallow-compatible
+  `fallow-ignore-next-line` suppressions for agent findings, including
+  `security-sink` and `hardcoded-secret` security aliases
+- `decimate/stale-suppression` findings for unused Decimate/Fallow inline
+  suppressions, with a safe remove action
+- `decimate audit --base REF` changed-file gating for the existing check stack,
+  including untracked new files, while keeping full-graph context before output
+  scoping
+- audit report scoping expands changed files by one resolved
+  import/export/part/augment graph hop so directly related findings stay visible
+- Fallow-style `--file PATH` report scoping for exact Dart files, keeping
+  full-graph analysis while filtering JSON findings, fix previews, list
+  metadata, and scoped detail arrays
+- Fallow-style `--changed-since REF` report scoping that derives changed Dart
+  files from Git, includes untracked files, hard-errors on invalid refs, and
+  keeps full-graph analysis while filtering JSON findings and scoped detail
+  arrays
+- Fallow-style `--production` reachability mode for `check`, `audit`,
+  `dead-code`, `trace-file`, `trace-symbol`, `list`, `workspaces`, and `fix`,
+  using only production Dart entry heuristics while keeping full graph parsing;
+  production dead-file findings are intentionally not auto-fixable;
+  `.decimaterc` supports `production = true` and `[cli].production`, with
+  `--no-production` as an explicit CLI override
+- Fallow-style `--workspace` report scoping for local pub package names,
+  package-root globs, comma lists, and `!` excludes, keeping full-graph analysis
+  while filtering JSON findings and scoped detail arrays; `list --workspace`
+  and `workspaces --workspace` filter file and package metadata
+- Fallow-style `--changed-workspaces REF` report scoping that derives changed
+  local pub packages from Git, hard-errors on invalid refs, is mutually
+  exclusive with `--workspace`, and keeps full-graph analysis while filtering
+  reports to changed package files and pubspecs
+- `.decimaterc`, JSON/JSONC, and TOML config discovery with strict unknown-key
+  rejection, root-relative explicit `--config`, `decimate config`,
+  `decimate config-schema`, `decimate report-schema`, config-driven `format`,
+  `entry`, `boundary`, `ignore_patterns`, and analyzer defaults for health,
+  dupes, flags, security, plus strict `cache.enabled` / `cache.path` metadata
+- config `rules` support for Fallow-style `"error"`, `"warn"`, and `"off"`
+  severities, including Fallow aliases like `unused-files`, `unused-exports`,
+  `unresolved-imports`, `unused-deps`, `unlisted-deps`, `circular-deps`, and
+  `complexity`
+- identity baselines for `check`, `dead-code`, `cycles`, `dupes`, `health`,
+  `flags`, and `security`, plus audit baseline loading for dead-code, health,
+  and duplicate-code findings
+- count-based regression baselines for `check`, `dead-code`, `cycles`,
+  `dupes`, `health`, `flags`, and `security`, with absolute and percentage
+  tolerance parsing
+- Dart entry heuristics for public `lib/*.dart`, direct `bin/`, `test/`,
+  `integration_test/`, `test_driver/`, `tool/`, and `pigeon/` scripts
+- CLI JSON output for `check`, `audit`, `dead-code`, `cycles`, `dupes`,
+  `health`, `flags`, `security`, `list`, `workspaces`, `explain`, `fix`,
+  `config`, `config-schema`, and `report-schema`
+- SARIF 2.1.0 output for report commands via `--format sarif`, suitable for
+  code-scanning upload after the same suppression, rule, baseline, and `--top`
+  filtering used by JSON reports; security `--sarif-file PATH` writes SARIF
+  while keeping stdout on the selected human or JSON format; `--gate new` with
+  `--changed-since`, `--diff-file`, or `--diff-stdin` narrows both JSON and
+  SARIF to candidates introduced by added diff lines; security `--ci` emits
+  SARIF and fails on candidates, while `--summary` keeps counts without item
+  arrays for human and JSON output

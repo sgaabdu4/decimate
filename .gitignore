@@ -1,0 +1,9 @@
+/target/
+/.cargo-home/
+/.rustup-home/
+/.decimate/
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example

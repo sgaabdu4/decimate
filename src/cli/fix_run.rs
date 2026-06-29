@@ -1,0 +1,142 @@
+use std::collections::BTreeSet;
+use std::io::Write;
+
+use clap::{Arg, ArgAction, ArgMatches, Command};
+
+use crate::config::apply_rules_to_report;
+use crate::fix::{FixMode, fix_findings, render_fix_report};
+use crate::output::{ReportCommand, build_json_report};
+use crate::scan::{ScanOptions, scan_project_with_options};
+use crate::{
+    DuplicateOptions, FeatureFlagOptions, HealthOptions, RegressionTolerance, SecurityOptions,
+};
+
+use super::analyze::analyze_project;
+use super::{CliError, CommandRequest, OutputFormat};
+
+pub(super) fn fix_command() -> Command {
+    super::scope_args::report_command(super::scan_command(
+        Command::new("fix").about("Plan or apply safe auto-fixes"),
+    ))
+    .arg(
+        Arg::new("action")
+            .long("action")
+            .value_name("ACTION")
+            .help("Only plan or apply this auto-fix action")
+            .num_args(1)
+            .action(ArgAction::Append),
+    )
+    .arg(
+        Arg::new("apply")
+            .long("apply")
+            .help("Apply planned fixes")
+            .requires("confirm")
+            .action(ArgAction::SetTrue),
+    )
+    .arg(
+        Arg::new("confirm")
+            .long("confirm")
+            .help("Confirm that --apply may modify files")
+            .action(ArgAction::SetTrue),
+    )
+}
+
+pub(super) fn run_fix<W: Write>(subcommand: &ArgMatches, mut writer: W) -> Result<i32, CliError> {
+    let root = subcommand
+        .get_one::<std::path::PathBuf>("root")
+        .cloned()
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let config = super::load_config(&root, subcommand)?;
+    if super::report_output_format(subcommand, &config) == super::ReportOutputFormat::Sarif {
+        return Err(CliError::UnsupportedSarifFormat { command: "fix" });
+    }
+    let format = super::output_format(subcommand, &config);
+    let production = super::mode_args::production(subcommand, &config);
+    let project = scan_project_with_options(
+        &root,
+        &ScanOptions {
+            ignore_patterns: config.ignore_patterns.clone(),
+        },
+    )?;
+    let request = CommandRequest {
+        command: ReportCommand::Check,
+        root,
+        format: match format {
+            OutputFormat::Human => super::ReportOutputFormat::Human,
+            OutputFormat::Json => super::ReportOutputFormat::Json,
+        },
+        entry_points: super::entry_points(subcommand, &config),
+        production,
+        symbol_options: super::SymbolRequestOptions {
+            include_entry_exports: super::mode_args::include_entry_exports(subcommand, &config),
+            private_type_leaks: false,
+        },
+        boundaries: config.boundaries.clone(),
+        boundary_coverage: false,
+        boundary_calls: Vec::new(),
+        policy_packs: Vec::new(),
+        audit_base: None,
+        file_paths: subcommand
+            .get_many::<std::path::PathBuf>("file")
+            .map(|values| values.cloned().collect())
+            .unwrap_or_default(),
+        workspace_patterns: subcommand
+            .get_many::<String>("workspace")
+            .map(|values| values.cloned().collect())
+            .unwrap_or_default(),
+        changed_workspaces: subcommand.get_one::<String>("changed-workspaces").cloned(),
+        changed_since: subcommand.get_one::<String>("changed-since").cloned(),
+        baseline_paths: Vec::new(),
+        security_sarif_file: None,
+        security_gate: None,
+        security_diff: None,
+        security_changed_since: None,
+        security_issue_mode: super::security_args::SecurityIssueMode::default(),
+        security_summary_mode: super::security_args::SecuritySummaryMode::default(),
+        save_baseline: None,
+        regression_baseline: None,
+        save_regression_baseline: None,
+        regression_tolerance: RegressionTolerance::default(),
+        fail_on_regression: false,
+        trace_file: None,
+        trace_symbol: None,
+        trace_dependency: None,
+        trace_clone: None,
+        duplicate_options: DuplicateOptions::default(),
+        health_options: HealthOptions::default(),
+        feature_flag_options: FeatureFlagOptions::default(),
+        security_options: SecurityOptions::default(),
+        scan_options: ScanOptions {
+            ignore_patterns: config.ignore_patterns.clone(),
+        },
+        ignore_dependencies: config.ignore_dependencies.clone(),
+        ignore_dependency_overrides: config.ignore_dependency_overrides.clone(),
+        rules: config.rules.clone(),
+    };
+    let mut results = analyze_project(&project, &request)?;
+    super::scope_args::apply_report_scope(&project, &mut results, &request)?;
+    let mut report = build_json_report(&project, &results);
+    apply_rules_to_report(&mut report, &request.rules)?;
+
+    let actions = subcommand
+        .get_many::<String>("action")
+        .map(|values| values.cloned().collect::<BTreeSet<_>>())
+        .unwrap_or_default();
+    let mode = if subcommand.get_flag("apply") {
+        FixMode::Apply
+    } else {
+        FixMode::DryRun
+    };
+    let fix_report = fix_findings(&project.root, &report.findings, &actions, mode);
+    match format {
+        OutputFormat::Human => writer.write_all(render_fix_report(&fix_report).as_bytes())?,
+        OutputFormat::Json => {
+            serde_json::to_writer_pretty(&mut writer, &fix_report)?;
+            writeln!(writer)?;
+        }
+    }
+
+    Ok(i32::from(
+        mode == FixMode::Apply && fix_report.summary.skipped > 0,
+    ))
+}
