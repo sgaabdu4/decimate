@@ -10,13 +10,15 @@ use tree_sitter::{Node, Parser};
 use crate::graph::normalize_against;
 use crate::{DeadCodeReport, Location, ScannedProject};
 
-/// Flutter widget constructor parameter analysis.
+/// Flutter widget framework analysis.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WidgetReport {
     /// Dart files included in widget analysis.
     pub analyzed_files: usize,
     /// Widget field-formal parameters that are never read.
     pub unused_params: Vec<UnusedWidgetParam>,
+    /// Private Flutter widget classes.
+    pub private_widget_classes: Vec<PrivateWidgetClass>,
 }
 
 /// A widget constructor field-formal parameter that is not used by the widget.
@@ -34,6 +36,19 @@ pub struct UnusedWidgetParam {
     pub location: Location,
 }
 
+/// A private class that extends a Flutter widget base.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PrivateWidgetClass {
+    /// Dart file containing the widget declaration.
+    pub path: PathBuf,
+    /// Private widget class name.
+    pub widget_class: String,
+    /// Flutter widget base class.
+    pub widget_kind: WidgetClassKind,
+    /// Location of the class identifier.
+    pub location: Location,
+}
+
 /// Supported Flutter widget base classes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -46,7 +61,7 @@ pub enum WidgetClassKind {
     HookConsumerWidget,
 }
 
-/// Errors returned while analyzing Flutter widget parameters.
+/// Errors returned while analyzing Flutter widgets.
 #[derive(Debug, Error)]
 pub enum WidgetAnalysisError {
     /// A Dart file could not be read.
@@ -74,7 +89,7 @@ pub enum WidgetAnalysisError {
     },
 }
 
-/// Detect unused Flutter widget constructor field-formal parameters.
+/// Detect Flutter widget framework issues.
 ///
 /// # Errors
 ///
@@ -102,13 +117,17 @@ pub fn analyze_widgets(
         .filter(|path| !is_generated_path(path) && !is_test_path(path))
         .collect::<Vec<_>>();
 
-    let mut unused_params = paths
+    let file_findings = paths
         .par_iter()
         .map(|path| analyze_file(path))
-        .collect::<Result<Vec<_>, _>>()?
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let mut unused_params = Vec::new();
+    let mut private_widget_classes = Vec::new();
+    for mut findings in file_findings {
+        unused_params.append(&mut findings.unused_params);
+        private_widget_classes.append(&mut findings.private_widget_classes);
+    }
     unused_params.sort_by(|left, right| {
         (
             &left.path,
@@ -125,14 +144,29 @@ pub fn analyze_widgets(
                 &right.param_name,
             ))
     });
+    private_widget_classes.sort_by(|left, right| {
+        (
+            &left.path,
+            left.location.line,
+            left.location.column,
+            &left.widget_class,
+        )
+            .cmp(&(
+                &right.path,
+                right.location.line,
+                right.location.column,
+                &right.widget_class,
+            ))
+    });
 
     Ok(WidgetReport {
         analyzed_files: paths.len(),
         unused_params,
+        private_widget_classes,
     })
 }
 
-fn analyze_file(path: &Path) -> Result<Vec<UnusedWidgetParam>, WidgetAnalysisError> {
+fn analyze_file(path: &Path) -> Result<FileWidgetFindings, WidgetAnalysisError> {
     let source = fs::read_to_string(path).map_err(|source| WidgetAnalysisError::ReadFile {
         path: path.to_path_buf(),
         source,
@@ -145,7 +179,7 @@ fn analyze_file(path: &Path) -> Result<Vec<UnusedWidgetParam>, WidgetAnalysisErr
         });
     }
 
-    Ok(unused_params_in_source(path, root, &source))
+    Ok(findings_in_source(path, root, &source))
 }
 
 fn parse_tree(path: &Path, source: &str) -> Result<tree_sitter::Tree, WidgetAnalysisError> {
@@ -158,19 +192,36 @@ fn parse_tree(path: &Path, source: &str) -> Result<tree_sitter::Tree, WidgetAnal
         })
 }
 
-fn unused_params_in_source(path: &Path, root: Node<'_>, source: &str) -> Vec<UnusedWidgetParam> {
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+struct FileWidgetFindings {
+    unused_params: Vec<UnusedWidgetParam>,
+    private_widget_classes: Vec<PrivateWidgetClass>,
+}
+
+fn findings_in_source(path: &Path, root: Node<'_>, source: &str) -> FileWidgetFindings {
     let mut classes = Vec::new();
     collect_class_declarations(root, &mut classes);
     let states = state_classes_by_widget(&classes, source);
-    let mut unused = Vec::new();
+    let mut findings = FileWidgetFindings::default();
 
     for class in classes {
         let Some(widget_kind) = widget_kind(class, source) else {
             continue;
         };
-        let Some(widget_class) = field_text(class, "name", source) else {
+        let Some(name_node) = class.child_by_field_name("name") else {
             continue;
         };
+        let Ok(widget_class) = name_node.utf8_text(source.as_bytes()).map(str::to_owned) else {
+            continue;
+        };
+        if widget_class.starts_with('_') {
+            findings.private_widget_classes.push(PrivateWidgetClass {
+                path: path.to_path_buf(),
+                widget_class: widget_class.clone(),
+                widget_kind,
+                location: name_node.start_position().into(),
+            });
+        }
         let Some(body) = class.child_by_field_name("body") else {
             continue;
         };
@@ -184,7 +235,7 @@ fn unused_params_in_source(path: &Path, root: Node<'_>, source: &str) -> Vec<Unu
             {
                 continue;
             }
-            unused.push(UnusedWidgetParam {
+            findings.unused_params.push(UnusedWidgetParam {
                 path: path.to_path_buf(),
                 widget_class: widget_class.clone(),
                 widget_kind,
@@ -194,7 +245,7 @@ fn unused_params_in_source(path: &Path, root: Node<'_>, source: &str) -> Vec<Unu
         }
     }
 
-    unused
+    findings
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -551,89 +602,4 @@ fn is_test_path(path: &Path) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::path::Path;
-
-    use super::*;
-
-    #[test]
-    fn flags_unused_stateless_widget_field_formal() -> Result<(), Box<dyn std::error::Error>> {
-        let source = r"
-class UserCard extends StatelessWidget {
-  const UserCard({super.key, required this.title, required this.subtitle});
-  final String title;
-  final String subtitle;
-  Widget build(BuildContext context) => Text(title);
-}
-";
-        let unused = parse_unused(source)?;
-
-        assert_eq!(unused.len(), 1);
-        assert_eq!(unused[0].widget_class, "UserCard");
-        assert_eq!(unused[0].param_name, "subtitle");
-        assert_eq!(unused[0].location.line, 3);
-        Ok(())
-    }
-
-    #[test]
-    fn respects_widget_and_state_usages() -> Result<(), Box<dyn std::error::Error>> {
-        let source = r"
-class UsedInBuild extends StatelessWidget {
-  const UsedInBuild({super.key, required this.title});
-  final String title;
-  Widget build(BuildContext context) => Text('$title');
-}
-class UsedViaState extends StatefulWidget {
-  const UsedViaState({super.key, required this.count});
-  final int count;
-  State<UsedViaState> createState() => _UsedViaStateState();
-}
-class _UsedViaStateState extends State<UsedViaState> {
-  Widget build(BuildContext context) => Text('${widget.count}');
-}
-";
-        let unused = parse_unused(source)?;
-
-        assert!(unused.is_empty(), "{unused:?}");
-        Ok(())
-    }
-
-    #[test]
-    fn recognizes_consumer_and_hook_widget_bases() -> Result<(), Box<dyn std::error::Error>> {
-        let source = r"
-class A extends ConsumerWidget {
-  const A({super.key, required this.value});
-  final String value;
-  Widget build(BuildContext context, WidgetRef ref) => const SizedBox();
-}
-class B extends HookConsumerWidget {
-  const B({super.key, required this.value});
-  final String value;
-  Widget build(BuildContext context, WidgetRef ref) => Text(value);
-}
-class C extends ConsumerStatefulWidget {
-  const C({super.key, required this.value});
-  final String value;
-  ConsumerState<C> createState() => _CState();
-}
-class _CState extends ConsumerState<C> {
-  Widget build(BuildContext context) => Text(oldWidget.value);
-}
-";
-        let unused = parse_unused(source)?;
-
-        assert_eq!(unused.len(), 1);
-        assert_eq!(unused[0].widget_class, "A");
-        assert_eq!(unused[0].widget_kind, WidgetClassKind::ConsumerWidget);
-        Ok(())
-    }
-
-    fn parse_unused(source: &str) -> Result<Vec<UnusedWidgetParam>, WidgetAnalysisError> {
-        let tree = parse_tree(Path::new("lib/widgets.dart"), source)?;
-        Ok(unused_params_in_source(
-            Path::new("lib/widgets.dart"),
-            tree.root_node(),
-            source,
-        ))
-    }
-}
+mod tests;

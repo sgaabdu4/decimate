@@ -286,6 +286,7 @@ const fn kind_key(kind: FindingKind) -> &'static str {
         FindingKind::UnusedClassMember => "unused-class-member",
         FindingKind::DuplicateExport => "duplicate-export",
         FindingKind::RouteCollision => "route-collision",
+        FindingKind::PrivateWidgetClass => "private-widget-class",
         FindingKind::UnusedWidgetParam => "unused-widget-param",
         FindingKind::MissingEntryPoint => "missing-entry-point",
         FindingKind::CircularDependency => "circular-dependency",

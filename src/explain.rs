@@ -273,6 +273,22 @@ const ISSUES: &[IssueExplanation] = &[
         &["decimate inspect --format json --file <path>"],
     ),
     issue!(
+        "private-widget-class",
+        "decimate/private-widget-class",
+        &[
+            "private-widget-class",
+            "private-widget-classes",
+            "flutter-private-widget-class"
+        ],
+        "Private widget class",
+        "A private Dart class extends a Flutter widget base class.",
+        "Extracted widgets should be public classes so widget boundaries stay reusable, testable, and discoverable; private State subclasses remain exempt.",
+        "class _Header extends StatelessWidget {}",
+        "Rename the widget class to a public name or add an explicit suppression when the private widget is intentional.",
+        &["// decimate-ignore-next-line private-widget-class"],
+        &["decimate check --format json"],
+    ),
+    issue!(
         "unused-widget-param",
         "decimate/unused-widget-param",
         &[

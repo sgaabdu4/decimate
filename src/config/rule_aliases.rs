@@ -142,6 +142,7 @@ fn all_known_aliases() -> Vec<&'static str> {
         FindingKind::UnusedClassMember,
         FindingKind::DuplicateExport,
         FindingKind::RouteCollision,
+        FindingKind::PrivateWidgetClass,
         FindingKind::UnusedWidgetParam,
         FindingKind::MissingEntryPoint,
         FindingKind::CircularDependency,
@@ -216,6 +217,13 @@ fn cleanup_kind_aliases(kind: FindingKind) -> Option<Vec<&'static str>> {
             "decimate/duplicate-export",
             "duplicate-export",
             "duplicate-exports",
+        ]),
+        FindingKind::PrivateWidgetClass => Some(vec![
+            "decimate/private-widget-class",
+            "private-widget-class",
+            "private-widget-classes",
+            "flutter-private-widget-class",
+            "flutter-private-widget-classes",
         ]),
         FindingKind::UnusedWidgetParam => Some(vec![
             "decimate/unused-widget-param",

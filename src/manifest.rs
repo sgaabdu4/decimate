@@ -281,6 +281,7 @@ fn issue_types() -> Value {
         "unused-class-member",
         "duplicate-export",
         "route-collision",
+        "private-widget-class",
         "unused-widget-param",
         "missing-entry-point",
         "circular-dependency",

@@ -50,7 +50,15 @@ fn report_schema_types_inventory_arrays() -> Result<(), Box<dyn std::error::Erro
         &json["$defs"]["finding"]["properties"]["kind"]["enum"],
         "unused-widget-param",
     );
+    assert_array_contains(
+        &json["$defs"]["finding"]["properties"]["kind"]["enum"],
+        "private-widget-class",
+    );
     assert_array_contains(&json["$defs"]["summary"]["required"], "route_collisions");
+    assert_array_contains(
+        &json["$defs"]["summary"]["required"],
+        "private_widget_classes",
+    );
     assert_array_contains(
         &json["$defs"]["summary"]["required"],
         "unused_widget_params",
@@ -61,6 +69,10 @@ fn report_schema_types_inventory_arrays() -> Result<(), Box<dyn std::error::Erro
     );
     assert_eq!(
         json["$defs"]["summary"]["properties"]["unused_widget_params"]["type"],
+        "integer"
+    );
+    assert_eq!(
+        json["$defs"]["summary"]["properties"]["private_widget_classes"]["type"],
         "integer"
     );
 

@@ -178,7 +178,8 @@ pub use trace::{
     render_file_trace, render_symbol_trace, trace_dependency, trace_file, trace_symbol,
 };
 pub use widgets::{
-    UnusedWidgetParam, WidgetAnalysisError, WidgetClassKind, WidgetReport, analyze_widgets,
+    PrivateWidgetClass, UnusedWidgetParam, WidgetAnalysisError, WidgetClassKind, WidgetReport,
+    analyze_widgets,
 };
 pub use workspace_scope::{
     WorkspaceScopeError, changed_workspace_file_scope, workspace_file_scope,

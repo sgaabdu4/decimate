@@ -359,6 +359,7 @@ fn report_summary(
         unused_class_members: kind_count(findings, FindingKind::UnusedClassMember),
         duplicate_exports: kind_count(findings, FindingKind::DuplicateExport),
         route_collisions: kind_count(findings, FindingKind::RouteCollision),
+        private_widget_classes: kind_count(findings, FindingKind::PrivateWidgetClass),
         unused_widget_params: kind_count(findings, FindingKind::UnusedWidgetParam),
         code_duplications: results
             .duplicates
@@ -489,6 +490,7 @@ fn apply_scoped_counts(summary: &mut ReportSummary, findings: &[Finding]) {
     summary.unused_class_members = kind_count(findings, FindingKind::UnusedClassMember);
     summary.duplicate_exports = kind_count(findings, FindingKind::DuplicateExport);
     summary.route_collisions = kind_count(findings, FindingKind::RouteCollision);
+    summary.private_widget_classes = kind_count(findings, FindingKind::PrivateWidgetClass);
     summary.unused_widget_params = kind_count(findings, FindingKind::UnusedWidgetParam);
     summary.code_duplications = kind_count(findings, FindingKind::CodeDuplication);
     summary.complex_functions = complexity_count(findings);

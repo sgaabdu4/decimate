@@ -115,6 +115,35 @@ fn explain_command_emits_unused_widget_param_contract() -> Result<(), Box<dyn st
 }
 
 #[test]
+fn explain_command_emits_private_widget_class_contract() -> Result<(), Box<dyn std::error::Error>> {
+    let mut output = Vec::new();
+
+    let code = run_from(
+        [
+            "decimate",
+            "explain",
+            "flutter-private-widget-class",
+            "--format",
+            "json",
+        ],
+        &mut output,
+    )?;
+
+    let json = serde_json::from_slice::<Value>(&output)?;
+    assert_eq!(code, 0);
+    assert_eq!(json["id"], "decimate/private-widget-class");
+    assert_eq!(json["issue_type"], "private-widget-class");
+    assert_eq!(json["name"], "Private widget class");
+    assert!(json["suppressions"].as_array().is_some_and(|comments| {
+        comments
+            .iter()
+            .any(|comment| comment == "// decimate-ignore-next-line private-widget-class")
+    }));
+
+    Ok(())
+}
+
+#[test]
 fn explain_command_emits_private_type_leak_contract() -> Result<(), Box<dyn std::error::Error>> {
     let mut output = Vec::new();
 
