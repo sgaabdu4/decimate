@@ -25,6 +25,11 @@ fn schema_command_emits_agent_manifest() -> Result<(), Box<dyn std::error::Error
             command["name"] == "trace-symbol" && command["schema"] == "decimate.trace.v1"
         })
     }));
+    assert!(json["commands"].as_array().is_some_and(|commands| {
+        commands
+            .iter()
+            .any(|command| command["name"] == "trace" && command["kind"] == "trace-symbol")
+    }));
     assert!(
         json["issue_types"]
             .as_array()
@@ -163,6 +168,7 @@ fn schema_command_lists_actual_cli_flags() -> Result<(), Box<dyn std::error::Err
         "trace-clone",
         &["--min-occurrences", "--fingerprint"],
     );
+    assert_manifest_flags(&json, "trace", &["--root", "--format"]);
     assert_manifest_flags(
         &json,
         "coverage upload-source-maps",

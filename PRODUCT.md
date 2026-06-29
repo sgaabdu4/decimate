@@ -81,6 +81,7 @@ Phase 4 exposes the CLI and agent output contract:
 - `decimate health`
 - `decimate flags`
 - `decimate security`
+- `decimate trace`
 - `decimate trace-file`
 - `decimate trace-symbol`
 - `decimate trace-dependency`
@@ -241,8 +242,9 @@ Current implemented parity:
   helper boundaries, unused widget constructor parameters, and manual Riverpod
   provider declarations
 - separate `decimate/re-export-cycle` findings for barrel export loops
-- read-only file, symbol, dependency, and clone trace JSON envelopes for
-  deletion review, using `kind` discriminators and `decimate.trace.v1`
+- read-only file, symbol, dependency, clone, and Fallow-compatible `trace`
+  symbol-trace JSON envelopes for deletion review, using `kind` discriminators
+  and `decimate.trace.v1`
 - `decimate inspect` evidence bundles for one file or top-level symbol,
   combining trace output with a file-scoped `check` report
 - `decimate schema` machine-readable command and issue manifest for agents

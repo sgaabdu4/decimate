@@ -193,6 +193,13 @@ fn evidence_commands() -> Value {
             "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--file"]
         },
         {
+            "name": "trace",
+            "kind": "trace-symbol",
+            "description": "Trace one top-level symbol's declaration, references, and re-export chains.",
+            "schema": TRACE_SCHEMA_VERSION,
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production"]
+        },
+        {
             "name": "trace-symbol",
             "kind": "trace-symbol",
             "description": "Trace one top-level symbol's declaration, references, and re-export chains.",

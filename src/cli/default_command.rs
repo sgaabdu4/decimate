@@ -25,6 +25,7 @@ const COMMANDS: &[&str] = &[
     "rule-pack-schema",
     "schema",
     "security",
+    "trace",
     "trace-clone",
     "trace-dependency",
     "trace-file",

@@ -85,12 +85,14 @@ cargo install --git https://github.com/sgaabdu4/decimate
 Run through npm/npx:
 
 ```bash
+npx @sgaabdu4/decimate check . --format json
 npx --package @sgaabdu4/decimate decimate check . --format json
 ```
 
 The npm package exposes the executable as `decimate`. The unscoped npm package
-name `decimate` is already owned by an unrelated GeoJSON package, so public npm
-installs use the scoped package name unless that package name is transferred.
+name `decimate` is already owned by an unrelated GeoJSON package, so
+`npx decimate` cannot safely target this project unless that package name is
+transferred. Public npm installs use `@sgaabdu4/decimate`.
 
 Exit code `0` means no error-severity findings. Exit code `1` means findings
 were produced. Exit code `2` means command/config/runtime failure. Security gate
@@ -194,6 +196,7 @@ Trace before deleting:
 
 ```bash
 decimate trace-file . --file lib/src/old.dart --format json
+decimate trace --root . lib/src/old.dart:OldThing --format json
 decimate trace-symbol . --symbol lib/src/old.dart:OldThing --format json
 decimate trace-dependency . --dependency collection --format json
 decimate trace-clone . --fingerprint dup:abc12345 --format json

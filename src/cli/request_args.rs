@@ -83,7 +83,11 @@ pub(super) fn trace_request_args(
     let trace_symbol = if matches!(command, ReportCommand::TraceSymbol | ReportCommand::Inspect)
         && (command == ReportCommand::TraceSymbol || inspect_symbol)
     {
-        let file = subcommand.get_one::<PathBuf>("file").cloned();
+        let file = subcommand
+            .try_get_one::<PathBuf>("file")
+            .ok()
+            .flatten()
+            .cloned();
         subcommand
             .get_one::<String>("symbol")
             .map(|value| parse_trace_symbol(file, value))

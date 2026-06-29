@@ -14,6 +14,10 @@ fn npm_package_exposes_decimate_bin() -> Result<(), Box<dyn std::error::Error>> 
         package["scripts"]["postinstall"],
         "node npm/scripts/postinstall.js"
     );
+    assert_eq!(
+        package["scripts"]["test:npx:local"],
+        "npx --package . decimate --help"
+    );
     assert!(Path::new("npm/bin/decimate.js").is_file());
     assert!(Path::new("npm/scripts/postinstall.js").is_file());
 

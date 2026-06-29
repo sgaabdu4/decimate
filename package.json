@@ -19,7 +19,8 @@
   "scripts": {
     "postinstall": "node npm/scripts/postinstall.js",
     "pack:check": "npm pack --dry-run",
-    "test:npm": "npm exec --package . -- decimate --help"
+    "test:npm": "npm exec --package . -- decimate --help",
+    "test:npx:local": "npx --package . decimate --help"
   },
   "engines": {
     "node": ">=18"

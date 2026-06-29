@@ -30,6 +30,7 @@ mod analyze;
 mod analyzer_options;
 mod boundary_args;
 mod ci_template_run;
+mod command_name;
 mod common_args;
 mod config_run;
 mod coverage_run;
@@ -67,6 +68,7 @@ use analyzer_options::{
 };
 use boundary_args::boundary_command;
 use ci_template_run::{ci_template_command, run_ci_template};
+use command_name::report_command_from_name;
 use common_args::{
     audit_baseline_arg, baseline_command, report_command, scan_command, symbol_options_command,
 };
@@ -103,7 +105,9 @@ use security_args::{
     security_command,
 };
 use security_gate_run::apply_security_gate;
-use trace_args::{trace_dependency_command, trace_file_command, trace_symbol_command};
+use trace_args::{
+    trace_command, trace_dependency_command, trace_file_command, trace_symbol_command,
+};
 use trace_run::run_trace_request;
 
 /// CLI execution errors.
@@ -462,6 +466,9 @@ fn command() -> Command {
             .subcommand(trace_file_command(scan_command(
                 Command::new("trace-file").about("Trace one Dart file"),
             )))
+            .subcommand(trace_command(
+                Command::new("trace").about("Trace one top-level Dart symbol"),
+            ))
             .subcommand(trace_symbol_command(scan_command(
                 Command::new("trace-symbol").about("Trace one top-level Dart symbol"),
             )))
@@ -619,25 +626,6 @@ fn audit_base_for(command: ReportCommand, subcommand: &ArgMatches) -> Option<Str
     }
 }
 
-fn report_command_from_name(name: &str) -> ReportCommand {
-    match name {
-        "check" => ReportCommand::Check,
-        "audit" => ReportCommand::Audit,
-        "dead-code" => ReportCommand::DeadCode,
-        "cycles" => ReportCommand::Cycles,
-        "dupes" => ReportCommand::Dupes,
-        "health" => ReportCommand::Health,
-        "flags" => ReportCommand::Flags,
-        "security" => ReportCommand::Security,
-        "trace-file" => ReportCommand::TraceFile,
-        "trace-symbol" => ReportCommand::TraceSymbol,
-        "trace-dependency" => ReportCommand::TraceDependency,
-        "trace-clone" => ReportCommand::TraceClone,
-        "inspect" => ReportCommand::Inspect,
-        _ => unreachable!("clap rejects unknown subcommands"),
-    }
-}
-
 fn baseline_paths(command: ReportCommand, subcommand: &ArgMatches) -> Vec<PathBuf> {
     let mut paths = Vec::new();
     if supports_global_baseline(command) {
@@ -697,3 +685,5 @@ fn entry_points(subcommand: &ArgMatches, config: &DecimateConfig) -> Vec<PathBuf
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod trace_tests;
