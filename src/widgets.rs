@@ -13,10 +13,12 @@ use crate::{DeadCodeReport, Location, ScannedProject};
 mod params;
 mod providers;
 mod top_level;
+mod unrendered;
 
 use params::constructor_params;
 use providers::manual_riverpod_providers;
 use top_level::top_level_widget_functions;
+use unrendered::unrendered_widgets;
 
 /// Flutter widget framework analysis.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -31,6 +33,8 @@ pub struct WidgetReport {
     pub top_level_functions: Vec<WidgetTopLevelFunction>,
     /// Manual Riverpod provider declarations.
     pub manual_riverpod_providers: Vec<ManualRiverpodProvider>,
+    /// Flutter widget classes with no reachable object construction.
+    pub unrendered_widgets: Vec<UnrenderedWidgetClass>,
 }
 
 /// A widget constructor parameter that is not used by the widget.
@@ -85,6 +89,21 @@ pub struct ManualRiverpodProvider {
     pub provider_type: String,
     /// Location of the provider constructor expression.
     pub location: Location,
+}
+
+/// A widget class that is never constructed from reachable production code.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UnrenderedWidgetClass {
+    /// Dart file containing the widget declaration.
+    pub path: PathBuf,
+    /// Widget class name.
+    pub widget_class: String,
+    /// Flutter widget base class.
+    pub widget_kind: WidgetClassKind,
+    /// Location of the class identifier.
+    pub location: Location,
+    /// Reachable object construction references for this widget.
+    pub render_reference_count: usize,
 }
 
 /// Supported Flutter widget base classes.
@@ -228,6 +247,7 @@ pub fn analyze_widgets(
                 &right.provider_name,
             ))
     });
+    let unrendered_widgets = unrendered_widgets(project, &paths)?;
 
     Ok(WidgetReport {
         analyzed_files: paths.len(),
@@ -235,6 +255,7 @@ pub fn analyze_widgets(
         private_widget_classes,
         top_level_functions,
         manual_riverpod_providers,
+        unrendered_widgets,
     })
 }
 

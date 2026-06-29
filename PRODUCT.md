@@ -168,7 +168,10 @@ Parity areas:
 - Graph issues: unresolved imports/exports/parts/augmentations, invalid Dart
   `part of` relationships, circular dependencies, re-export cycles, duplicate
   exports, and architecture boundary violations.
-- Flutter framework checks: typed and raw GoRouter route path and name collisions.
+- Flutter framework checks: typed and raw GoRouter route path and name
+  collisions, private widget classes, top-level widget helper boundaries,
+  unused widget constructor parameters, unrendered widget classes, and manual
+  Riverpod provider wiring.
 - Duplication: strict, mild, weak, and semantic clone detection with traceable
   fingerprints, top-N filtering, and clone tracing.
 - Health: cyclomatic/cognitive/CRAP complexity, file scores, hotspots,
@@ -231,6 +234,12 @@ Current implemented parity:
 - `decimate/route-collision` findings for typed GoRouter routes and raw
   `GoRoute` route trees that resolve to the same path pattern or route name,
   with parameter-name normalization and nested route path joining
+- `decimate/unrendered-widget` findings for Flutter widget classes with no
+  reachable production object construction, ignoring generated/test/dead files
+  and explicit package export chains
+- Flutter widget hygiene findings for private widget classes, top-level widget
+  helper boundaries, unused widget constructor parameters, and manual Riverpod
+  provider declarations
 - separate `decimate/re-export-cycle` findings for barrel export loops
 - read-only file, symbol, dependency, and clone trace JSON envelopes for
   deletion review, using `kind` discriminators and `decimate.trace.v1`
@@ -371,7 +380,8 @@ Current implemented parity:
 - config `rules` support for Fallow-style `"error"`, `"warn"`, and `"off"`
   severities, including Fallow aliases like `unused-files`, `unused-exports`,
   `unresolved-imports`, `unused-deps`, `unlisted-deps`, `circular-deps`, and
-  `complexity`
+  `complexity`, plus Flutter aliases like `unused-component` and
+  `unused-widget-class`
 - identity baselines for `check`, `dead-code`, `cycles`, `dupes`, `health`,
   `flags`, and `security`, plus audit baseline loading for dead-code, health,
   and duplicate-code findings

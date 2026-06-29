@@ -181,6 +181,8 @@ pub struct ReportSummary {
     pub unused_widget_params: usize,
     /// Top-level manual Riverpod provider declarations.
     pub manual_riverpod_providers: usize,
+    /// Flutter widget classes with no reachable object construction.
+    pub unrendered_widgets: usize,
     /// Duplicated Dart code clone groups.
     pub code_duplications: usize,
     /// Dart source files included in health analysis.
@@ -294,6 +296,8 @@ pub enum FindingKind {
     UnusedWidgetParam,
     /// Riverpod provider is manually wired instead of generated.
     ManualRiverpodProvider,
+    /// Flutter widget class is never constructed from reachable production code.
+    UnrenderedWidget,
     /// Missing entry point.
     MissingEntryPoint,
     /// Strongly connected dependency component.

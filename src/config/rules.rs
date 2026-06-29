@@ -163,6 +163,7 @@ fn recompute_summary(report: &mut JsonReport) {
     summary.unused_widget_params = kind_count(&report.findings, FindingKind::UnusedWidgetParam);
     summary.manual_riverpod_providers =
         kind_count(&report.findings, FindingKind::ManualRiverpodProvider);
+    summary.unrendered_widgets = kind_count(&report.findings, FindingKind::UnrenderedWidget);
     summary.code_duplications = report.clone_groups.len();
     summary.complex_functions = report.complexity.len();
     summary.coverage_gaps = kind_count(&report.findings, FindingKind::CoverageGap);
@@ -285,7 +286,8 @@ const fn default_rule_level(kind: FindingKind) -> RuleLevel {
         | FindingKind::PrivateWidgetClass
         | FindingKind::WidgetTopLevelFunctionBoundary
         | FindingKind::UnusedWidgetParam
-        | FindingKind::ManualRiverpodProvider => RuleLevel::Warn,
+        | FindingKind::ManualRiverpodProvider
+        | FindingKind::UnrenderedWidget => RuleLevel::Warn,
         _ => RuleLevel::Error,
     }
 }

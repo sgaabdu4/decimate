@@ -312,6 +312,7 @@ fn issue_types() -> Value {
         "widget-top-level-function-boundary",
         "unused-widget-param",
         "manual-riverpod-provider",
+        "unrendered-widget",
         "missing-entry-point",
         "circular-dependency",
         "re-export-cycle",

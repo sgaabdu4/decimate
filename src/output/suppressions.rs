@@ -290,6 +290,7 @@ const fn kind_key(kind: FindingKind) -> &'static str {
         FindingKind::WidgetTopLevelFunctionBoundary => "widget-top-level-function-boundary",
         FindingKind::UnusedWidgetParam => "unused-widget-param",
         FindingKind::ManualRiverpodProvider => "manual-riverpod-provider",
+        FindingKind::UnrenderedWidget => "unrendered-widget",
         FindingKind::MissingEntryPoint => "missing-entry-point",
         FindingKind::CircularDependency => "circular-dependency",
         FindingKind::ReExportCycle => "re-export-cycle",

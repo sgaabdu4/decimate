@@ -3,8 +3,8 @@ use std::path::Path;
 use super::format::display_path;
 use super::{Finding, FindingAction, FindingKind, Severity};
 use crate::{
-    ManualRiverpodProvider, PrivateWidgetClass, UnusedWidgetParam, WidgetReport,
-    WidgetTopLevelFunction,
+    ManualRiverpodProvider, PrivateWidgetClass, UnrenderedWidgetClass, UnusedWidgetParam,
+    WidgetReport, WidgetTopLevelFunction,
 };
 
 pub(super) fn add_widget_findings(root: &Path, report: &WidgetReport, findings: &mut Vec<Finding>) {
@@ -31,6 +31,12 @@ pub(super) fn add_widget_findings(root: &Path, report: &WidgetReport, findings: 
             .manual_riverpod_providers
             .iter()
             .map(|provider| manual_riverpod_provider_finding(root, provider)),
+    );
+    findings.extend(
+        report
+            .unrendered_widgets
+            .iter()
+            .map(|widget| unrendered_widget_finding(root, widget)),
     );
 }
 
@@ -166,6 +172,37 @@ fn manual_riverpod_provider_finding(root: &Path, provider: &ManualRiverpodProvid
             .with_target_symbol(provider.provider_name.clone())
             .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
             .with_suppression_comment("// decimate-ignore-next-line manual-riverpod-provider"),
+        ],
+    }
+}
+
+fn unrendered_widget_finding(root: &Path, widget: &UnrenderedWidgetClass) -> Finding {
+    let path = display_path(root, &widget.path);
+    Finding {
+        rule_id: "decimate/unrendered-widget".to_owned(),
+        fingerprint: Some(format!("unrendered-widget:{path}:{}", widget.widget_class)),
+        kind: FindingKind::UnrenderedWidget,
+        severity: Severity::Warning,
+        message: format!(
+            "Flutter widget class {} is never constructed from reachable production code",
+            widget.widget_class
+        ),
+        path: path.clone(),
+        line: widget.location.line,
+        column: widget.location.column,
+        safe_to_delete: false,
+        files: Vec::new(),
+        edge: None,
+        actions: vec![
+            FindingAction::new(
+                "trace-widget-reachability",
+                "Inspect reachable constructors and callers before removing this widget",
+                false,
+            )
+            .with_target_path(path.clone())
+            .with_target_symbol(widget.widget_class.clone())
+            .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
+            .with_suppression_comment("// decimate-ignore-next-line unrendered-widget"),
         ],
     }
 }

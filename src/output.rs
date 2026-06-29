@@ -372,6 +372,7 @@ fn report_summary(
         ),
         unused_widget_params: kind_count(findings, FindingKind::UnusedWidgetParam),
         manual_riverpod_providers: kind_count(findings, FindingKind::ManualRiverpodProvider),
+        unrendered_widgets: kind_count(findings, FindingKind::UnrenderedWidget),
         code_duplications: results
             .duplicates
             .as_ref()
@@ -494,6 +495,7 @@ fn apply_scoped_counts(summary: &mut ReportSummary, findings: &[Finding]) {
         kind_count(findings, FindingKind::WidgetTopLevelFunctionBoundary);
     summary.unused_widget_params = kind_count(findings, FindingKind::UnusedWidgetParam);
     summary.manual_riverpod_providers = kind_count(findings, FindingKind::ManualRiverpodProvider);
+    summary.unrendered_widgets = kind_count(findings, FindingKind::UnrenderedWidget);
     summary.code_duplications = kind_count(findings, FindingKind::CodeDuplication);
     summary.complex_functions = complexity_count(findings);
     summary.coverage_gaps = kind_count(findings, FindingKind::CoverageGap);

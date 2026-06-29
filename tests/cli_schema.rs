@@ -53,6 +53,11 @@ fn schema_command_emits_agent_manifest() -> Result<(), Box<dyn std::error::Error
     assert!(
         json["issue_types"]
             .as_array()
+            .is_some_and(|issues| issues.iter().any(|issue| issue == "unrendered-widget"))
+    );
+    assert!(
+        json["issue_types"]
+            .as_array()
             .is_some_and(|issues| { issues.iter().any(|issue| issue == "private-widget-class") })
     );
     assert!(json["issue_types"].as_array().is_some_and(|issues| {

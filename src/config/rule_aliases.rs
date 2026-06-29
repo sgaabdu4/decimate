@@ -146,6 +146,7 @@ fn all_known_aliases() -> Vec<&'static str> {
         FindingKind::WidgetTopLevelFunctionBoundary,
         FindingKind::UnusedWidgetParam,
         FindingKind::ManualRiverpodProvider,
+        FindingKind::UnrenderedWidget,
         FindingKind::MissingEntryPoint,
         FindingKind::CircularDependency,
         FindingKind::ReExportCycle,
@@ -250,6 +251,15 @@ fn cleanup_kind_aliases(kind: FindingKind) -> Option<Vec<&'static str>> {
             "riverpod-manual-provider",
             "riverpod-manual-providers",
             "riverpod-provider-wiring",
+        ]),
+        FindingKind::UnrenderedWidget => Some(vec![
+            "decimate/unrendered-widget",
+            "unrendered-widget",
+            "unrendered-widgets",
+            "unused-widget-class",
+            "unused-widget-classes",
+            "unused-component",
+            "unused-components",
         ]),
         FindingKind::StaleSuppression => Some(vec![
             "decimate/stale-suppression",

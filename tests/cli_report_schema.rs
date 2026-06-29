@@ -42,63 +42,33 @@ fn report_schema_types_inventory_arrays() -> Result<(), Box<dyn std::error::Erro
         "contributions",
     );
     assert_array_contains(&json["$defs"]["clone_group"]["required"], "instances");
-    assert_array_contains(
-        &json["$defs"]["finding"]["properties"]["kind"]["enum"],
+    for kind in [
         "route-collision",
-    );
-    assert_array_contains(
-        &json["$defs"]["finding"]["properties"]["kind"]["enum"],
         "unused-widget-param",
-    );
-    assert_array_contains(
-        &json["$defs"]["finding"]["properties"]["kind"]["enum"],
         "private-widget-class",
-    );
-    assert_array_contains(
-        &json["$defs"]["finding"]["properties"]["kind"]["enum"],
         "widget-top-level-function-boundary",
-    );
-    assert_array_contains(
-        &json["$defs"]["finding"]["properties"]["kind"]["enum"],
         "manual-riverpod-provider",
-    );
-    assert_array_contains(&json["$defs"]["summary"]["required"], "route_collisions");
-    assert_array_contains(
-        &json["$defs"]["summary"]["required"],
+        "unrendered-widget",
+    ] {
+        assert_array_contains(
+            &json["$defs"]["finding"]["properties"]["kind"]["enum"],
+            kind,
+        );
+    }
+    for field in [
+        "route_collisions",
         "private_widget_classes",
-    );
-    assert_array_contains(
-        &json["$defs"]["summary"]["required"],
         "widget_top_level_functions",
-    );
-    assert_array_contains(
-        &json["$defs"]["summary"]["required"],
         "unused_widget_params",
-    );
-    assert_array_contains(
-        &json["$defs"]["summary"]["required"],
         "manual_riverpod_providers",
-    );
-    assert_eq!(
-        json["$defs"]["summary"]["properties"]["route_collisions"]["type"],
-        "integer"
-    );
-    assert_eq!(
-        json["$defs"]["summary"]["properties"]["unused_widget_params"]["type"],
-        "integer"
-    );
-    assert_eq!(
-        json["$defs"]["summary"]["properties"]["private_widget_classes"]["type"],
-        "integer"
-    );
-    assert_eq!(
-        json["$defs"]["summary"]["properties"]["widget_top_level_functions"]["type"],
-        "integer"
-    );
-    assert_eq!(
-        json["$defs"]["summary"]["properties"]["manual_riverpod_providers"]["type"],
-        "integer"
-    );
+        "unrendered_widgets",
+    ] {
+        assert_array_contains(&json["$defs"]["summary"]["required"], field);
+        assert_eq!(
+            json["$defs"]["summary"]["properties"][field]["type"],
+            "integer"
+        );
+    }
 
     Ok(())
 }
