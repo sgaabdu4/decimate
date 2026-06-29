@@ -42,6 +42,8 @@ Decimate currently reports:
   refactoring-target health signals
 - feature flag usage in Dart compile-time environment reads, `Platform`
   environment gates, Firebase Remote Config, and LaunchDarkly-style SDK calls
+- manual Riverpod provider declarations that should move to generated
+  `@riverpod` owners
 - local, unverified Dart and Flutter security review candidates
 - stale suppressions and missing suppression reasons
 
@@ -346,6 +348,7 @@ Flutter:
 - private Flutter widget class visibility checks
 - top-level Flutter widget helper boundary checks
 - unused Flutter widget constructor parameter checks
+- manual Riverpod provider wiring checks
 - feature flag inventory
 - local security candidates with SARIF, surface inventory, and changed-code gates
 - changed-code audit and advisory decision-surface review
@@ -375,8 +378,8 @@ Known gaps before claiming full product parity with Fallow:
 - coverage upload commands are intentionally offline dry-runs; real hosted
   source-map/inventory uploads and `coverage analyze --cloud` are not enabled
   yet
-- broader Flutter-framework intelligence is still partial: provider wiring and
-  widget reachability are not complete
+- broader Flutter-framework intelligence is still partial: unrendered widget
+  reachability and deeper Riverpod dependency semantics are not complete
 - feature flags are inventory-focused and do not yet model owner, expiry, stale
   rollout state, or runtime stale-flag evidence as richly as Fallow
 - security candidates are Dart/Flutter-focused and configurable by category, but

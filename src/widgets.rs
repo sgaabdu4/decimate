@@ -11,9 +11,11 @@ use crate::graph::normalize_against;
 use crate::{DeadCodeReport, Location, ScannedProject};
 
 mod params;
+mod providers;
 mod top_level;
 
 use params::constructor_params;
+use providers::manual_riverpod_providers;
 use top_level::top_level_widget_functions;
 
 /// Flutter widget framework analysis.
@@ -27,6 +29,8 @@ pub struct WidgetReport {
     pub private_widget_classes: Vec<PrivateWidgetClass>,
     /// Top-level Flutter widget helper functions.
     pub top_level_functions: Vec<WidgetTopLevelFunction>,
+    /// Manual Riverpod provider declarations.
+    pub manual_riverpod_providers: Vec<ManualRiverpodProvider>,
 }
 
 /// A widget constructor parameter that is not used by the widget.
@@ -67,6 +71,19 @@ pub struct WidgetTopLevelFunction {
     /// Function return type when declared.
     pub return_type: Option<String>,
     /// Location of the function identifier.
+    pub location: Location,
+}
+
+/// A top-level manual Riverpod provider declaration.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ManualRiverpodProvider {
+    /// Dart file containing the provider declaration.
+    pub path: PathBuf,
+    /// Top-level provider variable name.
+    pub provider_name: String,
+    /// Manual Riverpod provider constructor.
+    pub provider_type: String,
+    /// Location of the provider constructor expression.
     pub location: Location,
 }
 
@@ -146,10 +163,12 @@ pub fn analyze_widgets(
     let mut unused_params = Vec::new();
     let mut private_widget_classes = Vec::new();
     let mut top_level_functions = Vec::new();
+    let mut manual_riverpod_providers = Vec::new();
     for mut findings in file_findings {
         unused_params.append(&mut findings.unused_params);
         private_widget_classes.append(&mut findings.private_widget_classes);
         top_level_functions.append(&mut findings.top_level_functions);
+        manual_riverpod_providers.append(&mut findings.manual_riverpod_providers);
     }
     unused_params.sort_by(|left, right| {
         (
@@ -195,12 +214,27 @@ pub fn analyze_widgets(
                 &right.function_name,
             ))
     });
+    manual_riverpod_providers.sort_by(|left, right| {
+        (
+            &left.path,
+            left.location.line,
+            left.location.column,
+            &left.provider_name,
+        )
+            .cmp(&(
+                &right.path,
+                right.location.line,
+                right.location.column,
+                &right.provider_name,
+            ))
+    });
 
     Ok(WidgetReport {
         analyzed_files: paths.len(),
         unused_params,
         private_widget_classes,
         top_level_functions,
+        manual_riverpod_providers,
     })
 }
 
@@ -235,6 +269,7 @@ struct FileWidgetFindings {
     unused_params: Vec<UnusedWidgetParam>,
     private_widget_classes: Vec<PrivateWidgetClass>,
     top_level_functions: Vec<WidgetTopLevelFunction>,
+    manual_riverpod_providers: Vec<ManualRiverpodProvider>,
 }
 
 fn findings_in_source(path: &Path, root: Node<'_>, source: &str) -> FileWidgetFindings {
@@ -246,6 +281,7 @@ fn findings_in_source(path: &Path, root: Node<'_>, source: &str) -> FileWidgetFi
         .iter()
         .any(|class| widget_kind(*class, source).is_some());
     findings.top_level_functions = top_level_widget_functions(path, root, source, has_widget_class);
+    findings.manual_riverpod_providers = manual_riverpod_providers(path, root, source);
 
     for class in classes {
         let Some(widget_kind) = widget_kind(class, source) else {

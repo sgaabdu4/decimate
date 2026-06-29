@@ -179,6 +179,8 @@ pub struct ReportSummary {
     pub widget_top_level_functions: usize,
     /// Flutter widget constructor params that are never read.
     pub unused_widget_params: usize,
+    /// Top-level manual Riverpod provider declarations.
+    pub manual_riverpod_providers: usize,
     /// Duplicated Dart code clone groups.
     pub code_duplications: usize,
     /// Dart source files included in health analysis.
@@ -290,6 +292,8 @@ pub enum FindingKind {
     WidgetTopLevelFunctionBoundary,
     /// Flutter widget constructor param is never read by the widget.
     UnusedWidgetParam,
+    /// Riverpod provider is manually wired instead of generated.
+    ManualRiverpodProvider,
     /// Missing entry point.
     MissingEntryPoint,
     /// Strongly connected dependency component.

@@ -10,6 +10,7 @@ mod human;
 mod next_steps;
 mod route_findings;
 mod runtime_coverage;
+mod scope;
 mod security_findings;
 mod security_sarif;
 mod suppressions;
@@ -49,6 +50,11 @@ pub use runtime_coverage::{
     JsonRuntimeCoverageFinding, JsonRuntimeCoverageIntelligence, JsonRuntimeCoverageProvenance,
     JsonRuntimeCoverageSummary, JsonRuntimeCoverageWatermark, JsonRuntimeHotPath,
     JsonRuntimeImportance, json_runtime_coverage,
+};
+use scope::{
+    file_scope, finding_in_scope, health_file_score_count, project_file_scope_count,
+    scope_attack_surface, scope_clone_groups, scope_complexity, scope_feature_flags,
+    scope_file_scores, scope_hotspots, scope_refactoring_targets, scope_security_candidates,
 };
 pub use security_findings::{
     JsonAttackSurfaceEntry, JsonSecurityCandidate, JsonSecurityOccurrence,
@@ -104,7 +110,7 @@ pub struct AnalysisResults {
 /// Build the stable JSON report for a project analysis.
 #[must_use]
 pub fn build_json_report(project: &ScannedProject, results: &AnalysisResults) -> JsonReport {
-    let scope = file_scope(project, results);
+    let scope = file_scope(project, results.file_scope.as_ref());
     let findings = report_findings(project, results, scope.as_ref());
     let mut summary = report_summary(project, results, &findings, scope.as_ref());
     let clone_groups = scope_clone_groups(
@@ -365,6 +371,7 @@ fn report_summary(
             FindingKind::WidgetTopLevelFunctionBoundary,
         ),
         unused_widget_params: kind_count(findings, FindingKind::UnusedWidgetParam),
+        manual_riverpod_providers: kind_count(findings, FindingKind::ManualRiverpodProvider),
         code_duplications: results
             .duplicates
             .as_ref()
@@ -457,17 +464,11 @@ fn health_summary_counts(
             max_cognitive_complexity: report.max_cognitive_complexity,
             coverage_files: report.coverage_files,
             max_crap_score: report.max_crap_score,
-            file_scores: health_file_score_count(project, report, scope),
+            file_scores: health_file_score_count(project, &report.file_scores, scope),
         },
     )
 }
-fn project_file_scope_count(project: &ScannedProject, scope: &BTreeSet<String>) -> usize {
-    project
-        .files
-        .iter()
-        .filter(|file| scope.contains(&format::display_path(&project.root, &file.path)))
-        .count()
-}
+
 fn apply_scoped_counts(summary: &mut ReportSummary, findings: &[Finding]) {
     summary.unresolved_dependencies = kind_count(findings, FindingKind::UnresolvedDependency);
     summary.part_of_violations = kind_count(findings, FindingKind::PartOfViolation);
@@ -492,6 +493,7 @@ fn apply_scoped_counts(summary: &mut ReportSummary, findings: &[Finding]) {
     summary.widget_top_level_functions =
         kind_count(findings, FindingKind::WidgetTopLevelFunctionBoundary);
     summary.unused_widget_params = kind_count(findings, FindingKind::UnusedWidgetParam);
+    summary.manual_riverpod_providers = kind_count(findings, FindingKind::ManualRiverpodProvider);
     summary.code_duplications = kind_count(findings, FindingKind::CodeDuplication);
     summary.complex_functions = complexity_count(findings);
     summary.coverage_gaps = kind_count(findings, FindingKind::CoverageGap);
@@ -513,146 +515,10 @@ fn apply_scoped_counts(summary: &mut ReportSummary, findings: &[Finding]) {
     summary.missing_suppression_reasons =
         kind_count(findings, FindingKind::MissingSuppressionReason);
 }
-fn file_scope(project: &ScannedProject, results: &AnalysisResults) -> Option<BTreeSet<String>> {
-    results.file_scope.as_ref().map(|paths| {
-        paths
-            .iter()
-            .map(|path| format::display_path(&project.root, path))
-            .collect()
-    })
-}
-
-fn finding_in_scope(finding: &Finding, scope: Option<&BTreeSet<String>>) -> bool {
-    scope.is_none_or(|scope| {
-        scope.contains(&finding.path)
-            || finding.files.iter().any(|file| scope.contains(file))
-            || finding
-                .edge
-                .as_ref()
-                .is_some_and(|edge| scope.contains(&edge.from) || scope.contains(&edge.to))
-    })
-}
-
-fn scope_clone_groups(
-    groups: Vec<JsonCloneGroup>,
-    scope: Option<&BTreeSet<String>>,
-) -> Vec<JsonCloneGroup> {
-    groups
-        .into_iter()
-        .filter_map(|mut group| {
-            if let Some(scope) = scope {
-                group
-                    .instances
-                    .retain(|instance| scope.contains(&instance.path));
-            }
-            (!group.instances.is_empty()).then_some(group)
-        })
-        .collect()
-}
-
-fn scope_complexity(
-    findings: Vec<JsonComplexityFinding>,
-    scope: Option<&BTreeSet<String>>,
-) -> Vec<JsonComplexityFinding> {
-    findings
-        .into_iter()
-        .filter(|finding| scope.is_none_or(|scope| scope.contains(&finding.path)))
-        .collect()
-}
-
-fn scope_file_scores(
-    scores: Vec<JsonFileHealthScore>,
-    scope: Option<&BTreeSet<String>>,
-) -> Vec<JsonFileHealthScore> {
-    scores
-        .into_iter()
-        .filter(|score| scope.is_none_or(|scope| scope.contains(&score.path)))
-        .collect()
-}
-
-fn scope_hotspots(
-    hotspots: Vec<JsonHealthHotspot>,
-    scope: Option<&BTreeSet<String>>,
-) -> Vec<JsonHealthHotspot> {
-    hotspots
-        .into_iter()
-        .filter(|hotspot| scope.is_none_or(|scope| scope.contains(&hotspot.path)))
-        .collect()
-}
-
-fn scope_refactoring_targets(
-    targets: Vec<JsonRefactoringTarget>,
-    scope: Option<&BTreeSet<String>>,
-) -> Vec<JsonRefactoringTarget> {
-    targets
-        .into_iter()
-        .filter(|target| scope.is_none_or(|scope| scope.contains(&target.path)))
-        .collect()
-}
-
-fn scope_feature_flags(
-    flags: Vec<JsonFeatureFlag>,
-    scope: Option<&BTreeSet<String>>,
-) -> Vec<JsonFeatureFlag> {
-    flags
-        .into_iter()
-        .filter_map(|mut flag| {
-            if let Some(scope) = scope {
-                flag.occurrences
-                    .retain(|occurrence| scope.contains(&occurrence.path));
-            }
-            (!flag.occurrences.is_empty()).then_some(flag)
-        })
-        .collect()
-}
-
-fn scope_security_candidates(
-    candidates: Vec<JsonSecurityCandidate>,
-    scope: Option<&BTreeSet<String>>,
-) -> Vec<JsonSecurityCandidate> {
-    candidates
-        .into_iter()
-        .filter_map(|mut candidate| {
-            if let Some(scope) = scope {
-                candidate
-                    .occurrences
-                    .retain(|occurrence| scope.contains(&occurrence.path));
-            }
-            (!candidate.occurrences.is_empty()).then_some(candidate)
-        })
-        .collect()
-}
-
-fn scope_attack_surface(
-    entries: Vec<JsonAttackSurfaceEntry>,
-    scope: Option<&BTreeSet<String>>,
-) -> Vec<JsonAttackSurfaceEntry> {
-    entries
-        .into_iter()
-        .filter(|entry| scope.is_none_or(|scope| scope.contains(&entry.path)))
-        .collect()
-}
-
 fn kind_count(findings: &[Finding], kind: FindingKind) -> usize {
     findings
         .iter()
         .filter(|finding| finding.kind == kind)
-        .count()
-}
-
-fn health_file_score_count(
-    project: &ScannedProject,
-    report: &HealthReport,
-    scope: Option<&BTreeSet<String>>,
-) -> usize {
-    report
-        .file_scores
-        .iter()
-        .filter(|score| {
-            scope.is_none_or(|scope| {
-                scope.contains(&format::display_path(&project.root, &score.path))
-            })
-        })
         .count()
 }
 

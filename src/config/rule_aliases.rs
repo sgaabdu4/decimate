@@ -145,6 +145,7 @@ fn all_known_aliases() -> Vec<&'static str> {
         FindingKind::PrivateWidgetClass,
         FindingKind::WidgetTopLevelFunctionBoundary,
         FindingKind::UnusedWidgetParam,
+        FindingKind::ManualRiverpodProvider,
         FindingKind::MissingEntryPoint,
         FindingKind::CircularDependency,
         FindingKind::ReExportCycle,
@@ -241,6 +242,14 @@ fn cleanup_kind_aliases(kind: FindingKind) -> Option<Vec<&'static str>> {
             "unused-component-props",
             "flutter-unused-widget-param",
             "flutter-unused-widget-params",
+        ]),
+        FindingKind::ManualRiverpodProvider => Some(vec![
+            "decimate/manual-riverpod-provider",
+            "manual-riverpod-provider",
+            "manual-riverpod-providers",
+            "riverpod-manual-provider",
+            "riverpod-manual-providers",
+            "riverpod-provider-wiring",
         ]),
         FindingKind::StaleSuppression => Some(vec![
             "decimate/stale-suppression",

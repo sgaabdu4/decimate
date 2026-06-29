@@ -45,6 +45,11 @@ fn schema_command_emits_agent_manifest() -> Result<(), Box<dyn std::error::Error
             .as_array()
             .is_some_and(|issues| issues.iter().any(|issue| issue == "unused-widget-param"))
     );
+    assert!(json["issue_types"].as_array().is_some_and(|issues| {
+        issues
+            .iter()
+            .any(|issue| issue == "manual-riverpod-provider")
+    }));
     assert!(
         json["issue_types"]
             .as_array()

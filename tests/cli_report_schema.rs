@@ -58,6 +58,10 @@ fn report_schema_types_inventory_arrays() -> Result<(), Box<dyn std::error::Erro
         &json["$defs"]["finding"]["properties"]["kind"]["enum"],
         "widget-top-level-function-boundary",
     );
+    assert_array_contains(
+        &json["$defs"]["finding"]["properties"]["kind"]["enum"],
+        "manual-riverpod-provider",
+    );
     assert_array_contains(&json["$defs"]["summary"]["required"], "route_collisions");
     assert_array_contains(
         &json["$defs"]["summary"]["required"],
@@ -70,6 +74,10 @@ fn report_schema_types_inventory_arrays() -> Result<(), Box<dyn std::error::Erro
     assert_array_contains(
         &json["$defs"]["summary"]["required"],
         "unused_widget_params",
+    );
+    assert_array_contains(
+        &json["$defs"]["summary"]["required"],
+        "manual_riverpod_providers",
     );
     assert_eq!(
         json["$defs"]["summary"]["properties"]["route_collisions"]["type"],
@@ -85,6 +93,10 @@ fn report_schema_types_inventory_arrays() -> Result<(), Box<dyn std::error::Erro
     );
     assert_eq!(
         json["$defs"]["summary"]["properties"]["widget_top_level_functions"]["type"],
+        "integer"
+    );
+    assert_eq!(
+        json["$defs"]["summary"]["properties"]["manual_riverpod_providers"]["type"],
         "integer"
     );
 

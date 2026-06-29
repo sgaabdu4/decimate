@@ -615,6 +615,8 @@ fn recompute_summary(report: &mut JsonReport) {
     );
     report.summary.unused_widget_params =
         kind_count(&report.findings, FindingKind::UnusedWidgetParam);
+    report.summary.manual_riverpod_providers =
+        kind_count(&report.findings, FindingKind::ManualRiverpodProvider);
     report.summary.code_duplications = report.clone_groups.len();
     report.summary.complex_functions = report.complexity.len();
     report.summary.coverage_gaps = kind_count(&report.findings, FindingKind::CoverageGap);
