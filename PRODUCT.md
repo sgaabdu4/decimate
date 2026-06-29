@@ -70,6 +70,7 @@ Phase 3 runs graph intelligence algorithms:
 
 Phase 4 exposes the CLI and agent output contract:
 
+- bare `decimate` as a default `decimate check` over the current directory
 - `decimate check`
 - `decimate audit`
 - `decimate review`
@@ -89,6 +90,7 @@ Phase 4 exposes the CLI and agent output contract:
 - `decimate workspaces`
 - `decimate explain`
 - `decimate fix`
+- `decimate init`
 - `decimate impact`
 - `decimate ci-template`
 - `decimate schema`
@@ -107,6 +109,9 @@ Phase 4 exposes the CLI and agent output contract:
 - `decimate impact --format json --quiet` emits `decimate.impact.v1` as a
   read-only local value report, enabling `.decimate/impact.jsonl` history when
   present
+- `decimate init` emits `decimate.init.v1`, writes `.decimaterc`, optionally
+  writes `AGENTS.md` with `--agents`, and refuses to overwrite existing files
+  unless `--force` is passed
 - `decimate ci-template github|gitlab` emits `decimate.ci-template.v1` JSON or
   YAML CI templates; `gitlab --vendor` writes scoped local template files only
   with explicit overwrite via `--force`
@@ -167,6 +172,7 @@ Parity areas:
 - Fix: dry-run and confirmed apply flows for safe unused exports/dependencies.
 - Config: suppressions, workspaces, public packages, cache settings, and
   broader rule-pack controls.
+- Onboarding: local init flows for config, CI, and agent instructions.
 - Security candidates: deterministic local review candidates for Dart/Flutter
   sinks and hardcoded secrets, never verified vulnerability claims.
 - Runtime coverage: local Dart/Flutter coverage ingestion for hot paths,
@@ -229,6 +235,8 @@ Current implemented parity:
   aggregation, and `--all` rollup shape
 - `decimate ci-template` read-only GitHub Actions and GitLab CI template output,
   plus explicit GitLab vendoring with overwrite protection
+- `decimate init --agents` project onboarding with `.decimaterc`, optional
+  `AGENTS.md`, overwrite protection, and `decimate.init.v1` JSON output
 - `decimate list` project metadata JSON for files, entry points, local pub
   packages, and active Dart/Flutter/workspace adapters; `decimate workspaces`
   emits the same schema scoped to local pub packages

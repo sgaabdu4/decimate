@@ -27,6 +27,30 @@ fn scans_dart_files_in_parallel_and_skips_build_outputs() -> Result<(), Box<dyn 
 }
 
 #[test]
+fn skips_rust_target_fixture_pubspecs() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(&fixture, "lib/main.dart", "void main() {}\n")?;
+    write(
+        &fixture,
+        "target/stale_fixture/pubspec.yaml",
+        "name: stale_fixture\nworkspace:\n  - missing/*\n",
+    )?;
+    write(
+        &fixture,
+        "target/stale_fixture/lib/generated.dart",
+        "class Generated {}\n",
+    )?;
+
+    let project = scan_project(fixture.path())?;
+
+    assert_eq!(project.files.len(), 1);
+    assert_eq!(project.files[0].path, fixture.path().join("lib/main.dart"));
+
+    Ok(())
+}
+
+#[test]
 fn scans_local_path_dependencies_for_graph_resolution() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     write(

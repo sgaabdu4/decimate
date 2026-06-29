@@ -7,6 +7,7 @@ use crate::decision_surface::DECISION_SURFACE_SCHEMA_VERSION;
 use crate::explain::EXPLAIN_SCHEMA_VERSION;
 use crate::fix::FIX_SCHEMA_VERSION;
 use crate::impact::IMPACT_SCHEMA_VERSION;
+use crate::init::INIT_SCHEMA_VERSION;
 use crate::inspect::INSPECT_SCHEMA_VERSION;
 use crate::output::{SCHEMA_VERSION, TRACE_SCHEMA_VERSION};
 use crate::policy::RULE_PACK_SCHEMA_VERSION;
@@ -30,6 +31,7 @@ pub fn decimate_schema() -> Value {
             "fix": FIX_SCHEMA_VERSION,
             "explain": EXPLAIN_SCHEMA_VERSION,
             "impact": IMPACT_SCHEMA_VERSION,
+            "init": INIT_SCHEMA_VERSION,
             "ci_template": CI_TEMPLATE_SCHEMA_VERSION,
             "config": CONFIG_SCHEMA_VERSION,
             "coverage": COVERAGE_ANALYSIS_SCHEMA_VERSION,
@@ -216,6 +218,13 @@ fn support_commands() -> Value {
             "flags": ["--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--action", "--apply", "--confirm"]
         },
         {
+            "name": "init",
+            "kind": "init",
+            "description": "Create Decimate config and optional AGENTS.md guidance.",
+            "schema": INIT_SCHEMA_VERSION,
+            "flags": ["--format", "--agents", "--force"]
+        },
+        {
             "name": "ci-template",
             "kind": "ci-template",
             "description": "Print or vendor GitHub Actions and GitLab CI templates.",
@@ -343,6 +352,11 @@ fn task_matrix() -> Value {
             "intent": "show local value report",
             "command": "decimate impact --format json --quiet",
             "reason": "Read-only local impact report; disabled projects return a populated zero-count report."
+        },
+        {
+            "intent": "initialize a Dart or Flutter project",
+            "command": "decimate init --agents",
+            "reason": "Write agent-first Decimate defaults and optional coding-agent guidance."
         },
         {
             "intent": "set up CI",

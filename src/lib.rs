@@ -23,6 +23,7 @@ pub mod fix;
 pub mod graph;
 pub mod health;
 pub mod impact;
+pub mod init;
 pub mod inspect;
 pub mod intelligence;
 pub mod manifest;
@@ -115,6 +116,10 @@ pub use impact::{
     IMPACT_SCHEMA_VERSION, ImpactAllReport, ImpactAllSummary, ImpactGate, ImpactProject,
     ImpactProjectSummary, ImpactRecord, ImpactReport, ImpactSort, ImpactTotals, ImpactTrend,
     impact_all_report, impact_report, render_impact_all_report, render_impact_report,
+};
+pub use init::{
+    INIT_SCHEMA_VERSION, InitError, InitFile, InitFileAction, InitFileKind, InitOptions,
+    InitReport, init_project, render_init_report,
 };
 pub use inspect::{
     INSPECT_SCHEMA_VERSION, InspectReport, InspectTarget, inspect_file, inspect_symbol,

@@ -60,6 +60,7 @@ cargo build --release
 Run a full static check:
 
 ```bash
+./target/release/decimate
 ./target/release/decimate check . --format json
 ```
 
@@ -81,6 +82,16 @@ were produced. Exit code `2` means command/config/runtime failure. Security gate
 mode can exit `8` for new review-required security candidates.
 
 ## Common Workflows
+
+Initialize Decimate defaults in a Dart or Flutter repo:
+
+```bash
+decimate init . --agents
+```
+
+`decimate init` writes `.decimaterc` and, with `--agents`, an `AGENTS.md`
+guide for downstream coding agents. It refuses to overwrite existing files
+unless `--force` is passed.
 
 Find dead code:
 
@@ -202,6 +213,7 @@ Important schemas:
 - `decimate.trace.v1`: trace reports
 - `decimate.inspect.v1`: file/symbol evidence bundles
 - `decimate.fix.v1`: safe-fix preview/apply reports
+- `decimate.init.v1`: project initialization reports
 - `decimate.decision-surface.v1`: changed-code review questions
 - `decimate.coverage.v1`: focused runtime coverage analysis
 - `decimate.ci-template.v1`: CI template output
@@ -288,7 +300,9 @@ decimate security . --ci --sarif-file decimate-security.sarif
 Decimate mirrors Fallow's core static intelligence workflow for Dart and
 Flutter:
 
+- bare `decimate` defaults to the full combined static check
 - agent-first JSON reports, actions, schemas, and next steps
+- `decimate init --agents` onboarding for config and agent guidance
 - dead code, unused exports/types/members, and dependency hygiene
 - cycles, re-export cycles, boundaries, policy packs, and suppressions
 - duplication detection with traceable fingerprints
@@ -316,7 +330,11 @@ Known gaps before claiming full product parity with Fallow:
 - no MCP/server API yet
 - no embedded Node/NAPI-style bindings, because Decimate is not a JS tool
 - no hosted/cloud continuous runtime monitoring
-- no `init`, `hooks`, `watch`, `migrate`, telemetry, or license commands yet
+- no `hooks`, `watch`, `migrate`, telemetry, license, editor, or viz commands yet
+- no Fallow-style `coverage setup`, source-map upload, inventory upload, or
+  cloud runtime workflow yet
+- no Flutter-framework intelligence yet for route collisions, provider wiring,
+  widget reachability, or unused widget API shapes
 - feature flags are inventory-focused and do not yet model owner, expiry, stale
   rollout state, or runtime stale-flag evidence as richly as Fallow
 - security candidates are Dart/Flutter-focused and configurable by category, but

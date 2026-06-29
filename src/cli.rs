@@ -34,6 +34,7 @@ mod common_args;
 mod config_run;
 mod coverage_run;
 mod decision_surface_run;
+mod default_command;
 mod dupes_args;
 mod entry_points;
 mod explain_run;
@@ -41,6 +42,7 @@ mod fix_run;
 mod flags_args;
 mod health_args;
 mod impact_run;
+mod init_run;
 mod inspect_args;
 mod inspect_run;
 mod list_run;
@@ -77,6 +79,7 @@ use fix_run::{fix_command, run_fix};
 use flags_args::flags_command;
 use health_args::{health_command, health_command_without_top};
 use impact_run::{impact_command, run_impact};
+use init_run::{init_command, run_init};
 use inspect_args::inspect_command;
 use inspect_run::run_inspect_request;
 use list_run::{list_command, run_list, run_workspaces, workspaces_command};
@@ -203,6 +206,9 @@ pub enum CliError {
     /// CI template generation failed.
     #[error(transparent)]
     CiTemplate(#[from] crate::CiTemplateError),
+    /// Project initialization failed.
+    #[error(transparent)]
+    Init(#[from] crate::InitError),
     /// SARIF output is not available for this command.
     #[error("--format sarif is not supported by decimate {command}")]
     UnsupportedSarifFormat { command: &'static str },
@@ -297,7 +303,7 @@ where
     T: Into<OsString> + Clone,
     W: Write,
 {
-    let matches = command().try_get_matches_from(args)?;
+    let matches = command().try_get_matches_from(default_command::args_with_default_check(args))?;
     match matches.subcommand() {
         Some(("config-schema", _)) => return run_config_schema(writer),
         Some(("report-schema", _)) => return run_report_schema(writer),
@@ -310,6 +316,7 @@ where
         Some(("fix", subcommand)) => return run_fix(subcommand, writer),
         Some(("impact", subcommand)) => return run_impact(subcommand, writer),
         Some(("ci-template", subcommand)) => return run_ci_template(subcommand, writer),
+        Some(("init", subcommand)) => return run_init(subcommand, writer),
         Some(("decision-surface", subcommand)) => {
             return run_decision_surface(subcommand, writer, "decision-surface");
         }
@@ -395,8 +402,8 @@ fn command() -> Command {
     schema_subcommands(
         Command::new("decimate")
             .about("Rust-native Dart and Flutter module-graph intelligence")
-            .subcommand_required(true)
-            .arg_required_else_help(true)
+            .subcommand_required(false)
+            .arg_required_else_help(false)
             .subcommand(symbol_options_command(dupes_command(
                 health_command_without_top(boundary_command(baseline_command(
                     Command::new("check").about("Run all enabled graph checks"),
@@ -472,6 +479,7 @@ fn command() -> Command {
             .subcommand(workspaces_command())
             .subcommand(explain_command())
             .subcommand(fix_command())
+            .subcommand(init_command())
             .subcommand(impact_command())
             .subcommand(ci_template_command())
             .subcommand(review_command())
