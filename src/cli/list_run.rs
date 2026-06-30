@@ -162,6 +162,7 @@ fn scoped_project(
         health_options: crate::HealthOptions::default(),
         feature_flag_options: crate::FeatureFlagOptions::default(),
         security_options: crate::SecurityOptions::default(),
+        issue_filters: super::issue_filter_args::IssueFilters::default(),
         scan_options: crate::ScanOptions::default(),
         ignore_dependencies: Vec::new(),
         ignore_dependency_overrides: Vec::new(),

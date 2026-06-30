@@ -24,10 +24,17 @@ pub fn decimate_schema() -> Value {
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "kind": "schema",
         "tool": "decimate",
+        "name": "Decimate",
+        "description": "Rust-native Dart and Flutter module-graph intelligence.",
         "manifest_version": MANIFEST_SCHEMA_VERSION,
         "version": env!("CARGO_PKG_VERSION"),
+        "default_command": "check",
+        "default_behavior": "Bare decimate invocations default to decimate check against the provided root.",
         "global_flags": ["--root", "--format", "--config", "--quiet"],
         "output_formats": ["human", "json", "sarif"],
+        "plugins": plugins(),
+        "environment_variables": environment_variables(),
+        "mcp_tools": [],
         "exit_codes": [
             { "code": 0, "meaning": "success or no error-severity findings" },
             { "code": 1, "meaning": "error-severity findings or skipped apply fixes" },
@@ -60,6 +67,36 @@ pub fn decimate_schema() -> Value {
     })
 }
 
+fn plugins() -> Value {
+    json!([
+        {
+            "name": "dart",
+            "kind": "language",
+            "description": "Parses Dart imports, exports, parts, augmentations, declarations, and references."
+        },
+        {
+            "name": "flutter",
+            "kind": "framework",
+            "description": "Adds Flutter widget, lifecycle, route, and security candidate checks."
+        },
+        {
+            "name": "pub-workspace",
+            "kind": "workspace",
+            "description": "Resolves pubspec packages, path dependencies, package_config.json, and Dart workspaces."
+        }
+    ])
+}
+
+fn environment_variables() -> Value {
+    json!([
+        {
+            "name": "DECIMATE_BASE",
+            "scope": "generated-git-hook",
+            "description": "Overrides the base ref used by Decimate-managed Git pre-commit hooks."
+        }
+    ])
+}
+
 fn commands() -> Value {
     let mut commands = Vec::new();
     append_commands(&mut commands, analysis_commands());
@@ -82,14 +119,14 @@ fn analysis_commands() -> Value {
             "kind": "combined",
             "description": "Run all enabled graph, symbol, dependency, duplicate, health, flag, and security checks.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks", "--unused-files", "--unused-exports", "--unused-types", "--unused-deps", "--unlisted-deps", "--duplicate-exports", "--unused-enum-members", "--unused-class-members", "--unresolved-imports", "--stale-suppressions", "--unused-dependency-overrides", "--misconfigured-dependency-overrides"]
         },
         {
             "name": "audit",
             "kind": "audit",
             "description": "Run changed-code graph checks scoped from a Git base ref.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--root", "--brief", "--base", "--dead-code-baseline", "--health-baseline", "--dupes-baseline", "--max-decisions", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks"]
+            "flags": ["--root", "--brief", "--base", "--dead-code-baseline", "--health-baseline", "--dupes-baseline", "--max-decisions", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks"]
         },
         {
             "name": "review",
@@ -110,7 +147,7 @@ fn analysis_commands() -> Value {
             "kind": "dead-code",
             "description": "Find unreachable Dart files and conservative symbol-level dead code.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--include-entry-exports", "--private-type-leaks"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--include-entry-exports", "--private-type-leaks", "--unused-files", "--unused-exports", "--unused-types", "--unused-deps", "--unlisted-deps", "--duplicate-exports", "--unused-enum-members", "--unused-class-members", "--unresolved-imports", "--stale-suppressions", "--unused-dependency-overrides", "--misconfigured-dependency-overrides"]
         },
         {
             "name": "cycles",
@@ -124,7 +161,7 @@ fn analysis_commands() -> Value {
             "kind": "dupes",
             "description": "Find duplicated Dart code blocks.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--no-ignore-imports"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports"]
         },
         {
             "name": "health",
@@ -232,7 +269,7 @@ fn evidence_commands() -> Value {
             "kind": "trace-clone",
             "description": "Trace one duplicate-code group by fingerprint or file line.",
             "schema": TRACE_SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--no-ignore-imports", "--fingerprint"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports", "--fingerprint"]
         }
     ])
 }

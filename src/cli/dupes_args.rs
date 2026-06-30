@@ -52,8 +52,16 @@ pub(super) fn dupes_command(command: Command) -> Command {
         .arg(
             Arg::new("no-ignore-imports")
                 .long("no-ignore-imports")
-                .help("Count import/export/part/augment directives")
-                .action(ArgAction::SetTrue),
+                .help("Count import/export/part/library directives")
+                .action(ArgAction::SetTrue)
+                .conflicts_with("ignore-imports"),
+        )
+        .arg(
+            Arg::new("ignore-imports")
+                .long("ignore-imports")
+                .help("Ignore import/export/part/library directives")
+                .action(ArgAction::SetTrue)
+                .conflicts_with("no-ignore-imports"),
         )
 }
 
@@ -97,6 +105,9 @@ pub(super) fn duplicate_options_with_defaults(
     }
     if is_command_line(matches, "skip-local") {
         options.skip_local = matches.get_flag("skip-local");
+    }
+    if is_command_line(matches, "ignore-imports") {
+        options.ignore_imports = matches.get_flag("ignore-imports");
     }
     if is_command_line(matches, "no-ignore-imports") {
         options.ignore_imports = !matches.get_flag("no-ignore-imports");

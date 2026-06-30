@@ -71,6 +71,62 @@ fn dupes_command_emits_json_contract() -> Result<(), Box<dyn std::error::Error>>
 }
 
 #[test]
+fn dupes_command_accepts_ignore_imports_alias_as_positive_override()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(&fixture, ".decimaterc", "[dupes]\nignore_imports = false\n")?;
+    write_import_only_duplicate_pair(&fixture)?;
+    let root = fixture.path().to_str().unwrap_or(".");
+    let mut counted_output = Vec::new();
+
+    let counted_code = run_from(
+        [
+            "decimate",
+            "dupes",
+            root,
+            "--format",
+            "json",
+            "--min-lines",
+            "5",
+            "--min-tokens",
+            "5",
+        ],
+        &mut counted_output,
+    )?;
+    let counted_json = serde_json::from_slice::<Value>(&counted_output)?;
+    assert_eq!(counted_code, 1);
+    assert_eq!(counted_json["summary"]["code_duplications"], 1);
+
+    let mut ignored_output = Vec::new();
+    let ignored_code = run_from(
+        [
+            "decimate",
+            "dupes",
+            root,
+            "--format",
+            "json",
+            "--min-lines",
+            "5",
+            "--min-tokens",
+            "5",
+            "--ignore-imports",
+        ],
+        &mut ignored_output,
+    )?;
+
+    let ignored_json = serde_json::from_slice::<Value>(&ignored_output)?;
+    assert_eq!(ignored_code, 0);
+    assert_eq!(ignored_json["summary"]["code_duplications"], 0);
+    assert_eq!(
+        ignored_json["clone_groups"].as_array().map(Vec::len),
+        Some(0)
+    );
+
+    Ok(())
+}
+
+#[test]
 fn check_command_includes_code_duplication_findings() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     write(&fixture, "pubspec.yaml", "name: app\n")?;
@@ -272,6 +328,12 @@ fn trace_clone_command_reports_matching_group() -> Result<(), Box<dyn std::error
 
 fn write_duplicate_pair(fixture: &TempDir) -> Result<(), std::io::Error> {
     let source = "void shared() {\n  final items = [1, 2, 3];\n  final active = items.where((item) => item > 1);\n  print(active.length);\n}\n";
+    write(fixture, "lib/a.dart", source)?;
+    write(fixture, "lib/b.dart", source)
+}
+
+fn write_import_only_duplicate_pair(fixture: &TempDir) -> Result<(), std::io::Error> {
+    let source = "import 'dart:async';\nimport 'dart:collection';\nimport 'dart:convert';\nimport 'dart:io';\nimport 'dart:math';\n";
     write(fixture, "lib/a.dart", source)?;
     write(fixture, "lib/b.dart", source)
 }

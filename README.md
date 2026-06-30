@@ -137,7 +137,15 @@ Find dead code:
 
 ```bash
 decimate dead-code . --entry lib/main.dart --format json
+decimate dead-code . --unused-exports --format json
+decimate check . --unused-files --unused-deps --format json
 ```
+
+Issue filters follow Fallow naming where Decimate has real Dart data:
+`--unused-files`, `--unused-exports`, `--unused-types`, `--unused-deps`,
+`--unlisted-deps`, `--duplicate-exports`, `--unused-enum-members`,
+`--unused-class-members`, `--unresolved-imports`, `--stale-suppressions`,
+`--unused-dependency-overrides`, and `--misconfigured-dependency-overrides`.
 
 Find cycles:
 
@@ -150,6 +158,7 @@ Find duplicate Dart code:
 ```bash
 decimate dupes . --format json
 decimate dupes . --mode semantic --format json
+decimate dupes . --ignore-imports --format json
 ```
 
 Review changed code against `origin/main`:

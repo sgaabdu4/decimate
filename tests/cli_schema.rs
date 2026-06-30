@@ -4,8 +4,7 @@ use serde_json::Value;
 #[test]
 fn schema_command_emits_agent_manifest() -> Result<(), Box<dyn std::error::Error>> {
     let json = schema_json()?;
-    assert_eq!(json["schema_version"], "decimate.schema.v1");
-    assert_eq!(json["kind"], "schema");
+    assert_manifest_identity(&json);
     assert_manifest_metadata(&json);
     assert!(
         json["commands"]
@@ -101,6 +100,23 @@ fn schema_command_emits_agent_manifest() -> Result<(), Box<dyn std::error::Error
     }));
 
     Ok(())
+}
+
+fn assert_manifest_identity(json: &Value) {
+    assert_eq!(json["schema_version"], "decimate.schema.v1");
+    assert_eq!(json["kind"], "schema");
+    assert_eq!(json["name"], "Decimate");
+    assert_eq!(json["default_command"], "check");
+    assert!(json["plugins"].as_array().is_some_and(|plugins| {
+        plugins
+            .iter()
+            .any(|plugin| plugin["name"] == "flutter" && plugin["kind"] == "framework")
+    }));
+    assert!(json["environment_variables"].as_array().is_some_and(|env| {
+        env.iter()
+            .any(|variable| variable["name"] == "DECIMATE_BASE")
+    }));
+    assert!(json["mcp_tools"].as_array().is_some_and(Vec::is_empty));
 }
 
 fn assert_manifest_metadata(json: &Value) {

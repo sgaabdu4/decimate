@@ -18,7 +18,10 @@ use crate::config::{
     ConfigError, DecimateConfig, IgnoreDependencyOverrideRule, RuleConfig, apply_rules_to_report,
     load_decimate_config,
 };
-use crate::output::{ReportCommand, build_json_report, render_human_report, render_sarif_report};
+use crate::output::{
+    ReportCommand, build_json_report, filter_report_findings, render_human_report,
+    render_sarif_report,
+};
 use crate::scan::{ScanError, ScanOptions, scan_project_with_options};
 use crate::{
     BoundaryCallRule, BoundaryRule, DependencyHygieneError, DuplicateCodeError, DuplicateOptions,
@@ -48,6 +51,7 @@ mod impact_run;
 mod init_run;
 mod inspect_args;
 mod inspect_run;
+mod issue_filter_args;
 mod list_run;
 mod mode_args;
 mod output_format;
@@ -89,6 +93,7 @@ use impact_run::{impact_command, run_impact};
 use init_run::{init_command, run_init};
 use inspect_args::inspect_command;
 use inspect_run::run_inspect_request;
+use issue_filter_args::issue_filter_command;
 use list_run::{list_command, run_list, run_workspaces, workspaces_command};
 use output_format::{
     OutputFormat, ReportOutputFormat, output_format, output_format_value, report_output_format,
@@ -271,6 +276,7 @@ struct CommandRequest {
     health_options: HealthOptions,
     feature_flag_options: FeatureFlagOptions,
     security_options: SecurityOptions,
+    issue_filters: issue_filter_args::IssueFilters,
     scan_options: ScanOptions,
     ignore_dependencies: Vec<String>,
     ignore_dependency_overrides: Vec<IgnoreDependencyOverrideRule>,
@@ -360,6 +366,7 @@ fn run_request<W: Write>(request: &CommandRequest, mut writer: W) -> Result<i32,
     scope_args::apply_report_scope(&project, &mut results, request)?;
     let mut report = build_json_report(&project, &results);
     apply_rules_to_report(&mut report, &request.rules)?;
+    filter_report_findings(&mut report, &request.issue_filters.kinds);
     for path in &request.baseline_paths {
         let baseline = load_baseline(resolve_report_path(&project.root, path))?;
         apply_baseline_to_report(&mut report, &baseline);
@@ -408,11 +415,11 @@ fn command() -> Command {
             .about("Rust-native Dart and Flutter module-graph intelligence")
             .subcommand_required(false)
             .arg_required_else_help(false)
-            .subcommand(symbol_options_command(dupes_command(
+            .subcommand(issue_filter_command(symbol_options_command(dupes_command(
                 health_command_without_top(boundary_command(baseline_command(
                     Command::new("check").about("Run all enabled graph checks"),
                 ))),
-            )))
+            ))))
             .subcommand(symbol_options_command(dupes_command(
                 health_command_without_top(boundary_command(report_command(
                     Command::new("audit")
@@ -445,8 +452,11 @@ fn command() -> Command {
                         .arg(max_decisions_arg()),
                 ))),
             )))
-            .subcommand(symbol_options_command(baseline_command(
-                Command::new("dead-code").about("Find Dart files unreachable from entry points"),
+            .subcommand(issue_filter_command(symbol_options_command(
+                baseline_command(
+                    Command::new("dead-code")
+                        .about("Find Dart files unreachable from entry points"),
+                ),
             )))
             .subcommand(baseline_command(
                 Command::new("cycles").about("Find circular file dependencies"),
@@ -556,6 +566,7 @@ fn request_from_matches(matches: &ArgMatches) -> Result<CommandRequest, CliError
     let health_options = health_options_for(command, subcommand, &config);
     let feature_flag_options = feature_flag_options_for(command, subcommand, &config);
     let security_options = security_options_for(command, subcommand, &config);
+    let issue_filters = issue_filter_args::issue_filters(command, subcommand);
     validate_security_cli(&security_cli, &security_options)?;
     Ok(CommandRequest {
         command,
@@ -593,6 +604,7 @@ fn request_from_matches(matches: &ArgMatches) -> Result<CommandRequest, CliError
         health_options,
         feature_flag_options,
         security_options,
+        issue_filters,
         scan_options: ScanOptions {
             ignore_patterns: config.ignore_patterns.clone(),
         },

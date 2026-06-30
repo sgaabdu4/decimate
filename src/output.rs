@@ -213,6 +213,38 @@ pub fn build_json_report(project: &ScannedProject, results: &AnalysisResults) ->
     }
 }
 
+/// Keep only selected finding kinds and recompute visible report counts.
+pub fn filter_report_findings(report: &mut JsonReport, allowed: &[FindingKind]) {
+    if allowed.is_empty() {
+        return;
+    }
+    report
+        .findings
+        .retain(|finding| allowed.contains(&finding.kind));
+    if !allowed.contains(&FindingKind::CodeDuplication) {
+        report.clone_groups.clear();
+    }
+    if !allowed.iter().any(|kind| is_complexity_kind(*kind)) {
+        report.complexity.clear();
+        report.file_scores.clear();
+        report.hotspots.clear();
+        report.refactoring_targets.clear();
+        report.threshold_overrides.clear();
+        report.runtime_coverage = None;
+    }
+    if !allowed.contains(&FindingKind::FeatureFlag) {
+        report.feature_flags.clear();
+    }
+    if !allowed.contains(&FindingKind::SecurityCandidate) {
+        report.security_candidates.clear();
+        report.attack_surface.clear();
+    }
+    report.next_steps.clear();
+    report.summary.findings = report.findings.len();
+    apply_scoped_counts(&mut report.summary, &report.findings);
+    report.verdict = report_verdict(&report.findings);
+}
+
 fn json_runtime_coverage_for(
     project: &ScannedProject,
     results: &AnalysisResults,
@@ -606,6 +638,19 @@ const fn is_dependency_hygiene_kind(kind: FindingKind) -> bool {
             | FindingKind::TestOnlyDependency
             | FindingKind::UnusedDependencyOverride
             | FindingKind::MisconfiguredDependencyOverride
+    )
+}
+
+const fn is_complexity_kind(kind: FindingKind) -> bool {
+    matches!(
+        kind,
+        FindingKind::HighCyclomaticComplexity
+            | FindingKind::HighCognitiveComplexity
+            | FindingKind::HighComplexity
+            | FindingKind::HighCrapScore
+            | FindingKind::CoverageGap
+            | FindingKind::HealthHotspot
+            | FindingKind::RefactoringTarget
     )
 }
 

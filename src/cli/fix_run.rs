@@ -121,6 +121,7 @@ pub(super) fn run_fix<W: Write>(subcommand: &ArgMatches, mut writer: W) -> Resul
         health_options: HealthOptions::default(),
         feature_flag_options: FeatureFlagOptions::default(),
         security_options: SecurityOptions::default(),
+        issue_filters: super::issue_filter_args::IssueFilters::default(),
         scan_options: ScanOptions {
             ignore_patterns: config.ignore_patterns.clone(),
         },
