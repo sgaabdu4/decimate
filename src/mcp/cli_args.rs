@@ -1,5 +1,13 @@
 use serde_json::{Map, Value};
 
+mod value_args;
+
+use value_args::{
+    array_strings, bool_arg, issue_filter_flag, push_bool_flag, push_bool_mode, push_float_flag,
+    push_noop_bool, push_number_flag, push_required_string, push_string_flag, push_string_flags,
+    string_arg,
+};
+
 const GLOBAL_KEYS: &[&str] = &["root", "config"];
 const REPORT_SCOPE_KEYS: &[&str] = &[
     "entry",
@@ -58,6 +66,7 @@ const HEALTH_KEYS: &[&str] = &[
     "min_score",
     "top",
 ];
+const FIX_KEYS: &[&str] = &["action", "no_create_config"];
 
 pub(super) fn cli_args_for_tool(
     name: &str,
@@ -66,7 +75,9 @@ pub(super) fn cli_args_for_tool(
     reject_unknown_args(name, args)?;
     match name {
         "analyze" => report_args("check", args, analyze_args),
+        "check_changed" => report_args("check", args, check_changed_args),
         "project_info" => report_args("list", args, project_info_args),
+        "list_boundaries" => report_args("list", args, list_boundaries_args),
         "inspect_target" => report_args("inspect", args, inspect_args),
         "trace_file" => report_args("trace-file", args, trace_file_args),
         "trace_export" => report_args("trace-symbol", args, trace_export_args),
@@ -83,6 +94,8 @@ pub(super) fn cli_args_for_tool(
         "feature_flags" => report_args("flags", args, flags_args),
         "impact" => impact_args(args),
         "impact_all" => impact_all_args(args),
+        "fix_preview" => fix_preview_args(args),
+        "fix_apply" => fix_apply_args(args),
         "audit" => report_args("audit", args, audit_args),
         "decision_surface" => report_args("decision-surface", args, decision_surface_args),
         "decimate_explain" => explain_args(args),
@@ -103,87 +116,29 @@ fn reject_unknown_args(name: &str, args: &Map<String, Value>) -> Result<(), Stri
 fn allowed_args(name: &str) -> Result<Vec<&'static str>, String> {
     let mut allowed = GLOBAL_KEYS.to_vec();
     match name {
-        "analyze" => {
-            allowed.extend(["issue_types"]);
-            allowed.extend(REPORT_SCOPE_KEYS);
-            allowed.extend(BASELINE_KEYS);
-            allowed.extend(SYMBOL_KEYS);
-            allowed.extend(BOUNDARY_KEYS);
-            allowed.extend(DUPLICATE_KEYS);
-            allowed.extend(HEALTH_KEYS);
-        }
-        "project_info" => {
-            allowed.extend([
-                "files",
-                "entry_points",
-                "plugins",
-                "boundaries",
-                "workspaces",
-            ]);
-            allowed.extend(LIST_SCOPE_KEYS);
-        }
+        "analyze" => extend_analyze_allowed(&mut allowed),
+        "check_changed" => extend_check_changed_allowed(&mut allowed),
+        "project_info" => extend_project_info_allowed(&mut allowed),
+        "list_boundaries" => allowed.extend(LIST_SCOPE_KEYS),
         "inspect_target" => allowed.extend(["target", "file", "symbol"]),
         "trace_file" => allowed.extend(["file"]),
         "trace_export" => allowed.extend(["file", "symbol", "export_name"]),
         "trace_dependency" => allowed.extend(["dependency", "package_name"]),
         "trace_clone" => allowed.extend(["fingerprint"]),
-        "find_dupes" => {
-            allowed.extend(REPORT_SCOPE_KEYS);
-            allowed.extend(BASELINE_KEYS);
-            allowed.extend(DUPLICATE_KEYS);
-        }
-        "check_health" => {
-            allowed.extend(REPORT_SCOPE_KEYS);
-            allowed.extend(BASELINE_KEYS);
-            allowed.extend(HEALTH_KEYS);
-        }
+        "find_dupes" => extend_dupes_allowed(&mut allowed),
+        "check_health" => extend_health_allowed(&mut allowed),
         "check_runtime_coverage"
         | "get_hot_paths"
         | "get_blast_radius"
         | "get_importance"
-        | "get_cleanup_candidates" => allowed.extend([
-            "coverage",
-            "min_invocations_hot",
-            "min_observation_volume",
-            "low_traffic_threshold",
-            "top",
-            "repo",
-        ]),
-        "security_candidates" => {
-            allowed.extend(REPORT_SCOPE_KEYS);
-            allowed.extend(BASELINE_KEYS);
-            allowed.extend([
-                "top",
-                "surface",
-                "gate",
-                "diff_file",
-                "ci",
-                "fail_on_issues",
-                "summary",
-            ]);
-        }
-        "feature_flags" => {
-            allowed.extend(REPORT_SCOPE_KEYS);
-            allowed.extend(BASELINE_KEYS);
-            allowed.extend(["top"]);
-        }
+        | "get_cleanup_candidates" => extend_runtime_allowed(&mut allowed),
+        "security_candidates" => extend_security_allowed(&mut allowed),
+        "feature_flags" => extend_flags_allowed(&mut allowed),
         "impact" => return Ok(vec!["root"]),
         "impact_all" => return Ok(vec!["sort", "limit"]),
-        "audit" => {
-            allowed.extend(REPORT_SCOPE_KEYS);
-            allowed.extend(SYMBOL_KEYS);
-            allowed.extend(BOUNDARY_KEYS);
-            allowed.extend(DUPLICATE_KEYS);
-            allowed.extend(HEALTH_KEYS);
-            allowed.extend([
-                "base",
-                "brief",
-                "dead_code_baseline",
-                "health_baseline",
-                "dupes_baseline",
-                "max_decisions",
-            ]);
-        }
+        "fix_preview" => extend_fix_allowed(&mut allowed),
+        "fix_apply" => extend_fix_apply_allowed(&mut allowed),
+        "audit" => extend_audit_allowed(&mut allowed),
         "decision_surface" => allowed.extend(["base", "max_decisions"]),
         "decimate_explain" => return Ok(vec!["issue_type", "rule_id"]),
         _ => return Err(format!("unknown tool {name}")),
@@ -191,6 +146,102 @@ fn allowed_args(name: &str) -> Result<Vec<&'static str>, String> {
     allowed.sort_unstable();
     allowed.dedup();
     Ok(allowed)
+}
+
+fn extend_analyze_allowed(allowed: &mut Vec<&'static str>) {
+    allowed.extend(["issue_types"]);
+    allowed.extend(REPORT_SCOPE_KEYS);
+    allowed.extend(BASELINE_KEYS);
+    allowed.extend(SYMBOL_KEYS);
+    allowed.extend(BOUNDARY_KEYS);
+    allowed.extend(DUPLICATE_KEYS);
+    allowed.extend(HEALTH_KEYS);
+}
+
+fn extend_check_changed_allowed(allowed: &mut Vec<&'static str>) {
+    allowed.extend(["since", "changed_since"]);
+    allowed.extend(BASELINE_KEYS);
+    allowed.extend(["production"]);
+}
+
+fn extend_project_info_allowed(allowed: &mut Vec<&'static str>) {
+    allowed.extend([
+        "files",
+        "entry_points",
+        "plugins",
+        "boundaries",
+        "workspaces",
+    ]);
+    allowed.extend(LIST_SCOPE_KEYS);
+}
+
+fn extend_dupes_allowed(allowed: &mut Vec<&'static str>) {
+    allowed.extend(REPORT_SCOPE_KEYS);
+    allowed.extend(BASELINE_KEYS);
+    allowed.extend(DUPLICATE_KEYS);
+}
+
+fn extend_health_allowed(allowed: &mut Vec<&'static str>) {
+    allowed.extend(REPORT_SCOPE_KEYS);
+    allowed.extend(BASELINE_KEYS);
+    allowed.extend(HEALTH_KEYS);
+}
+
+fn extend_runtime_allowed(allowed: &mut Vec<&'static str>) {
+    allowed.extend([
+        "coverage",
+        "min_invocations_hot",
+        "min_observation_volume",
+        "low_traffic_threshold",
+        "top",
+        "repo",
+    ]);
+}
+
+fn extend_security_allowed(allowed: &mut Vec<&'static str>) {
+    allowed.extend(REPORT_SCOPE_KEYS);
+    allowed.extend(BASELINE_KEYS);
+    allowed.extend([
+        "top",
+        "surface",
+        "gate",
+        "diff_file",
+        "ci",
+        "fail_on_issues",
+        "summary",
+    ]);
+}
+
+fn extend_flags_allowed(allowed: &mut Vec<&'static str>) {
+    allowed.extend(REPORT_SCOPE_KEYS);
+    allowed.extend(BASELINE_KEYS);
+    allowed.extend(["top"]);
+}
+
+fn extend_fix_allowed(allowed: &mut Vec<&'static str>) {
+    allowed.extend(REPORT_SCOPE_KEYS);
+    allowed.extend(FIX_KEYS);
+}
+
+fn extend_fix_apply_allowed(allowed: &mut Vec<&'static str>) {
+    extend_fix_allowed(allowed);
+    allowed.extend(["yes"]);
+}
+
+fn extend_audit_allowed(allowed: &mut Vec<&'static str>) {
+    allowed.extend(REPORT_SCOPE_KEYS);
+    allowed.extend(SYMBOL_KEYS);
+    allowed.extend(BOUNDARY_KEYS);
+    allowed.extend(DUPLICATE_KEYS);
+    allowed.extend(HEALTH_KEYS);
+    allowed.extend([
+        "base",
+        "brief",
+        "dead_code_baseline",
+        "health_baseline",
+        "dupes_baseline",
+        "max_decisions",
+    ]);
 }
 
 fn report_args<F>(
@@ -230,6 +281,15 @@ fn analyze_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), 
     Ok(())
 }
 
+fn check_changed_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
+    let since = string_arg(args, "since")?
+        .or(string_arg(args, "changed_since")?)
+        .ok_or_else(|| "check_changed requires since".to_owned())?;
+    cli.extend(["--changed-since".to_owned(), since]);
+    push_baseline_args(cli, args)?;
+    push_bool_mode(cli, args, "production", "--production", "--no-production")
+}
+
 fn project_info_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
     push_string_flags(cli, args, "entry", "--entry")?;
     push_string_flags(cli, args, "file", "--file")?;
@@ -245,6 +305,16 @@ fn project_info_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result
     ] {
         push_bool_flag(cli, args, key, flag)?;
     }
+    Ok(())
+}
+
+fn list_boundaries_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
+    push_string_flags(cli, args, "entry", "--entry")?;
+    push_string_flags(cli, args, "file", "--file")?;
+    push_string_flags(cli, args, "workspace", "--workspace")?;
+    push_string_flag(cli, args, "changed_workspaces", "--changed-workspaces")?;
+    push_bool_mode(cli, args, "production", "--production", "--no-production")?;
+    cli.push("--boundaries".to_owned());
     Ok(())
 }
 
@@ -426,6 +496,31 @@ fn impact_all_args(args: &Map<String, Value>) -> Result<Vec<String>, String> {
     Ok(cli)
 }
 
+fn fix_preview_args(args: &Map<String, Value>) -> Result<Vec<String>, String> {
+    let mut cli = json_command_args(&["fix"]);
+    push_string_flag(&mut cli, args, "root", "--root")?;
+    push_string_flag(&mut cli, args, "config", "--config")?;
+    push_report_scope_args(&mut cli, args)?;
+    push_string_flags(&mut cli, args, "action", "--action")?;
+    push_noop_bool(args, "no_create_config")?;
+    cli.push("--dry-run".to_owned());
+    Ok(cli)
+}
+
+fn fix_apply_args(args: &Map<String, Value>) -> Result<Vec<String>, String> {
+    if bool_arg(args, "yes")? != Some(true) {
+        return Err("fix_apply requires yes: true".to_owned());
+    }
+    let mut cli = json_command_args(&["fix"]);
+    push_string_flag(&mut cli, args, "root", "--root")?;
+    push_string_flag(&mut cli, args, "config", "--config")?;
+    push_report_scope_args(&mut cli, args)?;
+    push_string_flags(&mut cli, args, "action", "--action")?;
+    push_noop_bool(args, "no_create_config")?;
+    cli.push("--yes".to_owned());
+    Ok(cli)
+}
+
 fn audit_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
     push_required_string(cli, args, "base", "--base")?;
     push_report_scope_args(cli, args)?;
@@ -522,170 +617,4 @@ fn reject_nested_unknown(value: &Map<String, Value>, allowed: &[&str]) -> Result
         }
     }
     Ok(())
-}
-
-fn push_string_flag(
-    cli: &mut Vec<String>,
-    args: &Map<String, Value>,
-    key: &str,
-    flag: &str,
-) -> Result<(), String> {
-    if let Some(value) = string_arg(args, key)? {
-        cli.extend([flag.to_owned(), value]);
-    }
-    Ok(())
-}
-
-fn push_string_flags(
-    cli: &mut Vec<String>,
-    args: &Map<String, Value>,
-    key: &str,
-    flag: &str,
-) -> Result<(), String> {
-    match args.get(key) {
-        Some(Value::String(value)) => cli.extend([flag.to_owned(), value.clone()]),
-        Some(value @ Value::Array(_)) => {
-            for value in array_strings(value, key)? {
-                cli.extend([flag.to_owned(), value.to_owned()]);
-            }
-        }
-        Some(_) => return Err(format!("{key} must be a string or string array")),
-        None => {}
-    }
-    Ok(())
-}
-
-fn push_required_string(
-    cli: &mut Vec<String>,
-    args: &Map<String, Value>,
-    key: &str,
-    flag: &str,
-) -> Result<(), String> {
-    let value = string_arg(args, key)?.ok_or_else(|| format!("{key} is required"))?;
-    cli.extend([flag.to_owned(), value]);
-    Ok(())
-}
-
-fn push_number_flag(
-    cli: &mut Vec<String>,
-    args: &Map<String, Value>,
-    key: &str,
-    flag: &str,
-) -> Result<(), String> {
-    let Some(value) = args.get(key) else {
-        return Ok(());
-    };
-    let Some(number) = value.as_u64() else {
-        return Err(format!("{key} must be a non-negative integer"));
-    };
-    cli.extend([flag.to_owned(), number.to_string()]);
-    Ok(())
-}
-
-fn push_float_flag(
-    cli: &mut Vec<String>,
-    args: &Map<String, Value>,
-    key: &str,
-    flag: &str,
-) -> Result<(), String> {
-    let Some(value) = args.get(key) else {
-        return Ok(());
-    };
-    let Some(number) = value.as_f64() else {
-        return Err(format!("{key} must be a non-negative number"));
-    };
-    if !number.is_finite() || number.is_sign_negative() {
-        return Err(format!("{key} must be a non-negative number"));
-    }
-    cli.extend([flag.to_owned(), number.to_string()]);
-    Ok(())
-}
-
-fn push_bool_flag(
-    cli: &mut Vec<String>,
-    args: &Map<String, Value>,
-    key: &str,
-    flag: &str,
-) -> Result<(), String> {
-    if bool_arg(args, key)? == Some(true) {
-        cli.push(flag.to_owned());
-    }
-    Ok(())
-}
-
-fn push_bool_mode(
-    cli: &mut Vec<String>,
-    args: &Map<String, Value>,
-    key: &str,
-    true_flag: &str,
-    false_flag: &str,
-) -> Result<(), String> {
-    match bool_arg(args, key)? {
-        Some(true) => cli.push(true_flag.to_owned()),
-        Some(false) => cli.push(false_flag.to_owned()),
-        None => {}
-    }
-    Ok(())
-}
-
-fn string_arg(args: &Map<String, Value>, key: &str) -> Result<Option<String>, String> {
-    match args.get(key) {
-        Some(Value::String(value)) => Ok(Some(value.clone())),
-        Some(_) => Err(format!("{key} must be a string")),
-        None => Ok(None),
-    }
-}
-
-fn bool_arg(args: &Map<String, Value>, key: &str) -> Result<Option<bool>, String> {
-    match args.get(key) {
-        Some(Value::Bool(value)) => Ok(Some(*value)),
-        Some(_) => Err(format!("{key} must be a boolean")),
-        None => Ok(None),
-    }
-}
-
-fn array_strings<'value>(value: &'value Value, key: &str) -> Result<Vec<&'value str>, String> {
-    let Some(values) = value.as_array() else {
-        return Err(format!("{key} must be a string array"));
-    };
-    values
-        .iter()
-        .map(|value| {
-            value
-                .as_str()
-                .ok_or_else(|| format!("{key} entries must be strings"))
-        })
-        .collect()
-}
-
-fn issue_filter_flag(issue_type: &str) -> Result<String, String> {
-    match issue_type {
-        "unused-files" | "unused-file" => Ok("--unused-files".to_owned()),
-        "unused-exports" | "unused-export" => Ok("--unused-exports".to_owned()),
-        "unused-types" | "unused-type" => Ok("--unused-types".to_owned()),
-        "unused-deps" | "unused-dependency" | "unused-dependencies" => {
-            Ok("--unused-deps".to_owned())
-        }
-        "unlisted-deps" | "unlisted-dependency" | "unlisted-dependencies" => {
-            Ok("--unlisted-deps".to_owned())
-        }
-        "private-src-import" | "private-src-imports" => Ok("--private-src-imports".to_owned()),
-        "duplicate-exports" | "duplicate-export" => Ok("--duplicate-exports".to_owned()),
-        "circular-deps" | "circular-dependency" => Ok("--circular-deps".to_owned()),
-        "re-export-cycles" | "re-export-cycle" => Ok("--re-export-cycles".to_owned()),
-        "boundary-violations" | "boundary-violation" => Ok("--boundary-violations".to_owned()),
-        "policy-violations" | "policy-violation" => Ok("--policy-violations".to_owned()),
-        "unused-enum-members" | "unused-enum-member" => Ok("--unused-enum-members".to_owned()),
-        "unused-class-members" | "unused-class-member" => Ok("--unused-class-members".to_owned()),
-        "unresolved-imports" | "unresolved-dependency" => Ok("--unresolved-imports".to_owned()),
-        "stale-suppressions" | "stale-suppression" => Ok("--stale-suppressions".to_owned()),
-        "unused-dependency-overrides" | "unused-dependency-override" => {
-            Ok("--unused-dependency-overrides".to_owned())
-        }
-        "misconfigured-dependency-overrides" | "misconfigured-dependency-override" => {
-            Ok("--misconfigured-dependency-overrides".to_owned())
-        }
-        "private-type-leak" | "private-type-leaks" => Ok("--private-type-leaks".to_owned()),
-        _ => Err(format!("unsupported issue_type {issue_type}")),
-    }
 }

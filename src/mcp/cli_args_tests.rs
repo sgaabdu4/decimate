@@ -138,6 +138,58 @@ fn security_candidates_map_gate_and_ci_flags() -> Result<(), String> {
 }
 
 #[test]
+fn changed_and_boundary_tools_map_direct_fallow_aliases() -> Result<(), String> {
+    let changed = cli_args_for_tool(
+        "check_changed",
+        &arguments_json(
+            r#"{
+                "root": "/repo",
+                "since": "origin/main",
+                "baseline": "baseline.json",
+                "fail_on_regression": true,
+                "production": false
+            }"#,
+        )?,
+    )?;
+    let boundaries = cli_args_for_tool(
+        "list_boundaries",
+        &arguments_json(
+            r#"{
+                "root": "/repo",
+                "workspace": ["app"],
+                "production": true
+            }"#,
+        )?,
+    )?;
+
+    assert_eq!(changed[..4], ["decimate", "check", "--format", "json"]);
+    assert_pair(&changed, "--root", "/repo");
+    assert_pair(&changed, "--changed-since", "origin/main");
+    assert_pair(&changed, "--baseline", "baseline.json");
+    assert_flag(&changed, "--fail-on-regression");
+    assert_flag(&changed, "--no-production");
+
+    assert_eq!(boundaries[..4], ["decimate", "list", "--format", "json"]);
+    assert_pair(&boundaries, "--root", "/repo");
+    assert_pair(&boundaries, "--workspace", "app");
+    assert_flag(&boundaries, "--production");
+    assert_flag(&boundaries, "--boundaries");
+
+    Ok(())
+}
+
+#[test]
+fn check_changed_accepts_changed_since_alias() -> Result<(), String> {
+    let cli = cli_args_for_tool(
+        "check_changed",
+        &arguments_json(r#"{ "changed_since": "HEAD~1" }"#)?,
+    )?;
+
+    assert_pair(&cli, "--changed-since", "HEAD~1");
+    Ok(())
+}
+
+#[test]
 fn runtime_coverage_tools_map_fallow_coverage_param() -> Result<(), String> {
     let args = arguments_json(
         r#"{
@@ -192,6 +244,60 @@ fn impact_tools_map_read_only_reports() -> Result<(), String> {
         ]
     );
 
+    Ok(())
+}
+
+#[test]
+fn fix_tools_map_preview_and_confirmed_apply() -> Result<(), String> {
+    let preview_args = arguments_json(
+        r#"{
+            "root": "/repo",
+            "entry": ["lib/main.dart"],
+            "file": ["lib/dead.dart"],
+            "production": true,
+            "action": ["delete-file"],
+            "no_create_config": true
+        }"#,
+    )?;
+    let apply_args = arguments_json(
+        r#"{
+            "root": "/repo",
+            "entry": ["lib/main.dart"],
+            "action": ["delete-file"],
+            "yes": true
+        }"#,
+    )?;
+
+    let preview = cli_args_for_tool("fix_preview", &preview_args)?;
+    let apply = cli_args_for_tool("fix_apply", &apply_args)?;
+
+    assert_eq!(preview[..4], ["decimate", "fix", "--format", "json"]);
+    assert_pair(&preview, "--root", "/repo");
+    assert_pair(&preview, "--entry", "lib/main.dart");
+    assert_pair(&preview, "--file", "lib/dead.dart");
+    assert_flag(&preview, "--production");
+    assert_pair(&preview, "--action", "delete-file");
+    assert_flag(&preview, "--dry-run");
+
+    assert_eq!(apply[..4], ["decimate", "fix", "--format", "json"]);
+    assert_pair(&apply, "--root", "/repo");
+    assert_pair(&apply, "--entry", "lib/main.dart");
+    assert_pair(&apply, "--action", "delete-file");
+    assert_flag(&apply, "--yes");
+
+    Ok(())
+}
+
+#[test]
+fn fix_apply_requires_explicit_yes_true() -> Result<(), String> {
+    let error = cli_args_for_tool(
+        "fix_apply",
+        &arguments_json(r#"{ "root": "/repo", "yes": false }"#)?,
+    )
+    .err()
+    .ok_or_else(|| "expected yes rejection".to_owned())?;
+
+    assert_eq!(error, "fix_apply requires yes: true");
     Ok(())
 }
 

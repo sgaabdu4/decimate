@@ -34,12 +34,19 @@ fn mcp_initialize_and_tools_list_follow_json_rpc_contract() -> Result<(), Box<dy
         .as_array()
         .ok_or_else(|| "tools/list result must contain tools array".to_owned())?;
     for tool in tool_defs {
-        assert_eq!(tool["annotations"]["readOnlyHint"], true);
-        assert_eq!(tool["annotations"]["destructiveHint"], false);
+        if tool["name"] == "fix_apply" {
+            assert_eq!(tool["annotations"]["readOnlyHint"], false);
+            assert_eq!(tool["annotations"]["destructiveHint"], true);
+        } else {
+            assert_eq!(tool["annotations"]["readOnlyHint"], true);
+            assert_eq!(tool["annotations"]["destructiveHint"], false);
+        }
         assert_eq!(tool["inputSchema"]["additionalProperties"], false);
     }
     assert_tool_property(tool_defs, "analyze", "changed_workspaces")?;
     assert_tool_property(tool_defs, "analyze", "private_type_leaks")?;
+    assert_tool_property(tool_defs, "check_changed", "since")?;
+    assert_tool_property(tool_defs, "list_boundaries", "workspace")?;
     assert_tool_property(tool_defs, "analyze", "policy_pack")?;
     assert_tool_property(tool_defs, "check_health", "min_score")?;
     assert_tool_property(tool_defs, "check_runtime_coverage", "coverage")?;
@@ -47,6 +54,8 @@ fn mcp_initialize_and_tools_list_follow_json_rpc_contract() -> Result<(), Box<dy
     assert_tool_property(tool_defs, "impact", "root")?;
     assert_tool_property(tool_defs, "impact_all", "limit")?;
     assert_tool_property(tool_defs, "security_candidates", "gate")?;
+    assert_tool_property(tool_defs, "fix_preview", "action")?;
+    assert_tool_property(tool_defs, "fix_apply", "yes")?;
     assert_tool_property(tool_defs, "audit", "dead_code_baseline")?;
 
     Ok(())
@@ -152,6 +161,45 @@ fn mcp_call_analyze_runs_read_only_decimate_report() -> Result<(), Box<dyn std::
 }
 
 #[test]
+fn mcp_call_list_boundaries_returns_project_list() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(&fixture, "lib/main.dart", "void main() {}\n")?;
+    write(
+        &fixture,
+        "decimate.json",
+        r#"{ "boundaries": [{ "from": "lib/domain", "disallow": "lib/ui" }] }"#,
+    )?;
+    let message = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 14,
+        "method": "tools/call",
+        "params": {
+            "name": "list_boundaries",
+            "arguments": {
+                "root": fixture.path(),
+                "config": "decimate.json"
+            }
+        }
+    });
+
+    let output = response(&serde_json::to_string(&message)?)?;
+
+    assert_eq!(output["result"]["isError"], false);
+    assert_eq!(
+        output["result"]["structuredContent"]["schema_version"],
+        "decimate.list.v1"
+    );
+    assert_eq!(output["result"]["structuredContent"]["command"], "list");
+    assert_eq!(
+        output["result"]["structuredContent"]["boundaries"]["rules"][0]["from"],
+        "lib/domain"
+    );
+
+    Ok(())
+}
+
+#[test]
 fn mcp_call_runtime_coverage_uses_coverage_analyze() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     write(&fixture, "pubspec.yaml", "name: app\n")?;
@@ -221,6 +269,87 @@ fn mcp_call_impact_returns_read_only_report() -> Result<(), Box<dyn std::error::
     );
     assert_eq!(output["result"]["structuredContent"]["kind"], "impact");
     assert_eq!(output["result"]["structuredContent"]["enabled"], false);
+
+    Ok(())
+}
+
+#[test]
+fn mcp_call_fix_preview_does_not_modify_files() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = fix_fixture()?;
+    let message = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 7,
+        "method": "tools/call",
+        "params": {
+            "name": "fix_preview",
+            "arguments": {
+                "root": fixture.path(),
+                "entry": ["lib/main.dart"],
+                "action": ["delete-file"]
+            }
+        }
+    });
+
+    let output = response(&serde_json::to_string(&message)?)?;
+
+    assert_eq!(output["result"]["isError"], false);
+    assert_eq!(
+        output["result"]["structuredContent"]["schema_version"],
+        "decimate.fix.v1"
+    );
+    assert_eq!(output["result"]["structuredContent"]["mode"], "dry-run");
+    assert_eq!(
+        output["result"]["structuredContent"]["summary"]["planned"],
+        1
+    );
+    assert!(fixture.path().join("lib/dead.dart").exists());
+
+    Ok(())
+}
+
+#[test]
+fn mcp_call_fix_apply_requires_yes_true() -> Result<(), Box<dyn std::error::Error>> {
+    let output = response(
+        r#"{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"fix_apply","arguments":{"root":"/tmp","yes":false}}}"#,
+    )?;
+
+    assert_eq!(output["error"]["code"], -32602);
+    assert!(
+        output["error"]["message"]
+            .as_str()
+            .is_some_and(|message| message.contains("fix_apply requires yes: true"))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn mcp_call_fix_apply_applies_confirmed_safe_changes() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = fix_fixture()?;
+    let message = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 9,
+        "method": "tools/call",
+        "params": {
+            "name": "fix_apply",
+            "arguments": {
+                "root": fixture.path(),
+                "entry": ["lib/main.dart"],
+                "action": ["delete-file"],
+                "yes": true
+            }
+        }
+    });
+
+    let output = response(&serde_json::to_string(&message)?)?;
+
+    assert_eq!(output["result"]["isError"], false);
+    assert_eq!(output["result"]["structuredContent"]["mode"], "apply");
+    assert_eq!(
+        output["result"]["structuredContent"]["summary"]["applied"],
+        1
+    );
+    assert!(!fixture.path().join("lib/dead.dart").exists());
 
     Ok(())
 }
@@ -310,4 +439,12 @@ fn write(fixture: &TempDir, path: &str, source: &str) -> Result<(), std::io::Err
         fs::create_dir_all(parent)?;
     }
     fs::write(path, source)
+}
+
+fn fix_fixture() -> Result<TempDir, std::io::Error> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(&fixture, "lib/main.dart", "void main() {}\n")?;
+    write(&fixture, "lib/dead.dart", "class Dead {}\n")?;
+    Ok(fixture)
 }

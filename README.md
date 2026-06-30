@@ -268,14 +268,16 @@ decimate config-schema --format json
 decimate rule-pack-schema --format json
 ```
 
-`decimate-mcp` starts a read-only MCP stdio server. It implements
+`decimate-mcp` starts an MCP stdio server. It implements
 `initialize`, `ping`, `tools/list`, and `tools/call` for the same agent wrappers
 listed under `mcp_tools` in `decimate schema`: `analyze`, `project_info`,
-`inspect_target`, `trace_file`, `trace_export`, `trace_dependency`,
-`trace_clone`, `find_dupes`, `check_health`, `check_runtime_coverage`,
-`get_hot_paths`, `get_blast_radius`, `get_importance`,
-`get_cleanup_candidates`, `security_candidates`, `feature_flags`, `impact`,
-`impact_all`, `audit`, `decision_surface`, and `decimate_explain`.
+`check_changed`, `list_boundaries`, `inspect_target`, `trace_file`,
+`trace_export`, `trace_dependency`, `trace_clone`, `find_dupes`,
+`check_health`, `check_runtime_coverage`, `get_hot_paths`, `get_blast_radius`,
+`get_importance`, `get_cleanup_candidates`, `security_candidates`,
+`feature_flags`, `impact`, `impact_all`, `fix_preview`, `fix_apply`, `audit`,
+`decision_surface`, and `decimate_explain`. `fix_apply` is mutating and
+requires explicit `yes: true`; all other MCP tools are read-only.
 
 Important schemas:
 
@@ -408,8 +410,7 @@ Decimate also adds Dart-specific graph intelligence that Fallow does not need:
 
 Known gaps before claiming full product parity with Fallow:
 
-- MCP stdio support is read-only; mutating `fix_apply` and sandboxed
-  `code_execute` are not exposed yet
+- sandboxed MCP `code_execute` is not exposed yet
 - no embedded Node/NAPI-style bindings, because Decimate is not a JS tool
 - no hosted/cloud continuous runtime monitoring
 - no `watch`, `migrate`, telemetry, license, editor, or viz commands yet

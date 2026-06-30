@@ -14,7 +14,7 @@ use tools::tools;
 
 const PROTOCOL_VERSION: &str = "2025-11-25";
 
-/// Run Decimate's read-only MCP stdio server.
+/// Run Decimate's MCP stdio server.
 ///
 /// # Errors
 ///
@@ -83,7 +83,7 @@ fn initialize_result(message: &Value) -> Value {
             "title": "Decimate MCP",
             "version": env!("CARGO_PKG_VERSION")
         },
-        "instructions": "Read-only Dart and Flutter codebase intelligence. Mutating fixes are not exposed over MCP."
+        "instructions": "Dart and Flutter codebase intelligence. Mutating fix_apply is available only with explicit yes: true confirmation."
     })
 }
 

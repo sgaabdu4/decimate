@@ -3,6 +3,7 @@ use serde_json::{Value, json};
 use crate::coverage::COVERAGE_ANALYSIS_SCHEMA_VERSION;
 use crate::decision_surface::DECISION_SURFACE_SCHEMA_VERSION;
 use crate::explain::EXPLAIN_SCHEMA_VERSION;
+use crate::fix::FIX_SCHEMA_VERSION;
 use crate::impact::IMPACT_SCHEMA_VERSION;
 use crate::inspect::INSPECT_SCHEMA_VERSION;
 use crate::output::{SCHEMA_VERSION, TRACE_SCHEMA_VERSION};
@@ -11,7 +12,7 @@ use crate::project_list::PROJECT_LIST_SCHEMA_VERSION;
 pub(super) fn mcp_tools() -> Value {
     json!({
         "server": "decimate-mcp",
-        "note": "Read-only agent tool contracts backed by existing Decimate CLI commands. Mutating fixes are intentionally not advertised.",
+        "note": "Agent tool contracts backed by existing Decimate CLI commands. fix_apply is mutating and requires yes: true.",
         "tools": mcp_tool_list()
     })
 }
@@ -28,6 +29,22 @@ fn mcp_overview_tools() -> Vec<Value> {
     vec![
         analyze_mcp_tool(),
         mcp_tool(
+            "check_changed",
+            "decimate check --format json --changed-since",
+            SCHEMA_VERSION,
+            &[
+                "root",
+                "config",
+                "since",
+                "changed_since",
+                "baseline",
+                "regression_baseline",
+                "fail_on_regression",
+                "tolerance",
+                "production",
+            ],
+        ),
+        mcp_tool(
             "project_info",
             "decimate list --format json",
             PROJECT_LIST_SCHEMA_VERSION,
@@ -39,6 +56,20 @@ fn mcp_overview_tools() -> Vec<Value> {
                 "plugins",
                 "boundaries",
                 "workspaces",
+                "entry",
+                "file",
+                "workspace",
+                "changed_workspaces",
+                "production",
+            ],
+        ),
+        mcp_tool(
+            "list_boundaries",
+            "decimate list --format json --boundaries",
+            PROJECT_LIST_SCHEMA_VERSION,
+            &[
+                "root",
+                "config",
                 "entry",
                 "file",
                 "workspace",
@@ -335,6 +366,41 @@ fn feature_flags_mcp_tool() -> Value {
 fn mcp_change_tools() -> Vec<Value> {
     vec![
         mcp_tool(
+            "fix_preview",
+            "decimate fix --format json --dry-run",
+            FIX_SCHEMA_VERSION,
+            &[
+                "root",
+                "config",
+                "entry",
+                "file",
+                "workspace",
+                "changed_workspaces",
+                "changed_since",
+                "production",
+                "action",
+                "no_create_config",
+            ],
+        ),
+        mcp_write_tool(
+            "fix_apply",
+            "decimate fix --format json --yes",
+            FIX_SCHEMA_VERSION,
+            &[
+                "root",
+                "config",
+                "entry",
+                "file",
+                "workspace",
+                "changed_workspaces",
+                "changed_since",
+                "production",
+                "action",
+                "no_create_config",
+                "yes",
+            ],
+        ),
+        mcp_tool(
             "audit",
             "decimate audit --format json",
             SCHEMA_VERSION,
@@ -410,9 +476,23 @@ fn runtime_mcp_tool(name: &str, key_params: &[&str]) -> Value {
 }
 
 fn mcp_tool(name: &str, command: &str, schema: &str, key_params: &[&str]) -> Value {
+    mcp_tool_with_access(name, command, schema, key_params, true)
+}
+
+fn mcp_write_tool(name: &str, command: &str, schema: &str, key_params: &[&str]) -> Value {
+    mcp_tool_with_access(name, command, schema, key_params, false)
+}
+
+fn mcp_tool_with_access(
+    name: &str,
+    command: &str,
+    schema: &str,
+    key_params: &[&str],
+    read_only: bool,
+) -> Value {
     json!({
         "name": name,
-        "read_only": true,
+        "read_only": read_only,
         "command": command,
         "schema": schema,
         "key_params": key_params

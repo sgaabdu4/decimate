@@ -11,94 +11,148 @@ pub(super) fn tools() -> Value {
 
 fn overview_tools() -> Vec<Value> {
     vec![
-        tool(
-            "analyze",
-            "Run Decimate check and return the JSON report.",
-            schema(
-                &[
-                    ("root", "string"),
-                    ("config", "string"),
-                    ("issue_types", "array"),
-                    ("entry", "array"),
-                    ("file", "array"),
-                    ("workspace", "array"),
-                    ("changed_workspaces", "string"),
-                    ("changed_since", "string"),
-                    ("baseline", "string"),
-                    ("regression_baseline", "string"),
-                    ("fail_on_regression", "boolean"),
-                    ("tolerance", "string"),
-                    ("include_entry_exports", "boolean"),
-                    ("private_type_leaks", "boolean"),
-                    ("boundary", "array"),
-                    ("boundary_coverage", "boolean"),
-                    ("boundary_call", "array"),
-                    ("policy_pack", "array"),
-                    ("policy_violations", "boolean"),
-                    ("mode", "string"),
-                    ("min_tokens", "integer"),
-                    ("min_lines", "integer"),
-                    ("min_occurrences", "integer"),
-                    ("top", "integer"),
-                    ("skip_local", "boolean"),
-                    ("ignore_imports", "boolean"),
-                    ("no_ignore_imports", "boolean"),
-                    ("max_cyclomatic", "integer"),
-                    ("max_cognitive", "integer"),
-                    ("max_crap", "integer"),
-                    ("coverage", "string"),
-                    ("runtime_coverage", "string"),
-                    ("min_invocations_hot", "integer"),
-                    ("min_observation_volume", "integer"),
-                    ("low_traffic_threshold", "number"),
-                    ("coverage_gaps", "boolean"),
-                    ("file_scores", "boolean"),
-                    ("hotspots", "boolean"),
-                    ("targets", "boolean"),
-                    ("ownership", "boolean"),
-                    ("complexity_breakdown", "boolean"),
-                    ("min_score", "integer"),
-                    ("production", "boolean"),
-                ],
-                &[],
-            ),
-        ),
-        tool(
-            "project_info",
-            "List Decimate project metadata.",
-            schema(
-                &[
-                    ("root", "string"),
-                    ("config", "string"),
-                    ("files", "boolean"),
-                    ("entry_points", "boolean"),
-                    ("plugins", "boolean"),
-                    ("boundaries", "boolean"),
-                    ("workspaces", "boolean"),
-                    ("entry", "array"),
-                    ("file", "array"),
-                    ("workspace", "array"),
-                    ("changed_workspaces", "string"),
-                    ("production", "boolean"),
-                ],
-                &[],
-            ),
-        ),
-        tool(
-            "inspect_target",
-            "Inspect one Dart file or symbol.",
-            schema(
-                &[
-                    ("root", "string"),
-                    ("config", "string"),
-                    ("target", "target"),
-                    ("file", "string"),
-                    ("symbol", "string"),
-                ],
-                &[],
-            ),
-        ),
+        analyze_tool(),
+        check_changed_tool(),
+        project_info_tool(),
+        list_boundaries_tool(),
+        inspect_target_tool(),
     ]
+}
+
+fn analyze_tool() -> Value {
+    tool(
+        "analyze",
+        "Run Decimate check and return the JSON report.",
+        schema(
+            &[
+                ("root", "string"),
+                ("config", "string"),
+                ("issue_types", "array"),
+                ("entry", "array"),
+                ("file", "array"),
+                ("workspace", "array"),
+                ("changed_workspaces", "string"),
+                ("changed_since", "string"),
+                ("baseline", "string"),
+                ("regression_baseline", "string"),
+                ("fail_on_regression", "boolean"),
+                ("tolerance", "string"),
+                ("include_entry_exports", "boolean"),
+                ("private_type_leaks", "boolean"),
+                ("boundary", "array"),
+                ("boundary_coverage", "boolean"),
+                ("boundary_call", "array"),
+                ("policy_pack", "array"),
+                ("policy_violations", "boolean"),
+                ("mode", "string"),
+                ("min_tokens", "integer"),
+                ("min_lines", "integer"),
+                ("min_occurrences", "integer"),
+                ("top", "integer"),
+                ("skip_local", "boolean"),
+                ("ignore_imports", "boolean"),
+                ("no_ignore_imports", "boolean"),
+                ("max_cyclomatic", "integer"),
+                ("max_cognitive", "integer"),
+                ("max_crap", "integer"),
+                ("coverage", "string"),
+                ("runtime_coverage", "string"),
+                ("min_invocations_hot", "integer"),
+                ("min_observation_volume", "integer"),
+                ("low_traffic_threshold", "number"),
+                ("coverage_gaps", "boolean"),
+                ("file_scores", "boolean"),
+                ("hotspots", "boolean"),
+                ("targets", "boolean"),
+                ("ownership", "boolean"),
+                ("complexity_breakdown", "boolean"),
+                ("min_score", "integer"),
+                ("production", "boolean"),
+            ],
+            &[],
+        ),
+    )
+}
+
+fn check_changed_tool() -> Value {
+    tool(
+        "check_changed",
+        "Run Decimate check scoped to files changed since a Git ref.",
+        schema(
+            &[
+                ("root", "string"),
+                ("config", "string"),
+                ("since", "string"),
+                ("changed_since", "string"),
+                ("baseline", "string"),
+                ("regression_baseline", "string"),
+                ("fail_on_regression", "boolean"),
+                ("tolerance", "string"),
+                ("production", "boolean"),
+            ],
+            &[],
+        ),
+    )
+}
+
+fn project_info_tool() -> Value {
+    tool(
+        "project_info",
+        "List Decimate project metadata.",
+        schema(
+            &[
+                ("root", "string"),
+                ("config", "string"),
+                ("files", "boolean"),
+                ("entry_points", "boolean"),
+                ("plugins", "boolean"),
+                ("boundaries", "boolean"),
+                ("workspaces", "boolean"),
+                ("entry", "array"),
+                ("file", "array"),
+                ("workspace", "array"),
+                ("changed_workspaces", "string"),
+                ("production", "boolean"),
+            ],
+            &[],
+        ),
+    )
+}
+
+fn list_boundaries_tool() -> Value {
+    tool(
+        "list_boundaries",
+        "List configured architecture boundaries.",
+        schema(
+            &[
+                ("root", "string"),
+                ("config", "string"),
+                ("entry", "array"),
+                ("file", "array"),
+                ("workspace", "array"),
+                ("changed_workspaces", "string"),
+                ("production", "boolean"),
+            ],
+            &[],
+        ),
+    )
+}
+
+fn inspect_target_tool() -> Value {
+    tool(
+        "inspect_target",
+        "Inspect one Dart file or symbol.",
+        schema(
+            &[
+                ("root", "string"),
+                ("config", "string"),
+                ("target", "target"),
+                ("file", "string"),
+                ("symbol", "string"),
+            ],
+            &[],
+        ),
+    )
 }
 
 fn trace_tools() -> Vec<Value> {
@@ -355,81 +409,152 @@ fn feature_flags_tool() -> Value {
 
 fn change_tools() -> Vec<Value> {
     vec![
-        tool(
-            "audit",
-            "Run changed-code audit.",
-            schema(
-                &[
-                    ("root", "string"),
-                    ("config", "string"),
-                    ("base", "string"),
-                    ("entry", "array"),
-                    ("file", "array"),
-                    ("workspace", "array"),
-                    ("changed_workspaces", "string"),
-                    ("changed_since", "string"),
-                    ("include_entry_exports", "boolean"),
-                    ("private_type_leaks", "boolean"),
-                    ("boundary", "array"),
-                    ("boundary_coverage", "boolean"),
-                    ("boundary_call", "array"),
-                    ("policy_pack", "array"),
-                    ("policy_violations", "boolean"),
-                    ("mode", "string"),
-                    ("min_tokens", "integer"),
-                    ("min_lines", "integer"),
-                    ("min_occurrences", "integer"),
-                    ("top", "integer"),
-                    ("skip_local", "boolean"),
-                    ("ignore_imports", "boolean"),
-                    ("no_ignore_imports", "boolean"),
-                    ("max_cyclomatic", "integer"),
-                    ("max_cognitive", "integer"),
-                    ("max_crap", "integer"),
-                    ("coverage", "string"),
-                    ("runtime_coverage", "string"),
-                    ("min_invocations_hot", "integer"),
-                    ("min_observation_volume", "integer"),
-                    ("low_traffic_threshold", "number"),
-                    ("coverage_gaps", "boolean"),
-                    ("file_scores", "boolean"),
-                    ("hotspots", "boolean"),
-                    ("targets", "boolean"),
-                    ("ownership", "boolean"),
-                    ("complexity_breakdown", "boolean"),
-                    ("min_score", "integer"),
-                    ("dead_code_baseline", "string"),
-                    ("health_baseline", "string"),
-                    ("dupes_baseline", "string"),
-                    ("production", "boolean"),
-                    ("brief", "boolean"),
-                    ("max_decisions", "integer"),
-                ],
-                &["base"],
-            ),
-        ),
-        tool(
-            "decision_surface",
-            "Surface changed-code architecture decisions.",
-            schema(
-                &[
-                    ("root", "string"),
-                    ("config", "string"),
-                    ("base", "string"),
-                    ("max_decisions", "integer"),
-                ],
-                &["base"],
-            ),
-        ),
-        tool(
-            "decimate_explain",
-            "Explain a Decimate issue type.",
-            schema(&[("issue_type", "string"), ("rule_id", "string")], &[]),
-        ),
+        fix_preview_tool(),
+        fix_apply_tool(),
+        audit_tool(),
+        decision_surface_tool(),
+        explain_tool(),
     ]
 }
 
+fn fix_preview_tool() -> Value {
+    tool(
+        "fix_preview",
+        "Preview safe auto-fixes without modifying files.",
+        schema(
+            &[
+                ("root", "string"),
+                ("config", "string"),
+                ("entry", "array"),
+                ("file", "array"),
+                ("workspace", "array"),
+                ("changed_workspaces", "string"),
+                ("changed_since", "string"),
+                ("production", "boolean"),
+                ("action", "array"),
+                ("no_create_config", "boolean"),
+            ],
+            &[],
+        ),
+    )
+}
+
+fn fix_apply_tool() -> Value {
+    tool_with_annotations(
+        "fix_apply",
+        "Apply safe auto-fixes. Requires yes: true.",
+        schema(
+            &[
+                ("root", "string"),
+                ("config", "string"),
+                ("entry", "array"),
+                ("file", "array"),
+                ("workspace", "array"),
+                ("changed_workspaces", "string"),
+                ("changed_since", "string"),
+                ("production", "boolean"),
+                ("action", "array"),
+                ("no_create_config", "boolean"),
+                ("yes", "boolean"),
+            ],
+            &["yes"],
+        ),
+        false,
+        true,
+    )
+}
+
+fn audit_tool() -> Value {
+    tool(
+        "audit",
+        "Run changed-code audit.",
+        schema(
+            &[
+                ("root", "string"),
+                ("config", "string"),
+                ("base", "string"),
+                ("entry", "array"),
+                ("file", "array"),
+                ("workspace", "array"),
+                ("changed_workspaces", "string"),
+                ("changed_since", "string"),
+                ("include_entry_exports", "boolean"),
+                ("private_type_leaks", "boolean"),
+                ("boundary", "array"),
+                ("boundary_coverage", "boolean"),
+                ("boundary_call", "array"),
+                ("policy_pack", "array"),
+                ("policy_violations", "boolean"),
+                ("mode", "string"),
+                ("min_tokens", "integer"),
+                ("min_lines", "integer"),
+                ("min_occurrences", "integer"),
+                ("top", "integer"),
+                ("skip_local", "boolean"),
+                ("ignore_imports", "boolean"),
+                ("no_ignore_imports", "boolean"),
+                ("max_cyclomatic", "integer"),
+                ("max_cognitive", "integer"),
+                ("max_crap", "integer"),
+                ("coverage", "string"),
+                ("runtime_coverage", "string"),
+                ("min_invocations_hot", "integer"),
+                ("min_observation_volume", "integer"),
+                ("low_traffic_threshold", "number"),
+                ("coverage_gaps", "boolean"),
+                ("file_scores", "boolean"),
+                ("hotspots", "boolean"),
+                ("targets", "boolean"),
+                ("ownership", "boolean"),
+                ("complexity_breakdown", "boolean"),
+                ("min_score", "integer"),
+                ("dead_code_baseline", "string"),
+                ("health_baseline", "string"),
+                ("dupes_baseline", "string"),
+                ("production", "boolean"),
+                ("brief", "boolean"),
+                ("max_decisions", "integer"),
+            ],
+            &["base"],
+        ),
+    )
+}
+
+fn decision_surface_tool() -> Value {
+    tool(
+        "decision_surface",
+        "Surface changed-code architecture decisions.",
+        schema(
+            &[
+                ("root", "string"),
+                ("config", "string"),
+                ("base", "string"),
+                ("max_decisions", "integer"),
+            ],
+            &["base"],
+        ),
+    )
+}
+
+fn explain_tool() -> Value {
+    tool(
+        "decimate_explain",
+        "Explain a Decimate issue type.",
+        schema(&[("issue_type", "string"), ("rule_id", "string")], &[]),
+    )
+}
+
 fn tool(name: &str, description: &str, input_schema: Value) -> Value {
+    tool_with_annotations(name, description, input_schema, true, false)
+}
+
+fn tool_with_annotations(
+    name: &str,
+    description: &str,
+    input_schema: Value,
+    read_only: bool,
+    destructive: bool,
+) -> Value {
     let mut tool = Map::new();
     tool.insert("name".to_owned(), Value::String(name.to_owned()));
     tool.insert(
@@ -440,8 +565,8 @@ fn tool(name: &str, description: &str, input_schema: Value) -> Value {
     tool.insert(
         "annotations".to_owned(),
         json!({
-            "readOnlyHint": true,
-            "destructiveHint": false,
+            "readOnlyHint": read_only,
+            "destructiveHint": destructive,
             "openWorldHint": false
         }),
     );
