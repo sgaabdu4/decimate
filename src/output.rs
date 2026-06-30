@@ -55,6 +55,7 @@ use scope::{
     file_scope, finding_in_scope, health_file_score_count, project_file_scope_count,
     scope_attack_surface, scope_clone_groups, scope_complexity, scope_feature_flags,
     scope_file_scores, scope_hotspots, scope_refactoring_targets, scope_security_candidates,
+    scoped_quality_score,
 };
 pub use security_findings::{
     JsonAttackSurfaceEntry, JsonSecurityCandidate, JsonSecurityOccurrence, JsonSecurityReachability,
@@ -458,6 +459,7 @@ fn apply_quality_summary(
         .duplicates
         .as_ref()
         .map_or(0, |report| report.clone_groups.len());
+    summary.quality_score = health.quality_score;
     summary.health_files = health.files;
     summary.functions = health.functions;
     summary.complex_functions = health.complex_functions;
@@ -519,6 +521,7 @@ fn apply_graph_policy_summary(
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct HealthSummaryCounts {
+    quality_score: usize,
     files: usize,
     functions: usize,
     complex_functions: usize,
@@ -536,6 +539,7 @@ fn health_summary_counts(
     results.health.as_ref().map_or(
         HealthSummaryCounts {
             files: 0,
+            quality_score: 0,
             functions: 0,
             complex_functions: 0,
             max_cyclomatic_complexity: 0,
@@ -545,6 +549,7 @@ fn health_summary_counts(
             file_scores: 0,
         },
         |report| HealthSummaryCounts {
+            quality_score: scoped_quality_score(project, report, scope),
             files: report.analyzed_files,
             functions: report.functions,
             complex_functions: report.complexity.len() + report.crap.len(),

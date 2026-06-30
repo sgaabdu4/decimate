@@ -187,6 +187,8 @@ pub struct ReportSummary {
     pub missing_context_mounted_after_await: usize,
     /// Duplicated Dart code clone groups.
     pub code_duplications: usize,
+    /// Aggregate 0-100 project health score; higher is healthier.
+    pub quality_score: usize,
     /// Dart source files included in health analysis.
     pub health_files: usize,
     /// Function-like declarations included in health analysis.

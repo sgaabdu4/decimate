@@ -10,6 +10,7 @@ use crate::graph::normalize_path;
 use crate::{DependencyKind, Location};
 
 mod analyze;
+mod codegen;
 mod discovery;
 mod overrides;
 mod private_src_imports;

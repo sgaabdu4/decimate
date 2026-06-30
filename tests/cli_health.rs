@@ -34,6 +34,12 @@ fn health_command_emits_json_contract() -> Result<(), Box<dyn std::error::Error>
     assert_eq!(json["summary"]["health_files"], 1);
     assert_eq!(json["summary"]["functions"], 2);
     assert_eq!(json["summary"]["complex_functions"], 1);
+    assert!(
+        json["summary"]["quality_score"]
+            .as_u64()
+            .is_some_and(|score| score < 100)
+    );
+    assert_eq!(json["summary"]["file_scores"], 0);
     assert_eq!(json["summary"]["max_cyclomatic_complexity"], 4);
     assert_eq!(json["summary"]["max_cognitive_complexity"], 4);
     assert_eq!(json["findings"][0]["rule_id"], "decimate/high-complexity");
@@ -113,6 +119,7 @@ fn health_command_passes_when_thresholds_are_not_exceeded() -> Result<(), Box<dy
     assert_eq!(code, 0);
     assert_eq!(json["verdict"], "pass");
     assert_eq!(json["summary"]["functions"], 1);
+    assert_eq!(json["summary"]["quality_score"], 100);
     assert_eq!(json["summary"]["complex_functions"], 0);
     assert_eq!(json["summary"]["max_cyclomatic_complexity"], 1);
     assert_eq!(json["summary"]["max_cognitive_complexity"], 0);

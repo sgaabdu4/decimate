@@ -21,7 +21,7 @@ pub use runtime_intelligence::{
     RuntimeBlastRadius, RuntimeBlastRisk, RuntimeCoverageAction, RuntimeCoverageIntelligence,
     RuntimeCoverageIntelligenceKind, RuntimeImportance,
 };
-use scores::{file_health_scores, health_hotspots, refactoring_targets};
+use scores::{file_health_scores, health_hotspots, project_quality_score, refactoring_targets};
 use threshold_types::AppliedThresholds;
 pub use threshold_types::{
     EffectiveThresholds, HealthThresholdOverride, HealthThresholdOverrideReport,
@@ -85,9 +85,12 @@ pub fn analyze_health(
     let include_hotspots = options.hotspots.is_enabled()
         || options.targets.is_enabled()
         || options.ownership.is_enabled();
+    let all_file_scores =
+        file_health_scores(&functions, &complexity, &crap, coverage.as_ref(), options);
+    let quality_score = project_quality_score(&all_file_scores);
     let mut file_scores =
         if options.file_scores.is_enabled() || include_hotspots || options.ownership.is_enabled() {
-            file_health_scores(&functions, &complexity, &crap, coverage.as_ref(), options)
+            all_file_scores.clone()
         } else {
             Vec::new()
         };
@@ -112,6 +115,7 @@ pub fn analyze_health(
 
     Ok(HealthReport {
         options: options.clone(),
+        quality_score,
         analyzed_files,
         functions: functions.len(),
         max_cyclomatic_complexity: max_cyclomatic_complexity(&functions),

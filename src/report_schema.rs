@@ -138,6 +138,7 @@ fn summary_schema() -> Value {
         "unrendered_widgets",
         "missing_context_mounted_after_await",
         "code_duplications",
+        "quality_score",
         "health_files",
         "functions",
         "complex_functions",

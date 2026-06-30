@@ -53,7 +53,7 @@ fn annotation_window(source: &str, declaration_line: usize) -> String {
     }
 
     let end = declaration_line.saturating_sub(1).min(lines.len() - 1);
-    let start = end.saturating_sub(8);
+    let start = end.saturating_sub(32);
     lines[start..=end].join("\n")
 }
 

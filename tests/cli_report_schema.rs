@@ -69,6 +69,7 @@ fn report_schema_types_inventory_arrays() -> Result<(), Box<dyn std::error::Erro
         );
     }
     for field in [
+        "quality_score",
         "route_collisions",
         "private_widget_classes",
         "widget_top_level_functions",

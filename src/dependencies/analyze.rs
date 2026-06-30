@@ -5,6 +5,7 @@ use crate::dependency_scripts::package_used_in_tooling;
 use crate::generated::is_generated_dart_path;
 use crate::{DependencyKind, Location, scan::ScannedProject};
 
+use super::codegen::codegen_dependencies_for_file;
 use super::usage::DependencyUsage;
 use super::{
     DependencyHygieneError, DependencyHygieneReport, DependencyIssue, PrivateSrcImport, PubPackage,
@@ -64,6 +65,19 @@ fn collect_import_usage(project: &ScannedProject, packages: &[PubPackage]) -> Im
             )
         {
             record_directive(&mut usage, owner, &file.path, specifier, kind, location);
+        }
+        for dependency in codegen_dependencies_for_file(file) {
+            let dependency_usage = usage
+                .used_by_package
+                .entry(owner.root.clone())
+                .or_default()
+                .entry(dependency.name.to_owned())
+                .or_default();
+            if dependency.production {
+                dependency_usage.record(&owner.root, &file.path);
+            } else {
+                dependency_usage.record_tooling();
+            }
         }
     }
     usage

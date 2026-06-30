@@ -187,6 +187,8 @@ impl<'de> Deserialize<'de> for HealthToggle {
 pub struct HealthReport {
     /// Options used to compute this report.
     pub options: HealthOptions,
+    /// Aggregate 0-100 project health score; higher is healthier.
+    pub quality_score: usize,
     /// Number of source files included in health analysis.
     pub analyzed_files: usize,
     /// Number of function-like declarations scored.

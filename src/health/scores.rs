@@ -43,6 +43,21 @@ pub(super) fn file_health_scores(
     scores
 }
 
+pub(super) fn project_quality_score(scores: &[FileHealthScore]) -> usize {
+    if scores.is_empty() {
+        return 0;
+    }
+    let weighted_total = scores
+        .iter()
+        .map(|score| score.score.saturating_mul(score.functions.max(1)))
+        .sum::<usize>();
+    let weight = scores
+        .iter()
+        .map(|score| score.functions.max(1))
+        .sum::<usize>();
+    weighted_total.saturating_add(weight / 2) / weight
+}
+
 pub(super) fn health_hotspots(scores: &[FileHealthScore], min_score: usize) -> Vec<HealthHotspot> {
     let mut hotspots = scores
         .iter()

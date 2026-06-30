@@ -5,7 +5,7 @@ use super::{
     Finding, JsonAttackSurfaceEntry, JsonCloneGroup, JsonComplexityFinding, JsonFeatureFlag,
     JsonFileHealthScore, JsonHealthHotspot, JsonRefactoringTarget, JsonSecurityCandidate,
 };
-use crate::scan::ScannedProject;
+use crate::{HealthReport, scan::ScannedProject};
 
 pub(super) fn file_scope(
     project: &ScannedProject,
@@ -154,4 +154,30 @@ pub(super) fn health_file_score_count(
             })
         })
         .count()
+}
+
+pub(super) fn scoped_quality_score(
+    project: &ScannedProject,
+    report: &HealthReport,
+    scope: Option<&BTreeSet<String>>,
+) -> usize {
+    let Some(scope) = scope else {
+        return report.quality_score;
+    };
+    if report.file_scores.is_empty() {
+        return report.quality_score;
+    }
+    let mut total = 0usize;
+    let mut weight = 0usize;
+    for score in &report.file_scores {
+        if scope.contains(&format::display_path(&project.root, &score.path)) {
+            let file_weight = score.functions.max(1);
+            total = total.saturating_add(score.score.saturating_mul(file_weight));
+            weight = weight.saturating_add(file_weight);
+        }
+    }
+    if weight == 0 {
+        return 0;
+    }
+    total.saturating_add(weight / 2) / weight
 }

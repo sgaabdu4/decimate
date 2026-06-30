@@ -197,6 +197,75 @@ dev_dependencies:\n  build_runner: ^2.0.0\n",
 }
 
 #[test]
+fn dart_codegen_signals_count_builder_dependencies_as_used()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(
+        &fixture,
+        "pubspec.yaml",
+        "name: app\n\
+dependencies:\n  freezed_annotation: ^3.0.0\n  json_annotation: ^4.9.0\n\
+dev_dependencies:\n  build_runner: ^2.0.0\n  freezed: ^3.0.0\n  json_serializable: ^6.0.0\n",
+    )?;
+    write(
+        &fixture,
+        "lib/main.dart",
+        "import 'model.dart';\nvoid main() { Model.fromJson({'name': 'ok'}); }\n",
+    )?;
+    write(
+        &fixture,
+        "lib/model.dart",
+        "import 'package:freezed_annotation/freezed_annotation.dart';\n\
+part 'model.freezed.dart';\n\
+part 'model.g.dart';\n\
+@freezed\n\
+class Model with _$Model {\n\
+  const factory Model({required String name}) = _Model;\n\
+  factory Model.fromJson(Map<String, Object?> json) => _$ModelFromJson(json);\n\
+}\n",
+    )?;
+    write(
+        &fixture,
+        "lib/model.freezed.dart",
+        "part of 'model.dart';\n\
+mixin _$Model {}\n\
+class _Model implements Model {\n\
+  const _Model({required this.name});\n\
+  final String name;\n\
+}\n",
+    )?;
+    write(
+        &fixture,
+        "lib/model.g.dart",
+        "part of 'model.dart';\n\
+Model _$ModelFromJson(Map<String, Object?> json) => _Model(name: json['name'] as String);\n",
+    )?;
+
+    let (code, json) = run_json([
+        "decimate",
+        "check",
+        fixture.path().to_str().unwrap_or("."),
+        "--format",
+        "json",
+    ])?;
+
+    assert_eq!(code, 0);
+    assert_eq!(json["summary"]["unused_dependencies"], 0);
+    assert_eq!(json["summary"]["unused_dev_dependencies"], 0);
+    assert_eq!(json["summary"]["findings"], 0);
+    for dependency in [
+        "build_runner",
+        "freezed",
+        "json_annotation",
+        "json_serializable",
+    ] {
+        assert_no_unused_dependency_for(&json, dependency);
+    }
+
+    Ok(())
+}
+
+#[test]
 fn config_rules_disable_specific_dependency_placement_findings()
 -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
@@ -596,6 +665,17 @@ fn assert_unused_pub_action(json: &Value, dependency: &str, safe_to_delete: bool
     assert_eq!(finding["safe_to_delete"], safe_to_delete);
     assert_eq!(finding["actions"][0]["action"], action);
     assert_eq!(finding["actions"][0]["auto_fixable"], safe_to_delete);
+}
+
+fn assert_no_unused_dependency_for(json: &Value, dependency: &str) {
+    assert!(json["findings"].as_array().is_some_and(|findings| {
+        findings.iter().all(|finding| {
+            !matches!(
+                finding["rule_id"].as_str(),
+                Some("decimate/unused-dependency" | "decimate/unused-dev-dependency")
+            ) || finding["actions"][0]["target_dependency"] != dependency
+        })
+    }));
 }
 
 fn rule_ids(json: &Value) -> Vec<&str> {
