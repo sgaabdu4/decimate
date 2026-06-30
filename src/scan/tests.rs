@@ -108,6 +108,56 @@ fn scans_local_package_config_roots_for_graph_resolution() -> Result<(), Box<dyn
 }
 
 #[test]
+fn scans_workspace_package_config_from_member_root() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(
+        &fixture,
+        ".dart_tool/package_config.json",
+        r#"{
+  "configVersion": 2,
+  "packages": [
+    {"name": "app", "rootUri": "../packages/app", "packageUri": "lib/"},
+    {"name": "shared", "rootUri": "../packages/shared", "packageUri": "lib/"}
+  ]
+}
+"#,
+    )?;
+    write(
+        &fixture,
+        "pubspec.yaml",
+        "name: workspace\nworkspace:\n  - packages/*\n",
+    )?;
+    write(
+        &fixture,
+        "packages/app/pubspec.yaml",
+        "name: app\nresolution: workspace\ndependencies:\n  shared: ^1.0.0\n",
+    )?;
+    write(
+        &fixture,
+        "packages/app/lib/main.dart",
+        "import 'package:shared/shared.dart';\nvoid main() {}\n",
+    )?;
+    write(
+        &fixture,
+        "packages/shared/pubspec.yaml",
+        "name: shared\nresolution: workspace\n",
+    )?;
+    write(
+        &fixture,
+        "packages/shared/lib/shared.dart",
+        "class Shared {}\n",
+    )?;
+
+    let project = scan_project(fixture.path().join("packages/app"))?;
+
+    assert_eq!(project.files.len(), 2);
+    assert_eq!(project.graph.edge_count(), 1);
+    assert!(project.graph.unresolved().is_empty());
+
+    Ok(())
+}
+
+#[test]
 fn does_not_scan_pub_cache_package_config_roots() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     write(

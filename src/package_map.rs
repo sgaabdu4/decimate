@@ -27,8 +27,12 @@ pub(crate) struct PackageResolution {
 
 impl PackageMap {
     pub(crate) fn discover(root: &Path) -> Result<Self, GraphError> {
-        if let Some(config) = PackageConfig::read(root)? {
-            return Ok(Self::from_package_config(root, &config));
+        if let Some(config) = PackageConfigFile::read(root)? {
+            return Ok(Self::from_package_config(
+                root,
+                &config.config_dir,
+                &config.config,
+            ));
         }
 
         let mut packages = Self::default();
@@ -57,17 +61,18 @@ impl PackageMap {
         })
     }
 
-    fn from_package_config(root: &Path, config: &PackageConfig) -> Self {
-        let config_dir = root.join(".dart_tool");
+    fn from_package_config(root: &Path, config_dir: &Path, config: &PackageConfig) -> Self {
+        let config_root = config_dir.parent().unwrap_or(config_dir);
         let by_name = config
             .packages
             .iter()
             .filter_map(|package| {
                 let root_uri = package.root_uri.as_deref()?;
                 let package_uri = package.package_uri.as_deref().unwrap_or("lib/");
-                let package_root = resolve_config_uri(&config_dir, root_uri)?;
+                let package_root = resolve_config_uri(config_dir, root_uri)?;
                 let package_path = resolve_package_uri(&package_root, package_uri)?;
-                let local = is_local_package_config_root(root, root_uri, &package_root);
+                let local =
+                    is_local_package_config_root(root, config_root, root_uri, &package_root);
                 Some((
                     package.name.clone(),
                     PackageRoot {
@@ -174,19 +179,38 @@ struct PackageConfig {
     packages: Vec<PackageConfigPackage>,
 }
 
-impl PackageConfig {
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct PackageConfigFile {
+    config_dir: PathBuf,
+    config: PackageConfig,
+}
+
+impl PackageConfigFile {
     fn read(root: &Path) -> Result<Option<Self>, GraphError> {
-        let path = root.join(".dart_tool/package_config.json");
+        let Some(path) = find_package_config(root) else {
+            return Ok(None);
+        };
         let source = match fs::read_to_string(&path) {
             Ok(source) => source,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
             Err(source) => return Err(GraphError::ReadPackageConfig { path, source }),
         };
 
-        serde_json::from_str(&source)
-            .map(Some)
-            .map_err(|source| GraphError::ParsePackageConfig { path, source })
+        let config =
+            serde_json::from_str(&source).map_err(|source| GraphError::ParsePackageConfig {
+                path: path.clone(),
+                source,
+            })?;
+        let config_dir = path
+            .parent()
+            .map_or_else(|| root.join(".dart_tool"), Path::to_path_buf);
+        Ok(Some(Self { config_dir, config }))
     }
+}
+
+fn find_package_config(root: &Path) -> Option<PathBuf> {
+    root.ancestors()
+        .map(|dir| dir.join(".dart_tool/package_config.json"))
+        .find(|path| path.is_file())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -308,8 +332,15 @@ fn hex_value(value: u8) -> Option<u8> {
     }
 }
 
-fn is_local_package_config_root(root: &Path, root_uri: &str, package_root: &Path) -> bool {
-    (is_relative_uri(root_uri) || package_root.starts_with(root))
+fn is_local_package_config_root(
+    root: &Path,
+    config_root: &Path,
+    root_uri: &str,
+    package_root: &Path,
+) -> bool {
+    (is_relative_uri(root_uri)
+        || package_root.starts_with(root)
+        || package_root.starts_with(config_root))
         && !is_pub_cache_path(package_root)
 }
 

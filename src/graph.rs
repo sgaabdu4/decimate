@@ -604,6 +604,8 @@ pub(crate) fn normalize_path(path: &Path) -> PathBuf {
 #[cfg(test)]
 mod augment_tests;
 #[cfg(test)]
+mod package_config_tests;
+#[cfg(test)]
 mod pubspec_tests;
 #[cfg(test)]
 mod tests;
