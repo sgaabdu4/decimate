@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::Path;
 
 use tempfile::TempDir;
 
@@ -11,6 +12,7 @@ fn parses_pubspec_dependency_keys_from_source() {
         "name: app\n\
 dependencies:\n  http: ^1.0.0\n  path: ^1.0.0\n\
 dev_dependencies:\n  test: ^1.0.0\n",
+        Path::new("pubspec.yaml"),
     );
 
     assert_eq!(
@@ -344,6 +346,101 @@ dependency_overrides:\n  collection: ^1.0.0\n",
         report.unlisted_dependencies[0].declared_section,
         Some(DependencySection::DependencyOverrides)
     );
+
+    Ok(())
+}
+
+#[test]
+fn pubspec_overrides_dependency_overrides_replace_pubspec_overrides()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(
+        &fixture,
+        "pubspec.yaml",
+        "name: app\n\
+dependency_overrides:\n  stale: ^1.0.0\n",
+    )?;
+    write(
+        &fixture,
+        "pubspec_overrides.yaml",
+        "dependency_overrides:\n  patched: ^1.0.0\n",
+    )?;
+    write(&fixture, "pubspec.lock", "packages: {}\n")?;
+    write(&fixture, "lib/main.dart", "void main() {}\n")?;
+    let project = scan_project(fixture.path())?;
+
+    let report = analyze_dependency_hygiene(&project)?;
+
+    assert_eq!(report.unused_dependencies.len(), 1);
+    assert_eq!(report.unused_dependencies[0].dependency, "patched");
+    assert!(
+        report.unused_dependencies[0]
+            .pubspec_path
+            .ends_with("pubspec_overrides.yaml")
+    );
+    assert_eq!(
+        report.unused_dependencies[0].issue,
+        DependencyIssue::UnusedDependencyOverride
+    );
+    assert_eq!(report.unused_dependencies[0].location.line, 2);
+
+    Ok(())
+}
+
+#[test]
+fn pubspec_overrides_dependency_overrides_count_as_override_only_declarations()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(
+        &fixture,
+        "pubspec_overrides.yaml",
+        "dependency_overrides:\n  collection: ^1.0.0\n",
+    )?;
+    write(
+        &fixture,
+        "lib/main.dart",
+        "import 'package:collection/collection.dart';\nvoid main() {}\n",
+    )?;
+    let project = scan_project(fixture.path())?;
+
+    let report = analyze_dependency_hygiene(&project)?;
+
+    assert_eq!(report.unlisted_dependencies.len(), 1);
+    assert_eq!(report.unlisted_dependencies[0].dependency, "collection");
+    assert_eq!(
+        report.unlisted_dependencies[0].declared_section,
+        Some(DependencySection::DependencyOverrides)
+    );
+
+    Ok(())
+}
+
+#[test]
+fn location_ignores_nested_path_key_when_dependency_name_is_path()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(
+        &fixture,
+        "pubspec.yaml",
+        "name: app\n\
+dependencies:\n  local:\n    path: local\n  path: ^1.9.0\n",
+    )?;
+    write(&fixture, "local/pubspec.yaml", "name: local\n")?;
+    write(&fixture, "lib/main.dart", "void main() {}\n")?;
+    let project = scan_project(fixture.path())?;
+
+    let report = analyze_dependency_hygiene(&project)?;
+    let Some(path_dependency) = report
+        .unused_dependencies
+        .iter()
+        .find(|dependency| dependency.dependency == "path")
+    else {
+        panic!("path dependency finding");
+    };
+
+    assert_eq!(path_dependency.location.line, 5);
+    assert!(path_dependency.safe_to_delete);
 
     Ok(())
 }

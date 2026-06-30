@@ -5,7 +5,10 @@ use serde_yaml_ng::Value;
 
 use crate::Location;
 
-use super::{DependencySection, dependency_location, mapping_field, valid_dart_package_name};
+use super::{
+    DependencySection, mapping_field, pubspec_document::dependency_location,
+    valid_dart_package_name,
+};
 
 /// A dependency override declaration that Pub cannot honor.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

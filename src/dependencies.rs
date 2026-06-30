@@ -12,9 +12,12 @@ use crate::{DependencyKind, Location, scan::ScannedProject};
 
 mod discovery;
 mod overrides;
+mod pubspec_document;
 mod pubspec_entry;
+use discovery::discover_packages;
 use overrides::misconfigured_dependency_overrides;
 pub use overrides::{DependencyOverrideMisconfigReason, MisconfiguredDependencyOverride};
+use pubspec_document::{declared_dependencies_from_source, dependency_location};
 
 /// Dart pub dependency hygiene findings.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -252,7 +255,7 @@ pub fn analyze_dependency_hygiene(
             {
                 unused_dependencies.push(UnusedPackageDependency {
                     package: package.name.clone(),
-                    pubspec_path: package.pubspec_path.clone(),
+                    pubspec_path: dependency.source_path.clone(),
                     dependency: dependency.name.clone(),
                     section: dependency.section,
                     issue,
@@ -310,7 +313,7 @@ pub fn declared_package_dependencies(
         {
             declarations.push(DeclaredPackageDependency {
                 package: package.name.clone(),
-                pubspec_path: package.pubspec_path.clone(),
+                pubspec_path: declared.source_path.clone(),
                 dependency: declared.name,
                 section: declared.section,
                 location: declared.location,
@@ -354,7 +357,7 @@ pub fn local_pub_packages(root: &Path) -> Result<Vec<LocalPubPackage>, Dependenc
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct PubPackage {
+pub(super) struct PubPackage {
     name: String,
     root: PathBuf,
     pubspec_path: PathBuf,
@@ -396,6 +399,7 @@ fn allows_dev_dependency(package_root: &Path, path: &Path) -> bool {
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct DeclaredDependency {
     name: String,
+    source_path: PathBuf,
     section: DependencySection,
     location: Location,
     safe_to_delete: bool,
@@ -446,65 +450,9 @@ fn dependency_issue(
     }
 }
 
-fn discover_packages(root: &Path) -> Result<Vec<PubPackage>, DependencyHygieneError> {
-    let mut pubspecs = Vec::new();
-    discover_pubspecs(root, &mut pubspecs)?;
-    let mut packages = pubspecs
-        .into_iter()
-        .filter_map(|path| read_package(&path).transpose())
-        .collect::<Result<Vec<_>, _>>()?;
-    packages.sort_by(|left, right| left.root.cmp(&right.root));
-    Ok(packages)
-}
-
-fn discover_pubspecs(
-    dir: &Path,
-    pubspecs: &mut Vec<PathBuf>,
-) -> Result<(), DependencyHygieneError> {
-    let entries = fs::read_dir(dir).map_err(|source| DependencyHygieneError::ReadDir {
-        path: dir.to_path_buf(),
-        source,
-    })?;
-
-    for entry in entries {
-        let entry = entry.map_err(|source| DependencyHygieneError::ReadDirEntry {
-            path: dir.to_path_buf(),
-            source,
-        })?;
-        let path = entry.path();
-        let file_type = entry
-            .file_type()
-            .map_err(|source| DependencyHygieneError::FileType {
-                path: path.clone(),
-                source,
-            })?;
-
-        if file_type.is_dir() {
-            if discovery::should_skip_dir(&path) {
-                continue;
-            }
-            discover_pubspecs(&path, pubspecs)?;
-        } else if file_type.is_file() && path.file_name().is_some_and(|name| name == "pubspec.yaml")
-        {
-            pubspecs.push(normalize_path(&path));
-        }
-    }
-
-    Ok(())
-}
-
-fn read_package(path: &Path) -> Result<Option<PubPackage>, DependencyHygieneError> {
-    let source =
-        fs::read_to_string(path).map_err(|source| DependencyHygieneError::ReadPubspec {
-            path: path.to_path_buf(),
-            source,
-        })?;
-    let value = serde_yaml_ng::from_str::<Value>(&source).map_err(|source| {
-        DependencyHygieneError::ParsePubspec {
-            path: path.to_path_buf(),
-            source,
-        }
-    })?;
+pub(super) fn read_package(path: &Path) -> Result<Option<PubPackage>, DependencyHygieneError> {
+    let source = read_pubspec_source(path)?;
+    let value = parse_pubspec_value(path, &source)?;
 
     let Some(name) = string_field(&value, "name") else {
         return Ok(None);
@@ -513,16 +461,61 @@ fn read_package(path: &Path) -> Result<Option<PubPackage>, DependencyHygieneErro
     let root = path
         .parent()
         .map_or_else(|| PathBuf::from("."), normalize_path);
+    let overrides = read_pubspec_overrides(&root)?;
 
     Ok(Some(PubPackage {
         name: name.to_owned(),
         root,
         pubspec_path: path.to_path_buf(),
-        dependencies: declared_dependencies(&value, &source),
-        misconfigured_dependency_overrides: misconfigured_dependency_overrides(
-            &value, &source, name, path,
+        dependencies: merged_declared_dependencies(&value, &source, path, overrides.as_ref()),
+        misconfigured_dependency_overrides: merged_misconfigured_dependency_overrides(
+            &value,
+            &source,
+            name,
+            path,
+            overrides.as_ref(),
         ),
         locked_packages: read_locked_packages(path),
+    }))
+}
+
+#[derive(Debug, Clone)]
+struct PubspecOverridesDocument {
+    path: PathBuf,
+    source: String,
+    value: Value,
+}
+
+fn read_pubspec_source(path: &Path) -> Result<String, DependencyHygieneError> {
+    fs::read_to_string(path).map_err(|source| DependencyHygieneError::ReadPubspec {
+        path: path.to_path_buf(),
+        source,
+    })
+}
+
+fn parse_pubspec_value(path: &Path, source: &str) -> Result<Value, DependencyHygieneError> {
+    serde_yaml_ng::from_str::<Value>(source).map_err(|source| {
+        DependencyHygieneError::ParsePubspec {
+            path: path.to_path_buf(),
+            source,
+        }
+    })
+}
+
+fn read_pubspec_overrides(
+    package_root: &Path,
+) -> Result<Option<PubspecOverridesDocument>, DependencyHygieneError> {
+    let path = package_root.join("pubspec_overrides.yaml");
+    let source = match fs::read_to_string(&path) {
+        Ok(source) => source,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(source) => return Err(DependencyHygieneError::ReadPubspec { path, source }),
+    };
+    let value = parse_pubspec_value(&path, &source)?;
+    Ok(Some(PubspecOverridesDocument {
+        path,
+        source,
+        value,
     }))
 }
 
@@ -540,7 +533,59 @@ fn read_locked_packages(pubspec_path: &Path) -> Option<BTreeSet<String>> {
     )
 }
 
-fn declared_dependencies(value: &Value, source: &str) -> Vec<DeclaredDependency> {
+fn merged_declared_dependencies(
+    value: &Value,
+    source: &str,
+    source_path: &Path,
+    overrides: Option<&PubspecOverridesDocument>,
+) -> Vec<DeclaredDependency> {
+    let mut dependencies = declared_dependencies(value, source, source_path);
+    if let Some(overrides) = overrides.filter(|document| {
+        has_top_level_field(
+            &document.value,
+            DependencySection::DependencyOverrides.as_pubspec_key(),
+        )
+    }) {
+        dependencies
+            .retain(|dependency| dependency.section != DependencySection::DependencyOverrides);
+        dependencies.extend(declared_dependencies_for_sections(
+            &overrides.value,
+            &overrides.source,
+            &overrides.path,
+            &[DependencySection::DependencyOverrides],
+        ));
+    }
+    dependencies
+}
+
+fn merged_misconfigured_dependency_overrides(
+    value: &Value,
+    source: &str,
+    package: &str,
+    path: &Path,
+    overrides: Option<&PubspecOverridesDocument>,
+) -> Vec<MisconfiguredDependencyOverride> {
+    if let Some(overrides) = overrides.filter(|document| {
+        has_top_level_field(
+            &document.value,
+            DependencySection::DependencyOverrides.as_pubspec_key(),
+        )
+    }) {
+        return misconfigured_dependency_overrides(
+            &overrides.value,
+            &overrides.source,
+            package,
+            &overrides.path,
+        );
+    }
+    misconfigured_dependency_overrides(value, source, package, path)
+}
+
+fn declared_dependencies(
+    value: &Value,
+    source: &str,
+    source_path: &Path,
+) -> Vec<DeclaredDependency> {
     let has_declared_sections = [
         DependencySection::Dependencies,
         DependencySection::DevDependencies,
@@ -548,91 +593,54 @@ fn declared_dependencies(value: &Value, source: &str) -> Vec<DeclaredDependency>
     ]
     .into_iter()
     .any(|section| mapping_field(value, section.as_pubspec_key()).is_some());
-    let mut dependencies = [
+    let sections = [
         DependencySection::Dependencies,
         DependencySection::DevDependencies,
         DependencySection::DependencyOverrides,
-    ]
-    .into_iter()
-    .filter_map(|section| {
-        mapping_field(value, section.as_pubspec_key()).map(|mapping| (section, mapping))
-    })
-    .flat_map(|(section, mapping)| {
-        mapping.iter().filter_map(move |(name, value)| {
-            let name = name.as_str()?.to_owned();
-            if section == DependencySection::DependencyOverrides
-                && (!valid_dart_package_name(&name) || value.is_null())
-            {
-                return None;
-            }
-            let location = dependency_location(source, section, &name);
-            Some(DeclaredDependency {
-                safe_to_delete: pubspec_entry::is_simple_scalar_dependency(
-                    source, section, &name, location,
-                ),
-                location,
-                name,
-                section,
-            })
-        })
-    })
-    .collect::<Vec<_>>();
+    ];
+    let mut dependencies =
+        declared_dependencies_for_sections(value, source, source_path, &sections);
 
     if dependencies.is_empty() && !has_declared_sections {
-        dependencies = declared_dependencies_from_source(source);
+        dependencies = declared_dependencies_from_source(source, source_path);
     }
 
     dependencies
 }
 
-fn declared_dependencies_from_source(source: &str) -> Vec<DeclaredDependency> {
-    let mut dependencies = Vec::new();
-    let mut current_section = None;
-
-    for (index, line) in source.lines().enumerate() {
-        let trimmed = line.trim_start();
-        let indent = line.len() - trimmed.len();
-
-        if indent == 0 {
-            current_section = match trimmed.trim_end() {
-                "dependencies:" => Some(DependencySection::Dependencies),
-                "dev_dependencies:" => Some(DependencySection::DevDependencies),
-                "dependency_overrides:" => Some(DependencySection::DependencyOverrides),
-                _ => None,
-            };
-            continue;
-        }
-
-        let Some(section) = current_section else {
-            continue;
-        };
-        if indent != 2 {
-            continue;
-        }
-        let Some((name, _)) = trimmed.split_once(':') else {
-            continue;
-        };
-        if name.trim().is_empty() {
-            continue;
-        }
-        let location = Location {
-            line: index + 1,
-            column: indent,
-        };
-        dependencies.push(DeclaredDependency {
-            name: name.trim().to_owned(),
-            section,
-            location,
-            safe_to_delete: pubspec_entry::is_simple_scalar_dependency(
-                source,
-                section,
-                name.trim(),
-                location,
-            ),
-        });
-    }
-
-    dependencies
+fn declared_dependencies_for_sections(
+    value: &Value,
+    source: &str,
+    source_path: &Path,
+    sections: &[DependencySection],
+) -> Vec<DeclaredDependency> {
+    sections
+        .iter()
+        .copied()
+        .filter_map(|section| {
+            mapping_field(value, section.as_pubspec_key()).map(|mapping| (section, mapping))
+        })
+        .flat_map(|(section, mapping)| {
+            mapping.iter().filter_map(move |(name, value)| {
+                let name = name.as_str()?.to_owned();
+                if section == DependencySection::DependencyOverrides
+                    && (!valid_dart_package_name(&name) || value.is_null())
+                {
+                    return None;
+                }
+                let location = dependency_location(source, section, &name);
+                Some(DeclaredDependency {
+                    safe_to_delete: pubspec_entry::is_simple_scalar_dependency(
+                        source, section, &name, location,
+                    ),
+                    location,
+                    name,
+                    source_path: source_path.to_path_buf(),
+                    section,
+                })
+            })
+        })
+        .collect()
 }
 
 fn owning_package<'package>(
@@ -675,24 +683,10 @@ fn string_field<'value>(value: &'value Value, field: &str) -> Option<&'value str
         .as_str()
 }
 
-fn dependency_location(source: &str, section: DependencySection, dependency: &str) -> Location {
-    let mut in_section = false;
-    for (index, line) in source.lines().enumerate() {
-        let trimmed = line.trim_start();
-        let indent = line.len() - trimmed.len();
-        if indent == 0 {
-            in_section = trimmed.trim_end() == format!("{}:", section.as_pubspec_key());
-            continue;
-        }
-        if in_section && trimmed.starts_with(&format!("{dependency}:")) {
-            return Location {
-                line: index + 1,
-                column: indent,
-            };
-        }
-    }
-
-    Location { line: 1, column: 0 }
+fn has_top_level_field(value: &Value, field: &str) -> bool {
+    value
+        .as_mapping()
+        .is_some_and(|mapping| mapping.contains_key(Value::String(field.to_owned())))
 }
 
 #[cfg(test)]

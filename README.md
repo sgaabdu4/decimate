@@ -389,8 +389,8 @@ Decimate also adds Dart-specific graph intelligence that Fallow does not need:
 - Dart library privacy rules
 - Pub `.dart_tool/package_config.json`, path dependency, and workspace
   resolution
-- `pubspec.yaml`, `dev_dependencies`, `dependency_overrides`, and
-  `pubspec.lock` hygiene
+- `pubspec.yaml`, `pubspec_overrides.yaml`, `dev_dependencies`,
+  `dependency_overrides`, and `pubspec.lock` hygiene
 
 Known gaps before claiming full product parity with Fallow:
 

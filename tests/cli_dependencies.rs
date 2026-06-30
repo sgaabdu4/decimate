@@ -300,6 +300,128 @@ dependency_overrides:\n  stale: ^1.0.0\n",
 }
 
 #[test]
+fn check_reports_pubspec_overrides_dependency_override_path()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(
+        &fixture,
+        "pubspec.yaml",
+        "name: app\n\
+dependency_overrides:\n  stale: ^1.0.0\n",
+    )?;
+    write(
+        &fixture,
+        "pubspec_overrides.yaml",
+        "dependency_overrides:\n  patched: ^1.0.0\n",
+    )?;
+    write(&fixture, "pubspec.lock", "packages: {}\n")?;
+    write(&fixture, "lib/main.dart", "void main() {}\n")?;
+
+    let (code, json) = run_json([
+        "decimate",
+        "check",
+        fixture.path().to_str().unwrap_or("."),
+        "--format",
+        "json",
+    ])?;
+
+    let Some(finding) = json["findings"].as_array().and_then(|findings| {
+        findings
+            .iter()
+            .find(|finding| finding["rule_id"] == "decimate/unused-dependency-override")
+    }) else {
+        panic!("dependency override finding");
+    };
+    assert_eq!(code, 0);
+    assert_eq!(json["summary"]["unused_dependency_overrides"], 1);
+    assert_eq!(finding["path"], "pubspec_overrides.yaml");
+    assert_eq!(finding["line"], 2);
+    assert_eq!(
+        finding["actions"][0]["target_path"],
+        "pubspec_overrides.yaml"
+    );
+    assert_eq!(finding["actions"][0]["target_dependency"], "patched");
+
+    Ok(())
+}
+
+#[test]
+fn check_reports_misconfigured_dependency_override_from_pubspec_overrides_yaml()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(
+        &fixture,
+        "pubspec_overrides.yaml",
+        "dependency_overrides:\n  Bad-Name: ^1.0.0\n  stale:\n",
+    )?;
+    write(&fixture, "pubspec.lock", "packages: {}\n")?;
+    write(&fixture, "lib/main.dart", "void main() {}\n")?;
+
+    let (code, json) = run_json([
+        "decimate",
+        "check",
+        fixture.path().to_str().unwrap_or("."),
+        "--format",
+        "json",
+    ])?;
+
+    let override_findings = json["findings"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|finding| finding["rule_id"] == "decimate/misconfigured-dependency-override")
+        .collect::<Vec<_>>();
+    assert_eq!(code, 1);
+    assert_eq!(override_findings.len(), 2);
+    assert_eq!(json["summary"]["misconfigured_dependency_overrides"], 2);
+    assert!(
+        override_findings
+            .iter()
+            .all(|finding| finding["path"] == "pubspec_overrides.yaml")
+    );
+
+    Ok(())
+}
+
+#[test]
+fn check_marks_real_path_package_simple_scalar_even_after_local_path_dependency()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(
+        &fixture,
+        "pubspec.yaml",
+        "name: app\n\
+dependencies:\n  local:\n    path: local\n  path: ^1.9.0\n",
+    )?;
+    write(&fixture, "local/pubspec.yaml", "name: local\n")?;
+    write(&fixture, "lib/main.dart", "void main() {}\n")?;
+
+    let (code, json) = run_json([
+        "decimate",
+        "check",
+        fixture.path().to_str().unwrap_or("."),
+        "--format",
+        "json",
+    ])?;
+
+    let Some(finding) = json["findings"].as_array().and_then(|findings| {
+        findings.iter().find(|finding| {
+            finding["rule_id"] == "decimate/unused-dependency"
+                && finding["actions"][0]["target_dependency"] == "path"
+        })
+    }) else {
+        panic!("unused path package finding");
+    };
+    assert_eq!(code, 1);
+    assert_eq!(finding["line"], 5);
+    assert_eq!(finding["safe_to_delete"], true);
+    assert_eq!(finding["actions"][0]["action"], "remove-pubspec-dependency");
+
+    Ok(())
+}
+
+#[test]
 fn check_reports_misconfigured_dependency_override() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     write(

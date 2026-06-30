@@ -225,16 +225,32 @@ impl Pubspec {
             }
         })?;
 
-        Ok(Some(Self::from_value(&value)))
+        let overrides = read_pubspec_overrides(package_root)?;
+        Ok(Some(Self::from_values(&value, overrides.as_ref())))
     }
 
-    fn from_value(value: &Value) -> Self {
+    fn from_values(value: &Value, overrides: Option<&Value>) -> Self {
+        let workspace_source = overrides
+            .filter(|value| has_top_level_field(value, "workspace"))
+            .unwrap_or(value);
         Self {
             name: string_field(value, "name").map(str::to_owned),
-            workspace_members: string_sequence_field(value, "workspace"),
-            path_dependencies: path_dependencies(value),
+            workspace_members: string_sequence_field(workspace_source, "workspace"),
+            path_dependencies: path_dependencies(value, overrides),
         }
     }
+}
+
+fn read_pubspec_overrides(package_root: &Path) -> Result<Option<Value>, GraphError> {
+    let path = package_root.join("pubspec_overrides.yaml");
+    let source = match fs::read_to_string(&path) {
+        Ok(source) => source,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(source) => return Err(GraphError::ReadPubspec { path, source }),
+    };
+    serde_yaml_ng::from_str::<Value>(&source)
+        .map(Some)
+        .map_err(|source| GraphError::ParsePubspec { path, source })
 }
 
 fn resolve_config_uri(config_dir: &Path, uri: &str) -> Option<PathBuf> {
@@ -306,18 +322,32 @@ fn is_pub_cache_path(path: &Path) -> bool {
         .any(|component| component.as_os_str() == ".pub-cache")
 }
 
-fn path_dependencies(value: &Value) -> Vec<PathDependency> {
-    ["dependencies", "dev_dependencies", "dependency_overrides"]
+fn path_dependencies(value: &Value, overrides: Option<&Value>) -> Vec<PathDependency> {
+    let mut dependencies = ["dependencies", "dev_dependencies"]
         .into_iter()
         .filter_map(|section| mapping_field(value, section))
-        .flat_map(|mapping| {
-            mapping.iter().filter_map(|(name, dependency)| {
-                let name = name.as_str()?.to_owned();
-                let path = string_field(dependency, "path")?;
-                Some(PathDependency {
-                    name,
-                    path: PathBuf::from(path),
-                })
+        .flat_map(path_dependencies_from_mapping)
+        .collect::<Vec<_>>();
+    let override_source = overrides
+        .filter(|value| has_top_level_field(value, "dependency_overrides"))
+        .unwrap_or(value);
+    dependencies.extend(
+        mapping_field(override_source, "dependency_overrides")
+            .into_iter()
+            .flat_map(path_dependencies_from_mapping),
+    );
+    dependencies
+}
+
+fn path_dependencies_from_mapping(mapping: &Mapping) -> Vec<PathDependency> {
+    mapping
+        .iter()
+        .filter_map(|(name, dependency)| {
+            let name = name.as_str()?.to_owned();
+            let path = string_field(dependency, "path")?;
+            Some(PathDependency {
+                name,
+                path: PathBuf::from(path),
             })
         })
         .collect()
@@ -347,6 +377,12 @@ fn string_sequence_field(value: &Value, field: &str) -> Vec<String> {
         .filter_map(Value::as_str)
         .map(str::to_owned)
         .collect()
+}
+
+fn has_top_level_field(value: &Value, field: &str) -> bool {
+    value
+        .as_mapping()
+        .is_some_and(|mapping| mapping.contains_key(Value::String(field.to_owned())))
 }
 
 fn expand_workspace_member(root: &Path, member: &str) -> Result<Vec<PathBuf>, GraphError> {
