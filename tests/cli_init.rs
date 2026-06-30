@@ -21,9 +21,17 @@ fn init_writes_config_and_agents_guidance() -> Result<(), Box<dyn std::error::Er
     assert_eq!(json["files"].as_array().map_or(0, Vec::len), 2);
     assert!(fixture.path().join(".decimaterc").is_file());
     assert!(fixture.path().join("AGENTS.md").is_file());
-    assert!(
-        fs::read_to_string(fixture.path().join(".decimaterc"))?.contains("\"format\": \"json\"")
-    );
+    let config = fs::read_to_string(fixture.path().join(".decimaterc"))?;
+    assert!(config.contains("\"format\": \"json\""));
+    for pattern in [
+        "**/*.g.dart",
+        "**/*.freezed.dart",
+        "**/*.gen.dart",
+        "**/*.gr.dart",
+        "**/*.mocks.dart",
+    ] {
+        assert!(config.contains(pattern), "{pattern}");
+    }
     assert!(
         fs::read_to_string(fixture.path().join("AGENTS.md"))?
             .contains("decimate audit --format json --base origin/main")

@@ -205,7 +205,10 @@ const DECIMATE_RC: &str = r#"{
     "**/build/**",
     "**/generated/**",
     "**/*.g.dart",
-    "**/*.freezed.dart"
+    "**/*.freezed.dart",
+    "**/*.gen.dart",
+    "**/*.gr.dart",
+    "**/*.mocks.dart"
   ],
   "health": {
     "fileScores": true,

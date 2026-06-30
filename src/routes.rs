@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use crate::generated::is_generated_dart_path;
 use crate::{DartRouteDeclaration, Location, scan::ScannedProject};
 
 /// `GoRouter` route collision analysis.
@@ -51,7 +52,7 @@ pub fn detect_route_collisions(project: &ScannedProject) -> RouteCollisionReport
     let mut name_groups = BTreeMap::<String, CollisionGroup>::new();
 
     for file in &project.files {
-        if is_generated_dart(&file.path) || is_test_dart(&file.path) {
+        if is_generated_dart_path(&file.path) || is_test_dart(&file.path) {
             continue;
         }
         for route in &file.routes {
@@ -174,16 +175,6 @@ fn normalize_route_path(path: &str) -> String {
     } else {
         format!("/{normalized}")
     }
-}
-
-fn is_generated_dart(path: &Path) -> bool {
-    path.file_name()
-        .and_then(|name| name.to_str())
-        .is_some_and(|name| {
-            name.ends_with(".g.dart")
-                || name.ends_with(".freezed.dart")
-                || name.ends_with(".gr.dart")
-        })
 }
 
 fn is_test_dart(path: &Path) -> bool {
@@ -316,6 +307,29 @@ final router = GoRouter(routes: [
             (
                 "integration_test/app_flow_test.dart",
                 "final routes = [GoRoute(path: '/settings', builder: (_, _) => const SizedBox())];",
+            ),
+        ])?;
+
+        let report = detect_route_collisions(&project);
+
+        assert!(report.collisions.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn skips_generated_route_companions() -> Result<(), Box<dyn std::error::Error>> {
+        let project = test_project(&[
+            (
+                "lib/routes.dart",
+                "@TypedGoRoute<HomeRoute>(path: '/')\nclass HomeRoute extends GoRouteData {}\n",
+            ),
+            (
+                "lib/routes.gen.dart",
+                "@TypedGoRoute<GeneratedRoute>(path: '/')\nclass GeneratedRoute extends GoRouteData {}\n",
+            ),
+            (
+                "lib/routes.mocks.dart",
+                "@TypedGoRoute<MockRoute>(path: '/')\nclass MockRoute extends GoRouteData {}\n",
             ),
         ])?;
 

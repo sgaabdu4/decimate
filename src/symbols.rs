@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use crate::generated::is_generated_dart_path;
 use crate::graph::normalize_against;
 use crate::{
     DartCombinatorKind, DeadCodeReport, DeclarationKind, DependencyKind, Location,
@@ -11,7 +12,7 @@ use crate::{
 
 mod path_filters;
 mod private_type_leaks;
-use path_filters::{is_generated_path, is_library_source, is_private, is_public_library_entry};
+use path_filters::{is_library_source, is_private, is_public_library_entry};
 pub use private_type_leaks::PrivateTypeLeak;
 use private_type_leaks::private_type_leaks;
 
@@ -360,7 +361,7 @@ fn unused_export_from_declaration(
             && (!options.include_entry_exports || indexed.declaration.name == "main"))
         || dead_files.contains(&indexed.path)
         || is_private(&indexed.declaration.name)
-        || is_generated_path(&indexed.path)
+        || is_generated_dart_path(&indexed.path)
         || !is_library_source(&project.root, &indexed.path)
     {
         return None;
@@ -408,7 +409,7 @@ fn unused_member_from_declaration(
     if !indexed.path.starts_with(&project.root)
         || !reachable_files.contains(&indexed.path)
         || dead_files.contains(&indexed.path)
-        || is_generated_path(&indexed.path)
+        || is_generated_dart_path(&indexed.path)
         || !is_library_source(&project.root, &indexed.path)
         || !should_check_member(index, indexed)
     {

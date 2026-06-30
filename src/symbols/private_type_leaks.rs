@@ -4,7 +4,8 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use super::SymbolIndex;
-use super::path_filters::{is_generated_path, is_library_source, is_private};
+use super::path_filters::{is_library_source, is_private};
+use crate::generated::is_generated_dart_path;
 use crate::graph::normalize_against;
 use crate::{DeclarationKind, Location, ScannedProject};
 
@@ -35,7 +36,7 @@ pub(super) fn private_type_leaks(
     for file in &project.files {
         let path = normalize_against(&project.root, &file.path);
         if !path.starts_with(&project.root)
-            || is_generated_path(&path)
+            || is_generated_dart_path(&path)
             || !is_library_source(&project.root, &path)
         {
             continue;

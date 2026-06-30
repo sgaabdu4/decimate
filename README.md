@@ -326,7 +326,13 @@ min_tokens = 80
 surface = true
 categories = ["hardcoded-secret", "insecure-transport", "tls-bypass"]
 
-ignore_patterns = ["**/*.g.dart", "**/*.freezed.dart"]
+ignore_patterns = [
+  "**/*.g.dart",
+  "**/*.freezed.dart",
+  "**/*.gen.dart",
+  "**/*.gr.dart",
+  "**/*.mocks.dart"
+]
 ignore_dependencies = ["build_runner"]
 
 [rules]

@@ -25,18 +25,3 @@ pub(super) fn is_public_library_entry(root: &Path, path: &Path) -> bool {
             && relative.extension().is_some_and(|ext| ext == "dart")
     })
 }
-
-pub(super) fn is_generated_path(path: &Path) -> bool {
-    let file_name = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("");
-    matches!(
-        file_name,
-        name if name.ends_with(".g.dart")
-            || name.ends_with(".freezed.dart")
-            || name.ends_with(".gen.dart")
-            || name.ends_with(".gr.dart")
-            || name.ends_with(".mocks.dart")
-    )
-}

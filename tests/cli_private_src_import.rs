@@ -39,7 +39,7 @@ fn check_reports_cross_package_private_src_imports() -> Result<(), Box<dyn std::
 }
 
 #[test]
-fn private_src_import_ignores_generated_mockito_mocks() -> Result<(), Box<dyn std::error::Error>> {
+fn private_src_import_ignores_generated_companions() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     write(
         &fixture,
@@ -56,12 +56,25 @@ dependencies:\n  shared:\n    path: shared\n",
     write(
         &fixture,
         "lib/main.dart",
-        "import 'repository.mocks.dart';\nvoid main() { generatedMock(); }\n",
+        "import 'repository.mocks.dart';\n\
+import 'routes.gr.dart';\n\
+import 'l10n.gen.dart';\n\
+void main() { generatedMock(); generatedRoute(); generatedLookup(); }\n",
     )?;
     write(
         &fixture,
         "lib/repository.mocks.dart",
         "import 'package:shared/src/internal.dart';\nvoid generatedMock() => internal();\n",
+    )?;
+    write(
+        &fixture,
+        "lib/routes.gr.dart",
+        "import 'package:shared/src/internal.dart';\nvoid generatedRoute() => internal();\n",
+    )?;
+    write(
+        &fixture,
+        "lib/l10n.gen.dart",
+        "import 'package:shared/src/internal.dart';\nvoid generatedLookup() => internal();\n",
     )?;
 
     let (code, json) = run_json([

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tree_sitter::Node;
 
+use crate::generated::is_generated_dart_path;
 use crate::graph::normalize_against;
 use crate::{DeadCodeReport, Location, ScannedProject};
 
@@ -208,7 +209,7 @@ fn widget_analysis_paths(
         .map(|file| normalize_against(&project.root, &file.path))
         .filter(|path| path.starts_with(&project.root))
         .filter(|path| !dead_files.contains(path))
-        .filter(|path| !is_generated_path(path) && !is_test_path(path))
+        .filter(|path| !is_generated_dart_path(path) && !is_test_path(path))
         .collect()
 }
 
@@ -661,21 +662,6 @@ fn same_node(left: Node<'_>, right: Node<'_>) -> bool {
     left.kind() == right.kind()
         && left.start_byte() == right.start_byte()
         && left.end_byte() == right.end_byte()
-}
-
-fn is_generated_path(path: &Path) -> bool {
-    let file_name = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("");
-    matches!(
-        file_name,
-        name if name.ends_with(".g.dart")
-            || name.ends_with(".freezed.dart")
-            || name.ends_with(".gen.dart")
-            || name.ends_with(".gr.dart")
-            || name.ends_with(".mocks.dart")
-    )
 }
 
 fn is_test_path(path: &Path) -> bool {

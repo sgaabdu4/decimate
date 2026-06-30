@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use crate::generated::is_generated_dart_path;
 use crate::graph::normalize_against;
 use crate::{BoundaryRule, Location, ScannedProject};
 
@@ -110,7 +111,7 @@ pub fn detect_boundary_coverage(
         .filter_map(|file| {
             let path = normalize_against(&project.root, &file.path);
             if !is_library_source(&project.root, &path)
-                || is_generated_path(&path)
+                || is_generated_dart_path(&path)
                 || configured_boundaries
                     .iter()
                     .any(|boundary| path.starts_with(boundary))
@@ -141,7 +142,8 @@ fn library_files(project: &ScannedProject) -> Vec<PathBuf> {
         .iter()
         .filter_map(|file| {
             let path = normalize_against(&project.root, &file.path);
-            (is_library_source(&project.root, &path) && !is_generated_path(&path)).then_some(path)
+            (is_library_source(&project.root, &path) && !is_generated_dart_path(&path))
+                .then_some(path)
         })
         .collect()
 }
@@ -165,21 +167,6 @@ fn is_library_source(root: &Path, path: &Path) -> bool {
             .next()
             .is_some_and(|component| component.as_os_str() == "lib")
     })
-}
-
-fn is_generated_path(path: &Path) -> bool {
-    let file_name = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("");
-    matches!(
-        file_name,
-        name if name.ends_with(".g.dart")
-            || name.ends_with(".freezed.dart")
-            || name.ends_with(".gen.dart")
-            || name.ends_with(".gr.dart")
-            || name.ends_with(".mocks.dart")
-    )
 }
 
 #[cfg(test)]

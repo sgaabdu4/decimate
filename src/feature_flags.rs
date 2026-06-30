@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::generated::is_generated_dart_path;
 use crate::graph::normalize_against;
 use crate::{Location, ScannedProject};
 
@@ -114,7 +115,7 @@ pub fn detect_feature_flags(
 
     for file in &project.files {
         let path = normalize_against(&project.root, &file.path);
-        if !path.starts_with(&project.root) || is_generated_path(&path) {
+        if !path.starts_with(&project.root) || is_generated_dart_path(&path) {
             continue;
         }
         analyzed_files += 1;
@@ -446,21 +447,6 @@ fn is_flag_like_name(name: &str) -> bool {
         || lower.contains("beta")
         || lower.contains("rollout")
         || lower.contains("logging")
-}
-
-fn is_generated_path(path: &Path) -> bool {
-    let file_name = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("");
-    matches!(
-        file_name,
-        name if name.ends_with(".g.dart")
-            || name.ends_with(".freezed.dart")
-            || name.ends_with(".gen.dart")
-            || name.ends_with(".gr.dart")
-            || name.ends_with(".mocks.dart")
-    )
 }
 
 #[cfg(test)]

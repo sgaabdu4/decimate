@@ -2,6 +2,7 @@ use std::path::Path;
 
 use super::{DetectedSecurityCandidate, SecurityCategory, SecurityConfidence, SecurityOccurrence};
 use crate::Location;
+use crate::generated::is_generated_dart_path;
 
 pub(super) fn detect_in_source(path: &Path, source: &str) -> Vec<DetectedSecurityCandidate> {
     let mut candidates = Vec::new();
@@ -22,18 +23,7 @@ pub(super) fn is_ignored_path(path: &Path) -> bool {
     }) {
         return true;
     }
-    let file_name = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("");
-    matches!(
-        file_name,
-        name if name.ends_with(".g.dart")
-            || name.ends_with(".freezed.dart")
-            || name.ends_with(".gen.dart")
-            || name.ends_with(".gr.dart")
-            || name.ends_with(".mocks.dart")
-    )
+    is_generated_dart_path(path)
 }
 
 fn detect_hardcoded_secrets(

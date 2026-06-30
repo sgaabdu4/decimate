@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use tree_sitter::Node;
 
+use crate::generated::is_generated_dart_path;
 use crate::graph::normalize_against;
 use crate::{Location, ScannedProject};
 
@@ -531,18 +532,7 @@ fn has_crap_threshold(options: &HealthOptions) -> bool {
 }
 
 pub(super) fn is_ignored_path(path: &Path) -> bool {
-    let file_name = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("");
-    if matches!(
-        file_name,
-        name if name.ends_with(".g.dart")
-            || name.ends_with(".freezed.dart")
-            || name.ends_with(".gen.dart")
-            || name.ends_with(".gr.dart")
-            || name.ends_with(".mocks.dart")
-    ) {
+    if is_generated_dart_path(path) {
         return true;
     }
 

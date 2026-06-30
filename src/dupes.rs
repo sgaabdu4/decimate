@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::ScannedProject;
+use crate::generated::is_generated_dart_path;
 use crate::graph::normalize_against;
 use crate::output::TRACE_SCHEMA_VERSION;
 
@@ -396,18 +397,7 @@ fn clone_group_from_occurrences(
 }
 
 fn is_ignored_path(path: &Path) -> bool {
-    let file_name = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("");
-    if matches!(
-        file_name,
-        name if name.ends_with(".g.dart")
-            || name.ends_with(".freezed.dart")
-            || name.ends_with(".gen.dart")
-            || name.ends_with(".gr.dart")
-            || name.ends_with(".mocks.dart")
-    ) {
+    if is_generated_dart_path(path) {
         return true;
     }
 

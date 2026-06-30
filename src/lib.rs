@@ -21,6 +21,7 @@ pub mod explain;
 pub mod extract;
 pub mod feature_flags;
 pub mod fix;
+pub(crate) mod generated;
 pub mod graph;
 pub mod health;
 pub mod hooks;
