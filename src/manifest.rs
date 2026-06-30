@@ -41,7 +41,8 @@ pub fn decimate_schema() -> Value {
         "exit_codes": [
             { "code": 0, "meaning": "success or no error-severity findings" },
             { "code": 1, "meaning": "error-severity findings or skipped apply fixes" },
-            { "code": 2, "meaning": "runtime or configuration error" }
+            { "code": 2, "meaning": "runtime or configuration error" },
+            { "code": 3, "meaning": "config discovery miss for config --path" }
         ],
         "severity_levels": ["error", "warning"],
         "suppression_comments": {
@@ -380,6 +381,7 @@ fn issue_types() -> Value {
         "widget-top-level-function-boundary",
         "unused-widget-param",
         "unrendered-widget",
+        "missing-context-mounted-after-await",
         "missing-entry-point",
         "circular-dependency",
         "re-export-cycle",

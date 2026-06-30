@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
-
-/// Stable JSON schema version for issue explanations.
 pub const EXPLAIN_SCHEMA_VERSION: &str = "decimate.explain.v1";
 
-/// Explanation returned by `decimate explain`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExplainReport {
     pub schema_version: String,
@@ -21,21 +18,13 @@ pub struct ExplainReport {
     pub docs: String,
 }
 
-/// Error returned when an issue type is unknown.
 #[derive(Debug, thiserror::Error)]
 pub enum ExplainError {
-    /// The issue type did not match a supported Decimate issue.
     #[error("unknown issue type {issue_type:?}")]
-    UnknownIssueType {
-        /// Raw issue type argument.
-        issue_type: String,
-    },
+    UnknownIssueType { issue_type: String },
 }
 
-/// Explain one Decimate issue type.
-///
 /// # Errors
-///
 /// Returns [`ExplainError`] when `issue_type` is not supported.
 pub fn explain_issue(issue_type: &str) -> Result<ExplainReport, ExplainError> {
     let normalized = normalize_issue_type(issue_type);
@@ -70,7 +59,6 @@ pub fn explain_issue(issue_type: &str) -> Result<ExplainReport, ExplainError> {
     })
 }
 
-/// Render a human-readable explanation.
 #[must_use]
 pub fn render_explain_report(report: &ExplainReport) -> String {
     format!(
@@ -300,6 +288,18 @@ const ISSUES: &[IssueExplanation] = &[
         "const UserCard({required String subtitle}) : _subtitle = subtitle; where _subtitle is never read in UserCard or _UserCardState.",
         "Review callers before removing the parameter; Decimate reports this as a warning by default.",
         &["// decimate-ignore-next-line unused-widget-param"],
+        &["decimate check --format json"],
+    ),
+    issue!(
+        "missing-context-mounted-after-await",
+        "decimate/missing-context-mounted-after-await",
+        &["missing-context-mounted-after-await"],
+        "Missing context.mounted guard",
+        "A Flutter widget or State method awaits and then uses BuildContext without first checking context.mounted.",
+        "Async UI callbacks can resume after the widget is disposed; guarding after await prevents stale-context navigation, dialogs, and state access.",
+        "await save(); Navigator.of(context).pop(); without `if (!context.mounted) return;` after the await.",
+        "Add `if (!context.mounted) return;` immediately after the await before using context.",
+        &["// decimate-ignore-next-line missing-context-mounted-after-await"],
         &["decimate check --format json"],
     ),
     issue!(

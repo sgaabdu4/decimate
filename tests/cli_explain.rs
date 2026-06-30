@@ -144,6 +144,36 @@ fn explain_command_emits_private_widget_class_contract() -> Result<(), Box<dyn s
 }
 
 #[test]
+fn explain_command_emits_missing_context_mounted_contract() -> Result<(), Box<dyn std::error::Error>>
+{
+    let mut output = Vec::new();
+
+    let code = run_from(
+        [
+            "decimate",
+            "explain",
+            "missing-context-mounted-after-await",
+            "--format",
+            "json",
+        ],
+        &mut output,
+    )?;
+
+    let json = serde_json::from_slice::<Value>(&output)?;
+    assert_eq!(code, 0);
+    assert_eq!(json["id"], "decimate/missing-context-mounted-after-await");
+    assert_eq!(json["issue_type"], "missing-context-mounted-after-await");
+    assert_eq!(json["name"], "Missing context.mounted guard");
+    assert!(json["suppressions"].as_array().is_some_and(|comments| {
+        comments.iter().any(|comment| {
+            comment == "// decimate-ignore-next-line missing-context-mounted-after-await"
+        })
+    }));
+
+    Ok(())
+}
+
+#[test]
 fn explain_command_emits_widget_top_level_function_contract()
 -> Result<(), Box<dyn std::error::Error>> {
     let mut output = Vec::new();

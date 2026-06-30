@@ -33,8 +33,9 @@ pub(super) fn run_config<W: Write>(
     if subcommand.get_flag("path") {
         if let Some(path) = &config.path {
             writeln!(writer, "{}", path.display())?;
+            return Ok(0);
         }
-        return Ok(0);
+        return Ok(3);
     }
 
     match output_format(subcommand, &config) {

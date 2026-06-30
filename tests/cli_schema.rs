@@ -55,6 +55,11 @@ fn schema_command_emits_agent_manifest() -> Result<(), Box<dyn std::error::Error
             .as_array()
             .is_some_and(|issues| issues.iter().any(|issue| issue == "unrendered-widget"))
     );
+    assert!(json["issue_types"].as_array().is_some_and(|issues| {
+        issues
+            .iter()
+            .any(|issue| issue == "missing-context-mounted-after-await")
+    }));
     assert!(
         json["issue_types"]
             .as_array()
@@ -179,6 +184,11 @@ fn assert_manifest_metadata(json: &Value) {
         json["exit_codes"]
             .as_array()
             .is_some_and(|codes| { codes.iter().any(|code| code["code"] == 2) })
+    );
+    assert!(
+        json["exit_codes"]
+            .as_array()
+            .is_some_and(|codes| { codes.iter().any(|code| code["code"] == 3) })
     );
     assert_eq!(
         json["severity_levels"],
