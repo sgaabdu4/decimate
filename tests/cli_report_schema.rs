@@ -40,6 +40,16 @@ fn report_schema_types_inventory_arrays() -> Result<(), Box<dyn std::error::Erro
     for field in ["finding_id", "cwe", "candidate", "trace"] {
         assert_array_contains(&json["$defs"]["security_candidate"]["required"], field);
     }
+    assert_eq!(
+        json["$defs"]["security_candidate"]["properties"]["reachability"]["properties"]["taint_confidence"]
+            ["enum"][0],
+        "module-level"
+    );
+    assert_eq!(
+        json["$defs"]["security_occurrence"]["properties"]["reachability"]["properties"]["reachable_from_entrypoint"]
+            ["type"],
+        "boolean"
+    );
     assert_array_contains(
         &json["$defs"]["complexity_finding"]["required"],
         "contributions",

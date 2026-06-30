@@ -243,6 +243,7 @@ pub(super) fn security_candidate_schema() -> Value {
             "sink": string_schema(),
             "confidence": confidence_schema(),
             "occurrences": array_ref_schema("security_occurrence"),
+            "reachability": security_reachability_schema(),
             "evidence": {
                 "type": "object",
                 "additionalProperties": false,
@@ -263,12 +264,32 @@ pub(super) fn security_occurrence_schema() -> Value {
     let mut properties = location_expression_properties();
     if let Some(object) = properties.as_object_mut() {
         object.insert("evidence".to_owned(), string_schema());
+        object.insert("reachability".to_owned(), security_reachability_schema());
     }
     json!({
         "type": "object",
         "additionalProperties": false,
         "required": ["path", "line", "column", "expression", "evidence"],
         "properties": properties
+    })
+}
+
+fn security_reachability_schema() -> Value {
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+            "reachable_from_entrypoint",
+            "taint_confidence",
+            "entry_points",
+            "reachable_occurrences"
+        ],
+        "properties": {
+            "reachable_from_entrypoint": { "type": "boolean" },
+            "taint_confidence": { "type": "string", "enum": ["module-level"] },
+            "entry_points": string_array_schema(),
+            "reachable_occurrences": nonnegative_integer_schema()
+        }
     })
 }
 

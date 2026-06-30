@@ -305,6 +305,7 @@ fn detected(
             location: location_for_index(source, index),
             expression: expression.to_owned(),
             evidence: redact_line(line_at(source, index)),
+            reachability: None,
         },
     }
 }

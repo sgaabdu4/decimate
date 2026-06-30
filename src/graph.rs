@@ -514,8 +514,9 @@ pub(super) fn resolve_local_uri(
 
     if let Some(rest) = specifier.strip_prefix("package:") {
         let (package, path) = rest.split_once('/')?;
+        let path = percent_decode_uri_path(path);
         return packages
-            .resolve(package, path)
+            .resolve(package, &path)
             .map(|resolution| ResolvedTarget {
                 path: resolution.path,
                 local: resolution.local,
@@ -526,11 +527,47 @@ pub(super) fn resolve_local_uri(
         return None;
     }
 
+    let specifier = percent_decode_uri_path(specifier);
     let base = from_path.parent().unwrap_or(root);
     Some(ResolvedTarget {
-        path: normalize_path(&base.join(specifier)),
+        path: normalize_path(&base.join(&specifier)),
         local: true,
     })
+}
+
+fn percent_decode_uri_path(value: &str) -> String {
+    let bytes = value.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+
+    while index < bytes.len() {
+        if bytes[index] == b'%'
+            && let (Some(high), Some(low)) = (bytes.get(index + 1), bytes.get(index + 2))
+            && let Some(decoded_byte) = decode_hex_pair(*high, *low)
+        {
+            decoded.push(decoded_byte);
+            index += 3;
+            continue;
+        }
+
+        decoded.push(bytes[index]);
+        index += 1;
+    }
+
+    String::from_utf8(decoded).unwrap_or_else(|_| value.to_owned())
+}
+
+fn decode_hex_pair(high: u8, low: u8) -> Option<u8> {
+    Some(hex_value(high)? * 16 + hex_value(low)?)
+}
+
+const fn hex_value(value: u8) -> Option<u8> {
+    match value {
+        b'0'..=b'9' => Some(value - b'0'),
+        b'a'..=b'f' => Some(value - b'a' + 10),
+        b'A'..=b'F' => Some(value - b'A' + 10),
+        _ => None,
+    }
 }
 
 pub(crate) fn normalize_against(root: &Path, path: &Path) -> PathBuf {
@@ -568,3 +605,5 @@ pub(crate) fn normalize_path(path: &Path) -> PathBuf {
 mod augment_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod uri_tests;

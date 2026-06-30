@@ -57,7 +57,7 @@ use scope::{
     scope_file_scores, scope_hotspots, scope_refactoring_targets, scope_security_candidates,
 };
 pub use security_findings::{
-    JsonAttackSurfaceEntry, JsonSecurityCandidate, JsonSecurityOccurrence,
+    JsonAttackSurfaceEntry, JsonSecurityCandidate, JsonSecurityOccurrence, JsonSecurityReachability,
 };
 use security_findings::{add_security_findings, json_attack_surface, json_security_candidates};
 pub(crate) use security_sarif::render_sarif_report;

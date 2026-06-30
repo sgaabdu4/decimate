@@ -148,8 +148,9 @@ pub use output::{
     JsonRuntimeBlastRadius, JsonRuntimeCoverage, JsonRuntimeCoverageActionable,
     JsonRuntimeCoverageFinding, JsonRuntimeCoverageIntelligence, JsonRuntimeCoverageProvenance,
     JsonRuntimeCoverageSummary, JsonRuntimeCoverageWatermark, JsonRuntimeHotPath,
-    JsonRuntimeImportance, JsonSecurityCandidate, JsonSecurityOccurrence, JsonThresholdOverride,
-    ReportCommand, ReportSummary, TRACE_SCHEMA_VERSION, Verdict, build_json_report,
+    JsonRuntimeImportance, JsonSecurityCandidate, JsonSecurityOccurrence, JsonSecurityReachability,
+    JsonThresholdOverride, ReportCommand, ReportSummary, TRACE_SCHEMA_VERSION, Verdict,
+    build_json_report,
 };
 pub use policy::{
     BoundaryCallRule, BoundaryCallViolation, PolicyError, PolicyPack, PolicyRule, PolicyRuleKind,
@@ -169,7 +170,8 @@ pub use routes::{
 pub use scan::{ScanError, ScanOptions, ScannedProject, scan_project, scan_project_with_options};
 pub use security::{
     AttackSurfaceEntry, SecurityCandidate, SecurityCategory, SecurityConfidence, SecurityError,
-    SecurityOccurrence, SecurityOptions, SecurityReport, analyze_security,
+    SecurityOccurrence, SecurityOptions, SecurityReachability, SecurityReport,
+    SecurityTaintConfidence, analyze_security,
 };
 pub use symbols::{
     DuplicateExport, DuplicateExportDeclaration, PrivateTypeLeak, SymbolAnalysisOptions,

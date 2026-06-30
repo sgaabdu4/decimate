@@ -37,6 +37,7 @@ Future<void> main(dynamic db, dynamic prefs, dynamic controller, String command,
             surface: true,
             ..SecurityOptions::default()
         },
+        None,
     )?;
     let rules = report
         .candidates
@@ -94,7 +95,7 @@ Future<void> query(dynamic db, String id) => db.rawQuery('SELECT * FROM users WH
     )?;
 
     let project = scan_project(fixture.path())?;
-    let report = analyze_security(&project, &SecurityOptions::default())?;
+    let report = analyze_security(&project, &SecurityOptions::default(), None)?;
 
     assert!(report.candidates.is_empty());
     assert_eq!(report.total_occurrences, 0);
@@ -127,7 +128,7 @@ Future<void> main(dynamic viewModel, dynamic prefs, String token) async {
     )?;
 
     let project = scan_project(fixture.path())?;
-    let report = analyze_security(&project, &SecurityOptions::default())?;
+    let report = analyze_security(&project, &SecurityOptions::default(), None)?;
 
     assert_eq!(report.total_occurrences, 1);
     assert_eq!(
@@ -159,6 +160,7 @@ final uri = Uri.parse('http://api.example.com/login');
             surface: false,
             ..SecurityOptions::default()
         },
+        None,
     )?;
 
     assert_eq!(report.candidates.len(), 1);

@@ -143,9 +143,13 @@ decimate check . --unused-files --unused-deps --format json
 
 Issue filters follow Fallow naming where Decimate has real Dart data:
 `--unused-files`, `--unused-exports`, `--unused-types`, `--unused-deps`,
-`--unlisted-deps`, `--duplicate-exports`, `--unused-enum-members`,
-`--unused-class-members`, `--unresolved-imports`, `--stale-suppressions`,
+`--unlisted-deps`, `--duplicate-exports`, `--private-type-leaks`,
+`--unused-enum-members`, `--unused-class-members`, `--unresolved-imports`,
+`--stale-suppressions`,
 `--unused-dependency-overrides`, and `--misconfigured-dependency-overrides`.
+The check command also supports graph and architecture selectors:
+`--circular-deps`, `--re-export-cycles`, `--boundary-violations`, and
+`--policy-violations`.
 
 Find cycles:
 

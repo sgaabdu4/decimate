@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::graph::normalize_against;
-use crate::{Location, ScannedProject};
+use crate::{DeadCodeReport, Location, ScannedProject};
 
 mod detect;
 use detect::{detect_in_source, is_ignored_path};
@@ -115,6 +115,27 @@ pub struct SecurityOccurrence {
     pub expression: String,
     /// Redacted source-line evidence.
     pub evidence: String,
+    /// Optional module-level graph reachability context.
+    pub reachability: Option<SecurityReachability>,
+}
+
+/// Module-level security reachability context.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SecurityReachability {
+    /// Whether this occurrence's module is reachable from a configured entry point.
+    pub reachable_from_entrypoint: bool,
+    /// Confidence tier for the reachability evidence.
+    pub taint_confidence: SecurityTaintConfidence,
+    /// Entry points that seeded the module graph traversal.
+    pub entry_points: Vec<PathBuf>,
+}
+
+/// Security taint confidence tier.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SecurityTaintConfidence {
+    /// Module is import-reachable from an entry point; value flow is not proven.
+    ModuleLevel,
 }
 
 /// Attack-surface inventory entry.
@@ -170,9 +191,11 @@ struct DetectedSecurityCandidate {
 pub fn analyze_security(
     project: &ScannedProject,
     options: &SecurityOptions,
+    dead_code: Option<&DeadCodeReport>,
 ) -> Result<SecurityReport, SecurityError> {
     let mut groups = BTreeMap::<(SecurityCategory, String), CandidateGroup>::new();
     let mut analyzed_files = 0;
+    let reachability = dead_code.map(SecurityReachabilityContext::from);
 
     for file in &project.files {
         let path = normalize_against(&project.root, &file.path);
@@ -188,6 +211,10 @@ pub fn analyze_security(
             .into_iter()
             .filter(|candidate| options.includes_category(candidate.category))
         {
+            let mut detected = detected;
+            detected.occurrence.reachability = reachability
+                .as_ref()
+                .and_then(|context| context.reachability_for(&detected.occurrence.path));
             let key = (detected.category, detected.sink.clone());
             let group = groups.entry(key).or_insert_with(|| CandidateGroup {
                 rule_id: detected.category.rule_id().to_owned(),
@@ -237,6 +264,33 @@ pub fn analyze_security(
         total_occurrences,
         attack_surface,
     })
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SecurityReachabilityContext {
+    reachable_files: BTreeSet<PathBuf>,
+    entry_points: Vec<PathBuf>,
+}
+
+impl SecurityReachabilityContext {
+    fn reachability_for(&self, path: &PathBuf) -> Option<SecurityReachability> {
+        self.reachable_files
+            .contains(path)
+            .then(|| SecurityReachability {
+                reachable_from_entrypoint: true,
+                taint_confidence: SecurityTaintConfidence::ModuleLevel,
+                entry_points: self.entry_points.clone(),
+            })
+    }
+}
+
+impl From<&DeadCodeReport> for SecurityReachabilityContext {
+    fn from(report: &DeadCodeReport) -> Self {
+        Self {
+            reachable_files: report.reachable_files.iter().cloned().collect(),
+            entry_points: report.entry_points.clone(),
+        }
+    }
 }
 
 impl From<CandidateGroup> for SecurityCandidate {

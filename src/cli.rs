@@ -93,7 +93,7 @@ use impact_run::{impact_command, run_impact};
 use init_run::{init_command, run_init};
 use inspect_args::inspect_command;
 use inspect_run::run_inspect_request;
-use issue_filter_args::issue_filter_command;
+use issue_filter_args::{check_issue_filter_command, dead_code_issue_filter_command};
 use list_run::{list_command, run_list, run_workspaces, workspaces_command};
 use output_format::{
     OutputFormat, ReportOutputFormat, output_format, output_format_value, report_output_format,
@@ -415,11 +415,11 @@ fn command() -> Command {
             .about("Rust-native Dart and Flutter module-graph intelligence")
             .subcommand_required(false)
             .arg_required_else_help(false)
-            .subcommand(issue_filter_command(symbol_options_command(dupes_command(
-                health_command_without_top(boundary_command(baseline_command(
-                    Command::new("check").about("Run all enabled graph checks"),
+            .subcommand(check_issue_filter_command(symbol_options_command(
+                dupes_command(health_command_without_top(boundary_command(
+                    baseline_command(Command::new("check").about("Run all enabled graph checks")),
                 ))),
-            ))))
+            )))
             .subcommand(symbol_options_command(dupes_command(
                 health_command_without_top(boundary_command(report_command(
                     Command::new("audit")
@@ -452,7 +452,7 @@ fn command() -> Command {
                         .arg(max_decisions_arg()),
                 ))),
             )))
-            .subcommand(issue_filter_command(symbol_options_command(
+            .subcommand(dead_code_issue_filter_command(symbol_options_command(
                 baseline_command(
                     Command::new("dead-code")
                         .about("Find Dart files unreachable from entry points"),

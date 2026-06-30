@@ -8,6 +8,7 @@ use super::format::display_path;
 use super::{Finding, FindingAction, FindingKind, Severity};
 use crate::{
     AttackSurfaceEntry, SecurityCandidate, SecurityCategory, SecurityConfidence, SecurityReport,
+    SecurityTaintConfidence,
 };
 
 /// Security candidate serialized in JSON reports.
@@ -33,6 +34,8 @@ pub struct JsonSecurityCandidate {
     pub confidence: SecurityConfidence,
     /// Candidate occurrences.
     pub occurrences: Vec<JsonSecurityOccurrence>,
+    /// Optional module-level graph reachability context.
+    pub reachability: Option<JsonSecurityReachability>,
 }
 
 impl Serialize for JsonSecurityCandidate {
@@ -40,7 +43,7 @@ impl Serialize for JsonSecurityCandidate {
     where
         S: Serializer,
     {
-        let mut state = serializer.serialize_struct("JsonSecurityCandidate", 12)?;
+        let mut state = serializer.serialize_struct("JsonSecurityCandidate", 13)?;
         state.serialize_field("rule_id", &self.rule_id)?;
         state.serialize_field("finding_id", &self.finding_id)?;
         state.serialize_field("fingerprint", &self.fingerprint)?;
@@ -51,6 +54,9 @@ impl Serialize for JsonSecurityCandidate {
         state.serialize_field("sink", &self.sink)?;
         state.serialize_field("confidence", &self.confidence)?;
         state.serialize_field("occurrences", &self.occurrences)?;
+        if let Some(reachability) = &self.reachability {
+            state.serialize_field("reachability", reachability)?;
+        }
         state.serialize_field(
             "evidence",
             &JsonSecurityEvidence {
@@ -86,6 +92,22 @@ pub struct JsonSecurityOccurrence {
     pub expression: String,
     /// Redacted source-line evidence.
     pub evidence: String,
+    /// Optional module-level graph reachability context.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reachability: Option<JsonSecurityReachability>,
+}
+
+/// Module-level security reachability context serialized in JSON reports.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct JsonSecurityReachability {
+    /// Whether this module is reachable from a configured entry point.
+    pub reachable_from_entrypoint: bool,
+    /// Confidence tier for the reachability evidence.
+    pub taint_confidence: SecurityTaintConfidence,
+    /// Root-relative entry points that seeded graph traversal.
+    pub entry_points: Vec<String>,
+    /// Candidate occurrence count covered by this reachability context.
+    pub reachable_occurrences: usize,
 }
 
 #[derive(Serialize)]
@@ -142,6 +164,29 @@ pub(super) fn json_security_candidates(
         .iter()
         .map(|candidate| {
             let fingerprint = security_fingerprint(candidate);
+            let occurrences = candidate
+                .occurrences
+                .iter()
+                .map(|occurrence| JsonSecurityOccurrence {
+                    path: display_path(root, &occurrence.path),
+                    line: occurrence.location.line,
+                    column: occurrence.location.column,
+                    expression: occurrence.expression.clone(),
+                    evidence: occurrence.evidence.clone(),
+                    reachability: occurrence.reachability.as_ref().map(|reachability| {
+                        JsonSecurityReachability {
+                            reachable_from_entrypoint: reachability.reachable_from_entrypoint,
+                            taint_confidence: reachability.taint_confidence,
+                            entry_points: reachability
+                                .entry_points
+                                .iter()
+                                .map(|entry| display_path(root, entry))
+                                .collect(),
+                            reachable_occurrences: 1,
+                        }
+                    }),
+                })
+                .collect::<Vec<_>>();
             JsonSecurityCandidate {
                 rule_id: candidate.rule_id.clone(),
                 finding_id: fingerprint.clone(),
@@ -159,20 +204,35 @@ pub(super) fn json_security_candidates(
                 },
                 sink: candidate.sink.clone(),
                 confidence: candidate.confidence,
-                occurrences: candidate
-                    .occurrences
-                    .iter()
-                    .map(|occurrence| JsonSecurityOccurrence {
-                        path: display_path(root, &occurrence.path),
-                        line: occurrence.location.line,
-                        column: occurrence.location.column,
-                        expression: occurrence.expression.clone(),
-                        evidence: occurrence.evidence.clone(),
-                    })
-                    .collect(),
+                reachability: candidate_reachability(&occurrences),
+                occurrences,
             }
         })
         .collect()
+}
+
+fn candidate_reachability(
+    occurrences: &[JsonSecurityOccurrence],
+) -> Option<JsonSecurityReachability> {
+    let reachable = occurrences
+        .iter()
+        .filter_map(|occurrence| occurrence.reachability.as_ref())
+        .collect::<Vec<_>>();
+    let first = reachable.first()?;
+    let entry_points = reachable
+        .iter()
+        .flat_map(|reachability| reachability.entry_points.iter())
+        .cloned()
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+
+    Some(JsonSecurityReachability {
+        reachable_from_entrypoint: true,
+        taint_confidence: first.taint_confidence,
+        entry_points,
+        reachable_occurrences: reachable.len(),
+    })
 }
 
 pub(super) fn json_attack_surface(

@@ -33,7 +33,7 @@ pub(super) fn analyze_project(
         duplicates: analyze_project_duplicates(project, request)?,
         health: analyze_project_health(project, request)?,
         feature_flags: analyze_project_flags(project, request)?,
-        security: analyze_project_security(project, request)?,
+        security: analyze_project_security(project, request, dead_code.as_ref())?,
         routes: analyze_project_routes(project, request.command),
         widgets: analyze_project_widgets(project, request.command, dead_code.as_ref())?,
         file_scope: None,
@@ -330,10 +330,24 @@ fn analyze_project_flags(
 fn analyze_project_security(
     project: &ScannedProject,
     request: &CommandRequest,
+    dead_code: Option<&crate::DeadCodeReport>,
 ) -> Result<Option<crate::SecurityReport>, CliError> {
     match request.command {
-        ReportCommand::Check | ReportCommand::Audit | ReportCommand::Security => {
-            Ok(Some(analyze_security(project, &request.security_options)?))
+        ReportCommand::Check | ReportCommand::Audit => Ok(Some(analyze_security(
+            project,
+            &request.security_options,
+            dead_code,
+        )?)),
+        ReportCommand::Security => {
+            let entries =
+                entry_points_for_check(project, &request.entry_points, request.entry_point_mode());
+            let reachability =
+                (!entries.is_empty()).then(|| find_project_dead_code(project, entries, request));
+            Ok(Some(analyze_security(
+                project,
+                &request.security_options,
+                reachability.as_ref(),
+            )?))
         }
         ReportCommand::DeadCode
         | ReportCommand::Cycles

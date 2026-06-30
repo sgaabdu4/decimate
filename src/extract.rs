@@ -10,6 +10,7 @@ mod members;
 mod references;
 mod routes;
 mod signatures;
+mod strings;
 use directives::{
     extract_directive, extract_library_name, extract_part_directive, extract_part_of_directive,
 };
@@ -19,6 +20,7 @@ pub use routes::DartRouteDeclaration;
 use routes::extract_route_declarations;
 pub use signatures::SignatureReference;
 use signatures::extract_signature_references;
+use strings::unquote_dart_string;
 
 /// A 1-based line and 0-based byte column in a Dart source file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -601,34 +603,7 @@ fn find_first_named_descendant_with_cursor<'tree>(
     None
 }
 
-fn unquote_dart_string(raw: &str) -> Option<String> {
-    let trimmed = raw.trim();
-    let without_raw_prefix = trimmed
-        .strip_prefix('r')
-        .or_else(|| trimmed.strip_prefix('R'))
-        .unwrap_or(trimmed);
-
-    let quoted = without_raw_prefix
-        .strip_prefix("'''")
-        .and_then(|inner| inner.strip_suffix("'''"))
-        .or_else(|| {
-            without_raw_prefix
-                .strip_prefix("\"\"\"")
-                .and_then(|inner| inner.strip_suffix("\"\"\""))
-        })
-        .or_else(|| {
-            without_raw_prefix
-                .strip_prefix('\'')
-                .and_then(|inner| inner.strip_suffix('\''))
-        })
-        .or_else(|| {
-            without_raw_prefix
-                .strip_prefix('"')
-                .and_then(|inner| inner.strip_suffix('"'))
-        })?;
-
-    Some(quoted.to_owned())
-}
-
+#[cfg(test)]
+mod string_tests;
 #[cfg(test)]
 mod tests;
