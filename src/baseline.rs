@@ -10,9 +10,7 @@ use crate::output::{
 };
 use crate::{JsonCloneGroup, JsonComplexityFinding, JsonFeatureFlag, JsonSecurityCandidate};
 
-/// Stable Decimate baseline schema version.
 pub const BASELINE_SCHEMA_VERSION: &str = "decimate.baseline.v1";
-/// Stable Decimate regression baseline schema version.
 pub const REGRESSION_BASELINE_SCHEMA_VERSION: &str = "decimate.regression-baseline.v1";
 
 /// Identity-based finding baseline.
@@ -618,6 +616,14 @@ fn recompute_summary(report: &mut JsonReport) {
     report.summary.manual_riverpod_providers =
         kind_count(&report.findings, FindingKind::ManualRiverpodProvider);
     report.summary.unrendered_widgets = kind_count(&report.findings, FindingKind::UnrenderedWidget);
+    report.summary.missing_context_mounted_after_await = kind_count(
+        &report.findings,
+        FindingKind::MissingContextMountedAfterAwait,
+    );
+    report.summary.missing_ref_mounted_after_await =
+        kind_count(&report.findings, FindingKind::MissingRefMountedAfterAwait);
+    report.summary.riverpod_watch_in_notifier_methods =
+        kind_count(&report.findings, FindingKind::RiverpodWatchInNotifierMethod);
     report.summary.code_duplications = report.clone_groups.len();
     report.summary.complex_functions = report.complexity.len();
     report.summary.coverage_gaps = kind_count(&report.findings, FindingKind::CoverageGap);

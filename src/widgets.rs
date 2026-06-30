@@ -10,11 +10,16 @@ use tree_sitter::Node;
 use crate::graph::normalize_against;
 use crate::{DeadCodeReport, Location, ScannedProject};
 
+mod lifecycle;
 mod params;
 mod providers;
 mod top_level;
 mod unrendered;
 
+use lifecycle::lifecycle_findings;
+pub use lifecycle::{
+    MissingContextMountedAfterAwait, MissingRefMountedAfterAwait, RiverpodWatchInNotifierMethod,
+};
 use params::constructor_params;
 use providers::manual_riverpod_providers;
 use top_level::top_level_widget_functions;
@@ -35,6 +40,12 @@ pub struct WidgetReport {
     pub manual_riverpod_providers: Vec<ManualRiverpodProvider>,
     /// Flutter widget classes with no reachable object construction.
     pub unrendered_widgets: Vec<UnrenderedWidgetClass>,
+    /// Widget or `State` awaits missing an immediate `context.mounted` guard.
+    pub missing_context_mounted_after_await: Vec<MissingContextMountedAfterAwait>,
+    /// Riverpod notifier awaits missing an immediate `ref.mounted` guard.
+    pub missing_ref_mounted_after_await: Vec<MissingRefMountedAfterAwait>,
+    /// `ref.watch` calls inside Riverpod notifier methods other than `build`.
+    pub riverpod_watch_in_notifier_methods: Vec<RiverpodWatchInNotifierMethod>,
 }
 
 /// A widget constructor parameter that is not used by the widget.
@@ -156,6 +167,32 @@ pub fn analyze_widgets(
     project: &ScannedProject,
     dead_code: Option<&DeadCodeReport>,
 ) -> Result<WidgetReport, WidgetAnalysisError> {
+    let paths = widget_analysis_paths(project, dead_code);
+    let file_findings = paths
+        .par_iter()
+        .map(|path| analyze_file(path))
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut findings = merge_file_widget_findings(file_findings);
+    sort_file_widget_findings(&mut findings);
+    let unrendered_widgets = unrendered_widgets(project, &paths)?;
+
+    Ok(WidgetReport {
+        analyzed_files: paths.len(),
+        unused_params: findings.unused_params,
+        private_widget_classes: findings.private_widget_classes,
+        top_level_functions: findings.top_level_functions,
+        manual_riverpod_providers: findings.manual_riverpod_providers,
+        unrendered_widgets,
+        missing_context_mounted_after_await: findings.missing_context_mounted_after_await,
+        missing_ref_mounted_after_await: findings.missing_ref_mounted_after_await,
+        riverpod_watch_in_notifier_methods: findings.riverpod_watch_in_notifier_methods,
+    })
+}
+
+fn widget_analysis_paths(
+    project: &ScannedProject,
+    dead_code: Option<&DeadCodeReport>,
+) -> Vec<PathBuf> {
     let dead_files = dead_code
         .map(|report| {
             report
@@ -165,31 +202,49 @@ pub fn analyze_widgets(
                 .collect::<BTreeSet<_>>()
         })
         .unwrap_or_default();
-    let paths = project
+    project
         .files
         .iter()
         .map(|file| normalize_against(&project.root, &file.path))
         .filter(|path| path.starts_with(&project.root))
         .filter(|path| !dead_files.contains(path))
         .filter(|path| !is_generated_path(path) && !is_test_path(path))
-        .collect::<Vec<_>>();
+        .collect()
+}
 
-    let file_findings = paths
-        .par_iter()
-        .map(|path| analyze_file(path))
-        .collect::<Result<Vec<_>, _>>()?;
-
-    let mut unused_params = Vec::new();
-    let mut private_widget_classes = Vec::new();
-    let mut top_level_functions = Vec::new();
-    let mut manual_riverpod_providers = Vec::new();
+fn merge_file_widget_findings(file_findings: Vec<FileWidgetFindings>) -> FileWidgetFindings {
+    let mut merged = FileWidgetFindings::default();
     for mut findings in file_findings {
-        unused_params.append(&mut findings.unused_params);
-        private_widget_classes.append(&mut findings.private_widget_classes);
-        top_level_functions.append(&mut findings.top_level_functions);
-        manual_riverpod_providers.append(&mut findings.manual_riverpod_providers);
+        merged.unused_params.append(&mut findings.unused_params);
+        merged
+            .private_widget_classes
+            .append(&mut findings.private_widget_classes);
+        merged
+            .top_level_functions
+            .append(&mut findings.top_level_functions);
+        merged
+            .manual_riverpod_providers
+            .append(&mut findings.manual_riverpod_providers);
+        merged
+            .missing_context_mounted_after_await
+            .append(&mut findings.missing_context_mounted_after_await);
+        merged
+            .missing_ref_mounted_after_await
+            .append(&mut findings.missing_ref_mounted_after_await);
+        merged
+            .riverpod_watch_in_notifier_methods
+            .append(&mut findings.riverpod_watch_in_notifier_methods);
     }
-    unused_params.sort_by(|left, right| {
+    merged
+}
+
+fn sort_file_widget_findings(findings: &mut FileWidgetFindings) {
+    sort_widget_core_findings(findings);
+    sort_lifecycle_findings(findings);
+}
+
+fn sort_widget_core_findings(findings: &mut FileWidgetFindings) {
+    findings.unused_params.sort_by(|left, right| {
         (
             &left.path,
             left.location.line,
@@ -205,7 +260,7 @@ pub fn analyze_widgets(
                 &right.param_name,
             ))
     });
-    private_widget_classes.sort_by(|left, right| {
+    findings.private_widget_classes.sort_by(|left, right| {
         (
             &left.path,
             left.location.line,
@@ -219,7 +274,7 @@ pub fn analyze_widgets(
                 &right.widget_class,
             ))
     });
-    top_level_functions.sort_by(|left, right| {
+    findings.top_level_functions.sort_by(|left, right| {
         (
             &left.path,
             left.location.line,
@@ -233,7 +288,7 @@ pub fn analyze_widgets(
                 &right.function_name,
             ))
     });
-    manual_riverpod_providers.sort_by(|left, right| {
+    findings.manual_riverpod_providers.sort_by(|left, right| {
         (
             &left.path,
             left.location.line,
@@ -247,16 +302,59 @@ pub fn analyze_widgets(
                 &right.provider_name,
             ))
     });
-    let unrendered_widgets = unrendered_widgets(project, &paths)?;
+}
 
-    Ok(WidgetReport {
-        analyzed_files: paths.len(),
-        unused_params,
-        private_widget_classes,
-        top_level_functions,
-        manual_riverpod_providers,
-        unrendered_widgets,
-    })
+fn sort_lifecycle_findings(findings: &mut FileWidgetFindings) {
+    findings
+        .missing_context_mounted_after_await
+        .sort_by(|left, right| {
+            (
+                &left.path,
+                left.location.line,
+                left.location.column,
+                &left.owner,
+            )
+                .cmp(&(
+                    &right.path,
+                    right.location.line,
+                    right.location.column,
+                    &right.owner,
+                ))
+        });
+    findings
+        .missing_ref_mounted_after_await
+        .sort_by(|left, right| {
+            (
+                &left.path,
+                left.location.line,
+                left.location.column,
+                &left.owner,
+            )
+                .cmp(&(
+                    &right.path,
+                    right.location.line,
+                    right.location.column,
+                    &right.owner,
+                ))
+        });
+    findings
+        .riverpod_watch_in_notifier_methods
+        .sort_by(|left, right| {
+            (
+                &left.path,
+                left.location.line,
+                left.location.column,
+                &left.notifier_class,
+                &left.method_name,
+            )
+                .cmp(&(
+                    &right.path,
+                    right.location.line,
+                    right.location.column,
+                    &right.notifier_class,
+                    &right.method_name,
+                ))
+        });
 }
 
 fn analyze_file(path: &Path) -> Result<FileWidgetFindings, WidgetAnalysisError> {
@@ -295,6 +393,9 @@ struct FileWidgetFindings {
     private_widget_classes: Vec<PrivateWidgetClass>,
     top_level_functions: Vec<WidgetTopLevelFunction>,
     manual_riverpod_providers: Vec<ManualRiverpodProvider>,
+    missing_context_mounted_after_await: Vec<MissingContextMountedAfterAwait>,
+    missing_ref_mounted_after_await: Vec<MissingRefMountedAfterAwait>,
+    riverpod_watch_in_notifier_methods: Vec<RiverpodWatchInNotifierMethod>,
 }
 
 fn findings_in_source(path: &Path, root: Node<'_>, source: &str) -> FileWidgetFindings {
@@ -307,6 +408,10 @@ fn findings_in_source(path: &Path, root: Node<'_>, source: &str) -> FileWidgetFi
         .any(|class| widget_kind(*class, source).is_some());
     findings.top_level_functions = top_level_widget_functions(path, root, source, has_widget_class);
     findings.manual_riverpod_providers = manual_riverpod_providers(path, root, source);
+    let lifecycle = lifecycle_findings(path, &classes, source);
+    findings.missing_context_mounted_after_await = lifecycle.missing_context_mounted_after_await;
+    findings.missing_ref_mounted_after_await = lifecycle.missing_ref_mounted_after_await;
+    findings.riverpod_watch_in_notifier_methods = lifecycle.riverpod_watch_in_notifier_methods;
 
     for class in classes {
         let Some(widget_kind) = widget_kind(class, source) else {
@@ -378,7 +483,7 @@ fn state_classes_by_widget<'tree>(
     states
 }
 
-fn widget_kind(class: Node<'_>, source: &str) -> Option<WidgetClassKind> {
+pub(super) fn widget_kind(class: Node<'_>, source: &str) -> Option<WidgetClassKind> {
     let base = superclass_base_name(class, source)?;
     match base.as_str() {
         "StatelessWidget" => Some(WidgetClassKind::StatelessWidget),
@@ -391,7 +496,7 @@ fn widget_kind(class: Node<'_>, source: &str) -> Option<WidgetClassKind> {
     }
 }
 
-fn state_widget_class(class: Node<'_>, source: &str) -> Option<String> {
+pub(super) fn state_widget_class(class: Node<'_>, source: &str) -> Option<String> {
     let type_text = superclass_type_text(class, source)?;
     let compact = strip_whitespace(&type_text);
     let base = simple_type_name(compact.split('<').next().unwrap_or(&compact));
@@ -411,7 +516,7 @@ fn superclass_base_name(class: Node<'_>, source: &str) -> Option<String> {
     })
 }
 
-fn superclass_type_text(class: Node<'_>, source: &str) -> Option<String> {
+pub(super) fn superclass_type_text(class: Node<'_>, source: &str) -> Option<String> {
     let superclass = class.child_by_field_name("superclass")?;
     let type_text = superclass
         .child_by_field_name("type")?
@@ -443,7 +548,7 @@ fn strip_whitespace(text: &str) -> String {
         .collect()
 }
 
-fn simple_type_name(text: &str) -> String {
+pub(super) fn simple_type_name(text: &str) -> String {
     text.trim_end_matches('?')
         .rsplit('.')
         .next()

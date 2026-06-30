@@ -49,6 +49,9 @@ fn report_schema_types_inventory_arrays() -> Result<(), Box<dyn std::error::Erro
         "widget-top-level-function-boundary",
         "manual-riverpod-provider",
         "unrendered-widget",
+        "missing-context-mounted-after-await",
+        "missing-ref-mounted-after-await",
+        "riverpod-watch-in-notifier-method",
     ] {
         assert_array_contains(
             &json["$defs"]["finding"]["properties"]["kind"]["enum"],
@@ -62,6 +65,9 @@ fn report_schema_types_inventory_arrays() -> Result<(), Box<dyn std::error::Erro
         "unused_widget_params",
         "manual_riverpod_providers",
         "unrendered_widgets",
+        "missing_context_mounted_after_await",
+        "missing_ref_mounted_after_await",
+        "riverpod_watch_in_notifier_methods",
     ] {
         assert_array_contains(&json["$defs"]["summary"]["required"], field);
         assert_eq!(

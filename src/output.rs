@@ -330,98 +330,20 @@ fn report_summary(
     findings: &[Finding],
     scope: Option<&BTreeSet<String>>,
 ) -> ReportSummary {
-    let scoped = results.file_scope.is_some();
-    let findings_count = findings.len();
-    let health = health_summary_counts(project, results, scope);
     let mut summary = ReportSummary {
-        files: project.files.len(),
-        edges: project.graph.edge_count(),
-        unresolved_dependencies: project_unresolved_count(project),
-        part_of_violations: project_part_of_violation_count(project),
-        unused_dependencies: results
-            .dependency_hygiene
-            .as_ref()
-            .map_or(0, |report| report.unused_dependencies.len()),
-        unused_dev_dependencies: kind_count(findings, FindingKind::UnusedDevDependency),
-        test_only_dependencies: kind_count(findings, FindingKind::TestOnlyDependency),
-        dependency_overrides: dependency_override_count(findings),
-        unused_dependency_overrides: kind_count(findings, FindingKind::UnusedDependencyOverride),
-        misconfigured_dependency_overrides: kind_count(
-            findings,
-            FindingKind::MisconfiguredDependencyOverride,
-        ),
-        unlisted_dependencies: results
-            .dependency_hygiene
-            .as_ref()
-            .map_or(0, |report| report.unlisted_dependencies.len()),
-        dead_files: results
-            .dead_code
-            .as_ref()
-            .map_or(0, |dead_code| dead_code.dead_files.len()),
-        unused_exports: kind_count(findings, FindingKind::UnusedExport),
-        unused_types: kind_count(findings, FindingKind::UnusedType),
-        private_type_leaks: kind_count(findings, FindingKind::PrivateTypeLeak),
-        unused_enum_members: kind_count(findings, FindingKind::UnusedEnumMember),
-        unused_class_members: kind_count(findings, FindingKind::UnusedClassMember),
-        duplicate_exports: kind_count(findings, FindingKind::DuplicateExport),
-        route_collisions: kind_count(findings, FindingKind::RouteCollision),
-        private_widget_classes: kind_count(findings, FindingKind::PrivateWidgetClass),
-        widget_top_level_functions: kind_count(
-            findings,
-            FindingKind::WidgetTopLevelFunctionBoundary,
-        ),
-        unused_widget_params: kind_count(findings, FindingKind::UnusedWidgetParam),
-        manual_riverpod_providers: kind_count(findings, FindingKind::ManualRiverpodProvider),
-        unrendered_widgets: kind_count(findings, FindingKind::UnrenderedWidget),
-        code_duplications: results
-            .duplicates
-            .as_ref()
-            .map_or(0, |report| report.clone_groups.len()),
-        health_files: health.files,
-        functions: health.functions,
-        complex_functions: health.complex_functions,
-        max_cyclomatic_complexity: health.max_cyclomatic_complexity,
-        max_cognitive_complexity: health.max_cognitive_complexity,
-        coverage_files: health.coverage_files,
-        coverage_gaps: kind_count(findings, FindingKind::CoverageGap),
-        crap_functions: kind_count(findings, FindingKind::HighCrapScore),
-        max_crap_score: health.max_crap_score,
-        file_scores: health.file_scores,
-        hotspots: kind_count(findings, FindingKind::HealthHotspot),
-        refactoring_targets: kind_count(findings, FindingKind::RefactoringTarget),
-        feature_flags: results
-            .feature_flags
-            .as_ref()
-            .map_or(0, |report| report.flags.len()),
-        feature_flag_occurrences: results
-            .feature_flags
-            .as_ref()
-            .map_or(0, |report| report.total_occurrences),
-        security_candidates: results
-            .security
-            .as_ref()
-            .map_or(0, |report| report.candidates.len()),
-        security_candidate_occurrences: results
-            .security
-            .as_ref()
-            .map_or(0, |report| report.total_occurrences),
-        attack_surface: results
-            .security
-            .as_ref()
-            .map_or(0, |report| report.attack_surface.len()),
-        missing_entry_points: results
-            .dead_code
-            .as_ref()
-            .map_or(0, |dead_code| dead_code.missing_entry_points.len()),
-        cycles: results.cycles.len(),
-        re_export_cycles: results.re_export_cycles.len(),
-        boundary_violations: results.boundary_violations.len(),
-        boundary_coverage: kind_count(findings, FindingKind::BoundaryCoverage),
-        boundary_call_violations: kind_count(findings, FindingKind::BoundaryCallViolation),
-        policy_violations: kind_count(findings, FindingKind::PolicyViolation),
-        missing_suppression_reasons: kind_count(findings, FindingKind::MissingSuppressionReason),
-        findings: findings_count,
+        findings: findings.len(),
+        ..ReportSummary::default()
     };
+    let scoped = results.file_scope.is_some();
+    apply_project_summary(&mut summary, project);
+    apply_dependency_summary(&mut summary, results, findings);
+    apply_cleanup_summary(&mut summary, results, findings);
+    apply_widget_summary(&mut summary, findings);
+    apply_quality_summary(&mut summary, project, results, findings, scope);
+    apply_feature_flag_summary(&mut summary, results);
+    apply_security_summary(&mut summary, results);
+    apply_graph_policy_summary(&mut summary, results, findings);
+
     if scoped {
         if let Some(scope) = scope {
             summary.files = project_file_scope_count(project, scope);
@@ -430,6 +352,140 @@ fn report_summary(
     }
     summary
 }
+
+fn apply_project_summary(summary: &mut ReportSummary, project: &ScannedProject) {
+    summary.files = project.files.len();
+    summary.edges = project.graph.edge_count();
+    summary.unresolved_dependencies = project_unresolved_count(project);
+    summary.part_of_violations = project_part_of_violation_count(project);
+}
+
+fn apply_dependency_summary(
+    summary: &mut ReportSummary,
+    results: &AnalysisResults,
+    findings: &[Finding],
+) {
+    summary.unused_dependencies = results
+        .dependency_hygiene
+        .as_ref()
+        .map_or(0, |report| report.unused_dependencies.len());
+    summary.unused_dev_dependencies = kind_count(findings, FindingKind::UnusedDevDependency);
+    summary.test_only_dependencies = kind_count(findings, FindingKind::TestOnlyDependency);
+    summary.dependency_overrides = dependency_override_count(findings);
+    summary.unused_dependency_overrides =
+        kind_count(findings, FindingKind::UnusedDependencyOverride);
+    summary.misconfigured_dependency_overrides =
+        kind_count(findings, FindingKind::MisconfiguredDependencyOverride);
+    summary.unlisted_dependencies = results
+        .dependency_hygiene
+        .as_ref()
+        .map_or(0, |report| report.unlisted_dependencies.len());
+}
+
+fn apply_cleanup_summary(
+    summary: &mut ReportSummary,
+    results: &AnalysisResults,
+    findings: &[Finding],
+) {
+    summary.dead_files = results
+        .dead_code
+        .as_ref()
+        .map_or(0, |dead_code| dead_code.dead_files.len());
+    summary.unused_exports = kind_count(findings, FindingKind::UnusedExport);
+    summary.unused_types = kind_count(findings, FindingKind::UnusedType);
+    summary.private_type_leaks = kind_count(findings, FindingKind::PrivateTypeLeak);
+    summary.unused_enum_members = kind_count(findings, FindingKind::UnusedEnumMember);
+    summary.unused_class_members = kind_count(findings, FindingKind::UnusedClassMember);
+    summary.duplicate_exports = kind_count(findings, FindingKind::DuplicateExport);
+    summary.route_collisions = kind_count(findings, FindingKind::RouteCollision);
+}
+
+fn apply_widget_summary(summary: &mut ReportSummary, findings: &[Finding]) {
+    summary.private_widget_classes = kind_count(findings, FindingKind::PrivateWidgetClass);
+    summary.widget_top_level_functions =
+        kind_count(findings, FindingKind::WidgetTopLevelFunctionBoundary);
+    summary.unused_widget_params = kind_count(findings, FindingKind::UnusedWidgetParam);
+    summary.manual_riverpod_providers = kind_count(findings, FindingKind::ManualRiverpodProvider);
+    summary.unrendered_widgets = kind_count(findings, FindingKind::UnrenderedWidget);
+    summary.missing_context_mounted_after_await =
+        kind_count(findings, FindingKind::MissingContextMountedAfterAwait);
+    summary.missing_ref_mounted_after_await =
+        kind_count(findings, FindingKind::MissingRefMountedAfterAwait);
+    summary.riverpod_watch_in_notifier_methods =
+        kind_count(findings, FindingKind::RiverpodWatchInNotifierMethod);
+}
+
+fn apply_quality_summary(
+    summary: &mut ReportSummary,
+    project: &ScannedProject,
+    results: &AnalysisResults,
+    findings: &[Finding],
+    scope: Option<&BTreeSet<String>>,
+) {
+    let health = health_summary_counts(project, results, scope);
+    summary.code_duplications = results
+        .duplicates
+        .as_ref()
+        .map_or(0, |report| report.clone_groups.len());
+    summary.health_files = health.files;
+    summary.functions = health.functions;
+    summary.complex_functions = health.complex_functions;
+    summary.max_cyclomatic_complexity = health.max_cyclomatic_complexity;
+    summary.max_cognitive_complexity = health.max_cognitive_complexity;
+    summary.coverage_files = health.coverage_files;
+    summary.coverage_gaps = kind_count(findings, FindingKind::CoverageGap);
+    summary.crap_functions = kind_count(findings, FindingKind::HighCrapScore);
+    summary.max_crap_score = health.max_crap_score;
+    summary.file_scores = health.file_scores;
+    summary.hotspots = kind_count(findings, FindingKind::HealthHotspot);
+    summary.refactoring_targets = kind_count(findings, FindingKind::RefactoringTarget);
+}
+
+fn apply_feature_flag_summary(summary: &mut ReportSummary, results: &AnalysisResults) {
+    summary.feature_flags = results
+        .feature_flags
+        .as_ref()
+        .map_or(0, |report| report.flags.len());
+    summary.feature_flag_occurrences = results
+        .feature_flags
+        .as_ref()
+        .map_or(0, |report| report.total_occurrences);
+}
+
+fn apply_security_summary(summary: &mut ReportSummary, results: &AnalysisResults) {
+    summary.security_candidates = results
+        .security
+        .as_ref()
+        .map_or(0, |report| report.candidates.len());
+    summary.security_candidate_occurrences = results
+        .security
+        .as_ref()
+        .map_or(0, |report| report.total_occurrences);
+    summary.attack_surface = results
+        .security
+        .as_ref()
+        .map_or(0, |report| report.attack_surface.len());
+}
+
+fn apply_graph_policy_summary(
+    summary: &mut ReportSummary,
+    results: &AnalysisResults,
+    findings: &[Finding],
+) {
+    summary.missing_entry_points = results
+        .dead_code
+        .as_ref()
+        .map_or(0, |dead_code| dead_code.missing_entry_points.len());
+    summary.cycles = results.cycles.len();
+    summary.re_export_cycles = results.re_export_cycles.len();
+    summary.boundary_violations = results.boundary_violations.len();
+    summary.boundary_coverage = kind_count(findings, FindingKind::BoundaryCoverage);
+    summary.boundary_call_violations = kind_count(findings, FindingKind::BoundaryCallViolation);
+    summary.policy_violations = kind_count(findings, FindingKind::PolicyViolation);
+    summary.missing_suppression_reasons =
+        kind_count(findings, FindingKind::MissingSuppressionReason);
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct HealthSummaryCounts {
     files: usize,
@@ -496,6 +552,12 @@ fn apply_scoped_counts(summary: &mut ReportSummary, findings: &[Finding]) {
     summary.unused_widget_params = kind_count(findings, FindingKind::UnusedWidgetParam);
     summary.manual_riverpod_providers = kind_count(findings, FindingKind::ManualRiverpodProvider);
     summary.unrendered_widgets = kind_count(findings, FindingKind::UnrenderedWidget);
+    summary.missing_context_mounted_after_await =
+        kind_count(findings, FindingKind::MissingContextMountedAfterAwait);
+    summary.missing_ref_mounted_after_await =
+        kind_count(findings, FindingKind::MissingRefMountedAfterAwait);
+    summary.riverpod_watch_in_notifier_methods =
+        kind_count(findings, FindingKind::RiverpodWatchInNotifierMethod);
     summary.code_duplications = kind_count(findings, FindingKind::CodeDuplication);
     summary.complex_functions = complexity_count(findings);
     summary.coverage_gaps = kind_count(findings, FindingKind::CoverageGap);

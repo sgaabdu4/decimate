@@ -335,6 +335,143 @@ void main() {
     Ok(())
 }
 
+#[test]
+fn flags_widget_awaits_without_context_mounted_guard() -> Result<(), Box<dyn std::error::Error>> {
+    let source = r"
+class SaveButton extends StatefulWidget {
+  State<SaveButton> createState() => _SaveButtonState();
+}
+
+class _SaveButtonState extends State<SaveButton> {
+  Future<void> save() async {
+    await doWork();
+    Navigator.of(context).pop();
+  }
+
+  Future<void> guarded() async {
+    await doWork();
+    if (!context.mounted) return;
+    Navigator.of(context).pop();
+  }
+
+  Future<void> bareMountedIsNotEnough() async {
+    await doWork();
+    if (!mounted) return;
+    Navigator.of(context).pop();
+  }
+}
+";
+    let findings = parse_findings(source)?.missing_context_mounted_after_await;
+
+    assert_eq!(findings.len(), 2);
+    assert_eq!(findings[0].owner, "_SaveButtonState.save");
+    assert_eq!(findings[0].location.line, 8);
+    assert_eq!(findings[1].owner, "_SaveButtonState.bareMountedIsNotEnough");
+    Ok(())
+}
+
+#[test]
+fn flags_nested_widget_awaits_per_block() -> Result<(), Box<dyn std::error::Error>> {
+    let source = r"
+class SaveButton extends StatelessWidget {
+  Future<void> save(BuildContext context, bool active) async {
+    if (active) {
+      await doWork();
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+    }
+    await doWork();
+  }
+}
+";
+    let findings = parse_findings(source)?.missing_context_mounted_after_await;
+
+    assert_eq!(findings.len(), 1);
+    assert_eq!(findings[0].owner, "SaveButton.save");
+    assert_eq!(findings[0].location.line, 9);
+    Ok(())
+}
+
+#[test]
+fn flags_notifier_awaits_without_ref_mounted_guard() -> Result<(), Box<dyn std::error::Error>> {
+    let source = r"
+class CounterNotifier extends _$CounterNotifier {
+  int build() => 0;
+
+  Future<void> save() async {
+    await repo.save();
+    state++;
+  }
+
+  Future<void> guarded() async {
+    await repo.save();
+    if (!ref.mounted) return;
+    state++;
+  }
+
+  Future<int> terminal() async {
+    return await repo.count();
+  }
+}
+";
+    let findings = parse_findings(source)?.missing_ref_mounted_after_await;
+
+    assert_eq!(findings.len(), 1);
+    assert_eq!(findings[0].owner, "CounterNotifier.save");
+    assert_eq!(findings[0].location.line, 6);
+    Ok(())
+}
+
+#[test]
+fn recognizes_generated_riverpod_notifier_superclasses() -> Result<(), Box<dyn std::error::Error>> {
+    let source = r"
+class Counter extends _$Counter {
+  int build() => 0;
+
+  Future<void> save() async {
+    await repo.save();
+    state++;
+  }
+}
+";
+    let findings = parse_findings(source)?.missing_ref_mounted_after_await;
+
+    assert_eq!(findings.len(), 1);
+    assert_eq!(findings[0].owner, "Counter.save");
+    Ok(())
+}
+
+#[test]
+fn flags_ref_watch_inside_notifier_methods_except_build() -> Result<(), Box<dyn std::error::Error>>
+{
+    let source = r"
+class CounterNotifier extends _$CounterNotifier {
+  int build() {
+    return ref.watch(counterProvider);
+  }
+
+  void save() {
+    final value = ref.watch(counterProvider);
+    state = value;
+  }
+}
+
+class CounterWidget extends ConsumerWidget {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final value = ref.watch(counterProvider);
+    return Text('$value');
+  }
+}
+";
+    let findings = parse_findings(source)?.riverpod_watch_in_notifier_methods;
+
+    assert_eq!(findings.len(), 1);
+    assert_eq!(findings[0].notifier_class, "CounterNotifier");
+    assert_eq!(findings[0].method_name, "save");
+    assert_eq!(findings[0].location.line, 8);
+    Ok(())
+}
+
 fn parse_findings(source: &str) -> Result<FileWidgetFindings, WidgetAnalysisError> {
     parse_findings_at("lib/widgets.dart", source)
 }

@@ -3,7 +3,8 @@ use std::path::Path;
 use super::format::display_path;
 use super::{Finding, FindingAction, FindingKind, Severity};
 use crate::{
-    ManualRiverpodProvider, PrivateWidgetClass, UnrenderedWidgetClass, UnusedWidgetParam,
+    ManualRiverpodProvider, MissingContextMountedAfterAwait, MissingRefMountedAfterAwait,
+    PrivateWidgetClass, RiverpodWatchInNotifierMethod, UnrenderedWidgetClass, UnusedWidgetParam,
     WidgetReport, WidgetTopLevelFunction,
 };
 
@@ -37,6 +38,24 @@ pub(super) fn add_widget_findings(root: &Path, report: &WidgetReport, findings: 
             .unrendered_widgets
             .iter()
             .map(|widget| unrendered_widget_finding(root, widget)),
+    );
+    findings.extend(
+        report
+            .missing_context_mounted_after_await
+            .iter()
+            .map(|missing| missing_context_mounted_finding(root, missing)),
+    );
+    findings.extend(
+        report
+            .missing_ref_mounted_after_await
+            .iter()
+            .map(|missing| missing_ref_mounted_finding(root, missing)),
+    );
+    findings.extend(
+        report
+            .riverpod_watch_in_notifier_methods
+            .iter()
+            .map(|watch| riverpod_watch_in_notifier_method_finding(root, watch)),
     );
 }
 
@@ -203,6 +222,120 @@ fn unrendered_widget_finding(root: &Path, widget: &UnrenderedWidgetClass) -> Fin
             .with_target_symbol(widget.widget_class.clone())
             .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
             .with_suppression_comment("// decimate-ignore-next-line unrendered-widget"),
+        ],
+    }
+}
+
+fn missing_context_mounted_finding(
+    root: &Path,
+    missing: &MissingContextMountedAfterAwait,
+) -> Finding {
+    let path = display_path(root, &missing.path);
+    Finding {
+        rule_id: "decimate/missing-context-mounted-after-await".to_owned(),
+        fingerprint: Some(format!(
+            "missing-context-mounted-after-await:{path}:{}:{}",
+            missing.owner, missing.location.line
+        )),
+        kind: FindingKind::MissingContextMountedAfterAwait,
+        severity: Severity::Warning,
+        message: format!(
+            "{} awaits work without an immediate `if (!context.mounted) return;` guard",
+            missing.owner
+        ),
+        path: path.clone(),
+        line: missing.location.line,
+        column: missing.location.column,
+        safe_to_delete: false,
+        files: Vec::new(),
+        edge: None,
+        actions: vec![
+            FindingAction::new(
+                "add-context-mounted-guard",
+                "Add `if (!context.mounted) return;` immediately after this await before using BuildContext",
+                false,
+            )
+            .with_target_path(path.clone())
+            .with_target_symbol(missing.owner.clone())
+            .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
+            .with_suppression_comment(
+                "// decimate-ignore-next-line missing-context-mounted-after-await",
+            ),
+        ],
+    }
+}
+
+fn missing_ref_mounted_finding(root: &Path, missing: &MissingRefMountedAfterAwait) -> Finding {
+    let path = display_path(root, &missing.path);
+    Finding {
+        rule_id: "decimate/missing-ref-mounted-after-await".to_owned(),
+        fingerprint: Some(format!(
+            "missing-ref-mounted-after-await:{path}:{}:{}",
+            missing.owner, missing.location.line
+        )),
+        kind: FindingKind::MissingRefMountedAfterAwait,
+        severity: Severity::Warning,
+        message: format!(
+            "{} awaits work without an immediate `if (!ref.mounted) return;` guard",
+            missing.owner
+        ),
+        path: path.clone(),
+        line: missing.location.line,
+        column: missing.location.column,
+        safe_to_delete: false,
+        files: Vec::new(),
+        edge: None,
+        actions: vec![
+            FindingAction::new(
+                "add-ref-mounted-guard",
+                "Add `if (!ref.mounted) return;` immediately after this await before touching ref or state",
+                false,
+            )
+            .with_target_path(path.clone())
+            .with_target_symbol(missing.owner.clone())
+            .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
+            .with_suppression_comment(
+                "// decimate-ignore-next-line missing-ref-mounted-after-await",
+            ),
+        ],
+    }
+}
+
+fn riverpod_watch_in_notifier_method_finding(
+    root: &Path,
+    watch: &RiverpodWatchInNotifierMethod,
+) -> Finding {
+    let path = display_path(root, &watch.path);
+    let target_symbol = format!("{}.{}", watch.notifier_class, watch.method_name);
+    Finding {
+        rule_id: "decimate/riverpod-watch-in-notifier-method".to_owned(),
+        fingerprint: Some(format!(
+            "riverpod-watch-in-notifier-method:{path}:{target_symbol}:{}",
+            watch.location.line
+        )),
+        kind: FindingKind::RiverpodWatchInNotifierMethod,
+        severity: Severity::Warning,
+        message: format!(
+            "{target_symbol} calls `ref.watch`; use `ref.read` in notifier methods and reserve `ref.watch` for build"
+        ),
+        path: path.clone(),
+        line: watch.location.line,
+        column: watch.location.column,
+        safe_to_delete: false,
+        files: Vec::new(),
+        edge: None,
+        actions: vec![
+            FindingAction::new(
+                "replace-ref-watch-with-read",
+                "Use `ref.read` or move reactive dependency tracking into the notifier build method",
+                false,
+            )
+            .with_target_path(path.clone())
+            .with_target_symbol(target_symbol)
+            .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
+            .with_suppression_comment(
+                "// decimate-ignore-next-line riverpod-watch-in-notifier-method",
+            ),
         ],
     }
 }

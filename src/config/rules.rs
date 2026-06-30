@@ -164,6 +164,14 @@ fn recompute_summary(report: &mut JsonReport) {
     summary.manual_riverpod_providers =
         kind_count(&report.findings, FindingKind::ManualRiverpodProvider);
     summary.unrendered_widgets = kind_count(&report.findings, FindingKind::UnrenderedWidget);
+    summary.missing_context_mounted_after_await = kind_count(
+        &report.findings,
+        FindingKind::MissingContextMountedAfterAwait,
+    );
+    summary.missing_ref_mounted_after_await =
+        kind_count(&report.findings, FindingKind::MissingRefMountedAfterAwait);
+    summary.riverpod_watch_in_notifier_methods =
+        kind_count(&report.findings, FindingKind::RiverpodWatchInNotifierMethod);
     summary.code_duplications = report.clone_groups.len();
     summary.complex_functions = report.complexity.len();
     summary.coverage_gaps = kind_count(&report.findings, FindingKind::CoverageGap);
@@ -287,7 +295,10 @@ const fn default_rule_level(kind: FindingKind) -> RuleLevel {
         | FindingKind::WidgetTopLevelFunctionBoundary
         | FindingKind::UnusedWidgetParam
         | FindingKind::ManualRiverpodProvider
-        | FindingKind::UnrenderedWidget => RuleLevel::Warn,
+        | FindingKind::UnrenderedWidget
+        | FindingKind::MissingContextMountedAfterAwait
+        | FindingKind::MissingRefMountedAfterAwait
+        | FindingKind::RiverpodWatchInNotifierMethod => RuleLevel::Warn,
         _ => RuleLevel::Error,
     }
 }

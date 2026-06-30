@@ -147,6 +147,9 @@ fn all_known_aliases() -> Vec<&'static str> {
         FindingKind::UnusedWidgetParam,
         FindingKind::ManualRiverpodProvider,
         FindingKind::UnrenderedWidget,
+        FindingKind::MissingContextMountedAfterAwait,
+        FindingKind::MissingRefMountedAfterAwait,
+        FindingKind::RiverpodWatchInNotifierMethod,
         FindingKind::MissingEntryPoint,
         FindingKind::CircularDependency,
         FindingKind::ReExportCycle,
@@ -182,6 +185,7 @@ fn all_known_aliases() -> Vec<&'static str> {
 
 fn kind_aliases(kind: FindingKind) -> Vec<&'static str> {
     cleanup_kind_aliases(kind)
+        .or_else(|| widget_kind_aliases(kind))
         .or_else(|| graph_kind_aliases(kind))
         .or_else(|| dependency_kind_aliases(kind))
         .or_else(|| quality_kind_aliases(kind))
@@ -221,6 +225,20 @@ fn cleanup_kind_aliases(kind: FindingKind) -> Option<Vec<&'static str>> {
             "duplicate-export",
             "duplicate-exports",
         ]),
+        FindingKind::StaleSuppression => Some(vec![
+            "decimate/stale-suppression",
+            "stale-suppression",
+            "stale-suppressions",
+            "unused-suppression",
+            "unused-suppressions",
+        ]),
+        FindingKind::MissingSuppressionReason => Some(missing_suppression_reason_aliases().into()),
+        _ => None,
+    }
+}
+
+fn widget_kind_aliases(kind: FindingKind) -> Option<Vec<&'static str>> {
+    match kind {
         FindingKind::PrivateWidgetClass => Some(vec![
             "decimate/private-widget-class",
             "private-widget-class",
@@ -261,14 +279,26 @@ fn cleanup_kind_aliases(kind: FindingKind) -> Option<Vec<&'static str>> {
             "unused-component",
             "unused-components",
         ]),
-        FindingKind::StaleSuppression => Some(vec![
-            "decimate/stale-suppression",
-            "stale-suppression",
-            "stale-suppressions",
-            "unused-suppression",
-            "unused-suppressions",
+        FindingKind::MissingContextMountedAfterAwait => Some(vec![
+            "decimate/missing-context-mounted-after-await",
+            "missing-context-mounted-after-await",
+            "context-mounted-after-await",
+            "flutter-context-mounted",
+            "use-build-context-synchronously",
         ]),
-        FindingKind::MissingSuppressionReason => Some(missing_suppression_reason_aliases().into()),
+        FindingKind::MissingRefMountedAfterAwait => Some(vec![
+            "decimate/missing-ref-mounted-after-await",
+            "missing-ref-mounted-after-await",
+            "ref-mounted-after-await",
+            "riverpod-ref-mounted",
+        ]),
+        FindingKind::RiverpodWatchInNotifierMethod => Some(vec![
+            "decimate/riverpod-watch-in-notifier-method",
+            "riverpod-watch-in-notifier-method",
+            "ref-watch-in-notifier-method",
+            "riverpod-ref-watch-in-method",
+            "notifier-ref-watch",
+        ]),
         _ => None,
     }
 }
