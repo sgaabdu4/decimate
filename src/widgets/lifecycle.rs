@@ -141,9 +141,21 @@ enum GuardMode {
     Finally,
 }
 
+#[derive(Clone, Copy)]
+enum GuardRequirement {
+    Always,
+    LifecycleUse,
+}
+
 fn unguarded_awaits<'tree>(body: Node<'tree>, source: &str, receiver: &str) -> Vec<Node<'tree>> {
     let mut findings = Vec::new();
-    collect_unguarded_awaits_in_function_body(body, source, receiver, &mut findings);
+    collect_unguarded_awaits_in_function_body(
+        body,
+        source,
+        receiver,
+        GuardRequirement::Always,
+        &mut findings,
+    );
     findings
 }
 
@@ -151,6 +163,7 @@ fn collect_unguarded_awaits_in_function_body<'tree>(
     body: Node<'tree>,
     source: &str,
     receiver: &str,
+    requirement: GuardRequirement,
     findings: &mut Vec<Node<'tree>>,
 ) {
     if body.kind() == "block" {
@@ -159,6 +172,7 @@ fn collect_unguarded_awaits_in_function_body<'tree>(
             source,
             receiver,
             GuardMode::Normal,
+            requirement,
             false,
             findings,
         );
@@ -170,13 +184,21 @@ fn collect_unguarded_awaits_in_function_body<'tree>(
             source,
             receiver,
             GuardMode::Normal,
+            requirement,
             false,
             findings,
         );
         return;
     }
     collect_expression_body_awaits(body, source, receiver, findings);
-    collect_child_block_awaits(body, source, receiver, GuardMode::Normal, findings);
+    collect_child_block_awaits(
+        body,
+        source,
+        receiver,
+        GuardMode::Normal,
+        requirement,
+        findings,
+    );
 }
 
 fn collect_expression_body_awaits<'tree>(
@@ -198,6 +220,7 @@ fn collect_unguarded_awaits_in_block<'tree>(
     source: &str,
     receiver: &str,
     mode: GuardMode,
+    requirement: GuardRequirement,
     trailing_guard: bool,
     findings: &mut Vec<Node<'tree>>,
 ) {
@@ -205,11 +228,11 @@ fn collect_unguarded_awaits_in_block<'tree>(
     for (index, statement) in statements.iter().copied().enumerate() {
         let awaits = direct_awaits(statement);
         if awaits.is_empty() {
-            collect_child_block_awaits(statement, source, receiver, mode, findings);
+            collect_child_block_awaits(statement, source, receiver, mode, requirement, findings);
             continue;
         }
         if is_terminal_return_await(statement) {
-            collect_child_block_awaits(statement, source, receiver, mode, findings);
+            collect_child_block_awaits(statement, source, receiver, mode, requirement, findings);
             continue;
         }
         let guarded = statements
@@ -217,11 +240,30 @@ fn collect_unguarded_awaits_in_block<'tree>(
             .copied()
             .is_some_and(|next| is_valid_post_await_guard(next, source, receiver, mode))
             || (index + 1 == statements.len() && trailing_guard);
-        if !guarded {
+        let required = match requirement {
+            GuardRequirement::Always => true,
+            GuardRequirement::LifecycleUse => {
+                requires_post_await_guard(statement, &statements[index + 1..], source, receiver)
+            }
+        };
+        if !guarded && required {
             findings.extend(awaits);
         }
-        collect_child_block_awaits(statement, source, receiver, mode, findings);
+        collect_child_block_awaits(statement, source, receiver, mode, requirement, findings);
     }
+}
+
+fn requires_post_await_guard(
+    statement: Node<'_>,
+    following: &[Node<'_>],
+    source: &str,
+    receiver: &str,
+) -> bool {
+    contains_lifecycle_use(statement, source, receiver)
+        || following
+            .iter()
+            .copied()
+            .any(|statement| contains_lifecycle_use(statement, source, receiver))
 }
 
 fn collect_child_block_awaits<'tree>(
@@ -229,11 +271,18 @@ fn collect_child_block_awaits<'tree>(
     source: &str,
     receiver: &str,
     mode: GuardMode,
+    requirement: GuardRequirement,
     findings: &mut Vec<Node<'tree>>,
 ) {
     if node.kind() == "function_expression" {
         if let Some(body) = node.child_by_field_name("body") {
-            collect_unguarded_awaits_in_function_body(body, source, receiver, findings);
+            collect_unguarded_awaits_in_function_body(
+                body,
+                source,
+                receiver,
+                GuardRequirement::LifecycleUse,
+                findings,
+            );
         }
         return;
     }
@@ -241,15 +290,23 @@ fn collect_child_block_awaits<'tree>(
         return;
     }
     if node.kind() == "try_statement" {
-        collect_try_awaits(node, source, receiver, mode, findings);
+        collect_try_awaits(node, source, receiver, mode, requirement, findings);
         return;
     }
     let mut cursor = node.walk();
     for child in node.named_children(&mut cursor) {
         if child.kind() == "block" {
-            collect_unguarded_awaits_in_block(child, source, receiver, mode, false, findings);
+            collect_unguarded_awaits_in_block(
+                child,
+                source,
+                receiver,
+                mode,
+                requirement,
+                false,
+                findings,
+            );
         } else {
-            collect_child_block_awaits(child, source, receiver, mode, findings);
+            collect_child_block_awaits(child, source, receiver, mode, requirement, findings);
         }
     }
 }
@@ -259,6 +316,7 @@ fn collect_try_awaits<'tree>(
     source: &str,
     receiver: &str,
     mode: GuardMode,
+    requirement: GuardRequirement,
     findings: &mut Vec<Node<'tree>>,
 ) {
     let body = try_statement.child_by_field_name("body");
@@ -269,6 +327,7 @@ fn collect_try_awaits<'tree>(
             source,
             receiver,
             mode,
+            requirement,
             has_finally_guard,
             findings,
         );
@@ -286,12 +345,13 @@ fn collect_try_awaits<'tree>(
                     source,
                     receiver,
                     GuardMode::Finally,
+                    requirement,
                     false,
                     findings,
                 );
             }
         } else {
-            collect_child_block_awaits(child, source, receiver, mode, findings);
+            collect_child_block_awaits(child, source, receiver, mode, requirement, findings);
         }
     }
 }
@@ -475,19 +535,23 @@ fn ref_alias_from_fields(node: Node<'_>, source: &str) -> Option<String> {
 
 fn contains_lifecycle_use(node: Node<'_>, source: &str, receiver: &str) -> bool {
     if receiver == "context" {
-        contains_identifier(node, source, "context")
+        contains_identifier(node, source, "context", true)
     } else {
-        contains_identifier(node, source, "ref") || contains_identifier(node, source, "state")
+        contains_identifier(node, source, "ref", true)
+            || contains_identifier(node, source, "state", true)
     }
 }
 
-fn contains_identifier(node: Node<'_>, source: &str, name: &str) -> bool {
+fn contains_identifier(node: Node<'_>, source: &str, name: &str, root: bool) -> bool {
+    if !root && is_nested_function_scope(node.kind()) {
+        return false;
+    }
     if node.kind() == "identifier" && node.utf8_text(source.as_bytes()).ok() == Some(name) {
         return true;
     }
     let mut cursor = node.walk();
     node.named_children(&mut cursor)
-        .any(|child| contains_identifier(child, source, name))
+        .any(|child| contains_identifier(child, source, name, false))
 }
 
 fn is_notifier_class(class: Node<'_>, _class_name: &str, source: &str) -> bool {

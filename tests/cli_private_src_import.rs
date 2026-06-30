@@ -39,6 +39,49 @@ fn check_reports_cross_package_private_src_imports() -> Result<(), Box<dyn std::
 }
 
 #[test]
+fn private_src_import_ignores_generated_mockito_mocks() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(
+        &fixture,
+        "pubspec.yaml",
+        "name: app\n\
+dependencies:\n  shared:\n    path: shared\n",
+    )?;
+    write(&fixture, "shared/pubspec.yaml", "name: shared\n")?;
+    write(
+        &fixture,
+        "shared/lib/src/internal.dart",
+        "void internal() {}\n",
+    )?;
+    write(
+        &fixture,
+        "lib/main.dart",
+        "import 'repository.mocks.dart';\nvoid main() { generatedMock(); }\n",
+    )?;
+    write(
+        &fixture,
+        "lib/repository.mocks.dart",
+        "import 'package:shared/src/internal.dart';\nvoid generatedMock() => internal();\n",
+    )?;
+
+    let (code, json) = run_json([
+        "decimate",
+        "check",
+        fixture.path().to_str().unwrap_or("."),
+        "--format",
+        "json",
+        "--private-src-imports",
+    ])?;
+
+    assert_eq!(code, 0);
+    assert_eq!(json["summary"]["private_src_imports"], 0);
+    assert_eq!(json["summary"]["unused_dependencies"], 0);
+    assert_eq!(json["summary"]["findings"], 0);
+
+    Ok(())
+}
+
+#[test]
 fn private_src_import_rule_can_warn_or_turn_off() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     write_private_src_fixture(&fixture)?;

@@ -129,6 +129,22 @@ fn assert_manifest_identity(json: &Value) {
             tool["name"] == "decimate_explain" && tool["schema"] == "decimate.explain.v1"
         })
     }));
+    assert_mcp_tool_key(json, "analyze", "changed_workspaces");
+    assert_mcp_tool_key(json, "analyze", "private_type_leaks");
+    assert_mcp_tool_key(json, "check_health", "min_score");
+    assert_mcp_tool_key(json, "security_candidates", "gate");
+    assert_mcp_tool_key(json, "audit", "dead_code_baseline");
+}
+
+fn assert_mcp_tool_key(json: &Value, tool_name: &str, key: &str) {
+    assert!(json["mcp_tools"]["tools"].as_array().is_some_and(|tools| {
+        tools.iter().any(|tool| {
+            tool["name"] == tool_name
+                && tool["key_params"]
+                    .as_array()
+                    .is_some_and(|params| params.iter().any(|param| param == key))
+        })
+    }));
 }
 
 fn assert_manifest_metadata(json: &Value) {

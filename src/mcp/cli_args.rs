@@ -1,6 +1,63 @@
 use serde_json::{Map, Value};
 
 const GLOBAL_KEYS: &[&str] = &["root", "config"];
+const REPORT_SCOPE_KEYS: &[&str] = &[
+    "entry",
+    "file",
+    "workspace",
+    "changed_workspaces",
+    "changed_since",
+    "production",
+];
+const LIST_SCOPE_KEYS: &[&str] = &[
+    "entry",
+    "file",
+    "workspace",
+    "changed_workspaces",
+    "production",
+];
+const BASELINE_KEYS: &[&str] = &[
+    "baseline",
+    "regression_baseline",
+    "fail_on_regression",
+    "tolerance",
+];
+const SYMBOL_KEYS: &[&str] = &["include_entry_exports", "private_type_leaks"];
+const BOUNDARY_KEYS: &[&str] = &[
+    "boundary",
+    "boundary_coverage",
+    "boundary_call",
+    "policy_pack",
+    "policy_violations",
+];
+const DUPLICATE_KEYS: &[&str] = &[
+    "mode",
+    "min_tokens",
+    "min_lines",
+    "min_occurrences",
+    "top",
+    "skip_local",
+    "ignore_imports",
+    "no_ignore_imports",
+];
+const HEALTH_KEYS: &[&str] = &[
+    "max_cyclomatic",
+    "max_cognitive",
+    "max_crap",
+    "coverage",
+    "runtime_coverage",
+    "min_invocations_hot",
+    "min_observation_volume",
+    "low_traffic_threshold",
+    "coverage_gaps",
+    "file_scores",
+    "hotspots",
+    "targets",
+    "ownership",
+    "complexity_breakdown",
+    "min_score",
+    "top",
+];
 
 pub(super) fn cli_args_for_tool(
     name: &str,
@@ -37,56 +94,82 @@ fn reject_unknown_args(name: &str, args: &Map<String, Value>) -> Result<(), Stri
 }
 
 fn allowed_args(name: &str) -> Result<Vec<&'static str>, String> {
-    let local = match name {
-        "analyze" => &[
-            "issue_types",
-            "entry",
-            "file",
-            "workspace",
-            "changed_since",
-            "runtime_coverage",
-            "production",
-        ][..],
-        "project_info" => &[
-            "files",
-            "entry_points",
-            "plugins",
-            "boundaries",
-            "workspaces",
-            "file",
-            "workspace",
-        ],
-        "inspect_target" => &["target", "file", "symbol"],
-        "trace_file" => &["file"],
-        "trace_export" => &["file", "symbol", "export_name"],
-        "trace_dependency" => &["dependency", "package_name"],
-        "trace_clone" => &["fingerprint"],
-        "find_dupes" => &["mode", "min_tokens", "min_lines", "min_occurrences", "top"],
-        "check_health" => &[
-            "max_cyclomatic",
-            "max_cognitive",
-            "max_crap",
-            "coverage",
-            "runtime_coverage",
-            "coverage_gaps",
-            "file_scores",
-            "hotspots",
-            "targets",
-            "ownership",
-            "complexity_breakdown",
-        ],
-        "security_candidates" => &["top", "file", "surface", "production"],
-        "feature_flags" => &["top", "changed_since"],
-        "audit" => &["base", "brief", "max_decisions"],
-        "decision_surface" => &["base", "max_decisions"],
+    let mut allowed = GLOBAL_KEYS.to_vec();
+    match name {
+        "analyze" => {
+            allowed.extend(["issue_types"]);
+            allowed.extend(REPORT_SCOPE_KEYS);
+            allowed.extend(BASELINE_KEYS);
+            allowed.extend(SYMBOL_KEYS);
+            allowed.extend(BOUNDARY_KEYS);
+            allowed.extend(DUPLICATE_KEYS);
+            allowed.extend(HEALTH_KEYS);
+        }
+        "project_info" => {
+            allowed.extend([
+                "files",
+                "entry_points",
+                "plugins",
+                "boundaries",
+                "workspaces",
+            ]);
+            allowed.extend(LIST_SCOPE_KEYS);
+        }
+        "inspect_target" => allowed.extend(["target", "file", "symbol"]),
+        "trace_file" => allowed.extend(["file"]),
+        "trace_export" => allowed.extend(["file", "symbol", "export_name"]),
+        "trace_dependency" => allowed.extend(["dependency", "package_name"]),
+        "trace_clone" => allowed.extend(["fingerprint"]),
+        "find_dupes" => {
+            allowed.extend(REPORT_SCOPE_KEYS);
+            allowed.extend(BASELINE_KEYS);
+            allowed.extend(DUPLICATE_KEYS);
+        }
+        "check_health" => {
+            allowed.extend(REPORT_SCOPE_KEYS);
+            allowed.extend(BASELINE_KEYS);
+            allowed.extend(HEALTH_KEYS);
+        }
+        "security_candidates" => {
+            allowed.extend(REPORT_SCOPE_KEYS);
+            allowed.extend(BASELINE_KEYS);
+            allowed.extend([
+                "top",
+                "surface",
+                "gate",
+                "diff_file",
+                "ci",
+                "fail_on_issues",
+                "summary",
+            ]);
+        }
+        "feature_flags" => {
+            allowed.extend(REPORT_SCOPE_KEYS);
+            allowed.extend(BASELINE_KEYS);
+            allowed.extend(["top"]);
+        }
+        "audit" => {
+            allowed.extend(REPORT_SCOPE_KEYS);
+            allowed.extend(SYMBOL_KEYS);
+            allowed.extend(BOUNDARY_KEYS);
+            allowed.extend(DUPLICATE_KEYS);
+            allowed.extend(HEALTH_KEYS);
+            allowed.extend([
+                "base",
+                "brief",
+                "dead_code_baseline",
+                "health_baseline",
+                "dupes_baseline",
+                "max_decisions",
+            ]);
+        }
+        "decision_surface" => allowed.extend(["base", "max_decisions"]),
         "decimate_explain" => return Ok(vec!["issue_type", "rule_id"]),
         _ => return Err(format!("unknown tool {name}")),
-    };
-    Ok(GLOBAL_KEYS
-        .iter()
-        .copied()
-        .chain(local.iter().copied())
-        .collect())
+    }
+    allowed.sort_unstable();
+    allowed.dedup();
+    Ok(allowed)
 }
 
 fn report_args<F>(
@@ -110,12 +193,12 @@ where
 }
 
 fn analyze_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
-    push_string_flags(cli, args, "entry", "--entry")?;
-    push_string_flags(cli, args, "file", "--file")?;
-    push_string_flags(cli, args, "workspace", "--workspace")?;
-    push_string_flag(cli, args, "changed_since", "--changed-since")?;
-    push_string_flag(cli, args, "runtime_coverage", "--runtime-coverage")?;
-    push_bool_mode(cli, args, "production", "--production", "--no-production")?;
+    push_report_scope_args(cli, args)?;
+    push_baseline_args(cli, args)?;
+    push_symbol_args(cli, args)?;
+    push_boundary_args(cli, args)?;
+    push_duplicate_args(cli, args)?;
+    push_health_args(cli, args)?;
     if let Some(issue_types) = args.get("issue_types") {
         for issue_type in array_strings(issue_types, "issue_types")? {
             cli.push(issue_filter_flag(issue_type)?);
@@ -125,8 +208,11 @@ fn analyze_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), 
 }
 
 fn project_info_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
+    push_string_flags(cli, args, "entry", "--entry")?;
     push_string_flags(cli, args, "file", "--file")?;
     push_string_flags(cli, args, "workspace", "--workspace")?;
+    push_string_flag(cli, args, "changed_workspaces", "--changed-workspaces")?;
+    push_bool_mode(cli, args, "production", "--production", "--no-production")?;
     for (key, flag) in [
         ("files", "--files"),
         ("entry_points", "--entry-points"),
@@ -189,20 +275,52 @@ fn trace_clone_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<
 }
 
 fn dupes_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
+    push_report_scope_args(cli, args)?;
+    push_baseline_args(cli, args)?;
+    push_duplicate_args(cli, args)
+}
+
+fn push_duplicate_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
     push_string_flag(cli, args, "mode", "--mode")?;
     push_number_flag(cli, args, "min_tokens", "--min-tokens")?;
     push_number_flag(cli, args, "min_lines", "--min-lines")?;
     push_number_flag(cli, args, "min_occurrences", "--min-occurrences")?;
     push_number_flag(cli, args, "top", "--top")?;
+    for (key, flag) in [
+        ("skip_local", "--skip-local"),
+        ("ignore_imports", "--ignore-imports"),
+        ("no_ignore_imports", "--no-ignore-imports"),
+    ] {
+        push_bool_flag(cli, args, key, flag)?;
+    }
     Ok(())
 }
 
 fn health_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
+    push_report_scope_args(cli, args)?;
+    push_baseline_args(cli, args)?;
+    push_health_args(cli, args)
+}
+
+fn push_health_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
     push_number_flag(cli, args, "max_cyclomatic", "--max-cyclomatic")?;
     push_number_flag(cli, args, "max_cognitive", "--max-cognitive")?;
     push_number_flag(cli, args, "max_crap", "--max-crap")?;
     push_string_flag(cli, args, "coverage", "--coverage")?;
     push_string_flag(cli, args, "runtime_coverage", "--runtime-coverage")?;
+    push_number_flag(cli, args, "min_invocations_hot", "--min-invocations-hot")?;
+    push_number_flag(
+        cli,
+        args,
+        "min_observation_volume",
+        "--min-observation-volume",
+    )?;
+    push_float_flag(
+        cli,
+        args,
+        "low_traffic_threshold",
+        "--low-traffic-threshold",
+    )?;
     for (key, flag) in [
         ("coverage_gaps", "--coverage-gaps"),
         ("file_scores", "--file-scores"),
@@ -213,27 +331,49 @@ fn health_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), S
     ] {
         push_bool_flag(cli, args, key, flag)?;
     }
+    push_number_flag(cli, args, "min_score", "--min-score")?;
+    push_number_flag(cli, args, "top", "--top")?;
     Ok(())
 }
 
 fn security_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
+    push_report_scope_args(cli, args)?;
+    push_baseline_args(cli, args)?;
     push_number_flag(cli, args, "top", "--top")?;
-    push_string_flags(cli, args, "file", "--file")?;
     push_bool_flag(cli, args, "surface", "--surface")?;
-    if bool_arg(args, "production")? == Some(true) {
-        cli.push("--production".to_owned());
+    push_string_flag(cli, args, "gate", "--gate")?;
+    push_string_flag(cli, args, "diff_file", "--diff-file")?;
+    for (key, flag) in [
+        ("ci", "--ci"),
+        ("fail_on_issues", "--fail-on-issues"),
+        ("summary", "--summary"),
+    ] {
+        push_bool_flag(cli, args, key, flag)?;
     }
     Ok(())
 }
 
 fn flags_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
+    push_report_scope_args(cli, args)?;
+    push_baseline_args(cli, args)?;
     push_number_flag(cli, args, "top", "--top")?;
-    push_string_flag(cli, args, "changed_since", "--changed-since")?;
     Ok(())
 }
 
 fn audit_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
     push_required_string(cli, args, "base", "--base")?;
+    push_report_scope_args(cli, args)?;
+    push_symbol_args(cli, args)?;
+    push_boundary_args(cli, args)?;
+    push_duplicate_args(cli, args)?;
+    push_health_args(cli, args)?;
+    for (key, flag) in [
+        ("dead_code_baseline", "--dead-code-baseline"),
+        ("health_baseline", "--health-baseline"),
+        ("dupes_baseline", "--dupes-baseline"),
+    ] {
+        push_string_flag(cli, args, key, flag)?;
+    }
     push_number_flag(cli, args, "max_decisions", "--max-decisions")?;
     push_bool_flag(cli, args, "brief", "--brief")?;
     Ok(())
@@ -256,6 +396,42 @@ fn explain_args(args: &Map<String, Value>) -> Result<Vec<String>, String> {
         "--format".to_owned(),
         "json".to_owned(),
     ])
+}
+
+fn push_report_scope_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
+    push_string_flags(cli, args, "entry", "--entry")?;
+    push_string_flags(cli, args, "file", "--file")?;
+    push_string_flags(cli, args, "workspace", "--workspace")?;
+    push_string_flag(cli, args, "changed_workspaces", "--changed-workspaces")?;
+    push_string_flag(cli, args, "changed_since", "--changed-since")?;
+    push_bool_mode(cli, args, "production", "--production", "--no-production")?;
+    Ok(())
+}
+
+fn push_baseline_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
+    push_string_flag(cli, args, "baseline", "--baseline")?;
+    push_string_flag(cli, args, "regression_baseline", "--regression-baseline")?;
+    push_bool_flag(cli, args, "fail_on_regression", "--fail-on-regression")?;
+    push_string_flag(cli, args, "tolerance", "--tolerance")?;
+    Ok(())
+}
+
+fn push_symbol_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
+    push_bool_flag(
+        cli,
+        args,
+        "include_entry_exports",
+        "--include-entry-exports",
+    )?;
+    push_bool_flag(cli, args, "private_type_leaks", "--private-type-leaks")
+}
+
+fn push_boundary_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
+    push_string_flags(cli, args, "boundary", "--boundary")?;
+    push_bool_flag(cli, args, "boundary_coverage", "--boundary-coverage")?;
+    push_string_flags(cli, args, "boundary_call", "--boundary-call")?;
+    push_string_flags(cli, args, "policy_pack", "--policy-pack")?;
+    push_bool_flag(cli, args, "policy_violations", "--policy-violations")
 }
 
 fn push_symbol_target(cli: &mut Vec<String>, target: &Map<String, Value>) -> Result<(), String> {
@@ -336,6 +512,25 @@ fn push_number_flag(
     let Some(number) = value.as_u64() else {
         return Err(format!("{key} must be a non-negative integer"));
     };
+    cli.extend([flag.to_owned(), number.to_string()]);
+    Ok(())
+}
+
+fn push_float_flag(
+    cli: &mut Vec<String>,
+    args: &Map<String, Value>,
+    key: &str,
+    flag: &str,
+) -> Result<(), String> {
+    let Some(value) = args.get(key) else {
+        return Ok(());
+    };
+    let Some(number) = value.as_f64() else {
+        return Err(format!("{key} must be a non-negative number"));
+    };
+    if !number.is_finite() || number.is_sign_negative() {
+        return Err(format!("{key} must be a non-negative number"));
+    }
     cli.extend([flag.to_owned(), number.to_string()]);
     Ok(())
 }

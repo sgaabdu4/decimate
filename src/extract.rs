@@ -7,6 +7,7 @@ use tree_sitter::{Node, TreeCursor};
 
 mod directives;
 mod members;
+mod primary_constructors;
 mod references;
 mod routes;
 mod signatures;
@@ -15,6 +16,10 @@ use directives::{
     extract_directive, extract_library_name, extract_part_directive, extract_part_of_directive,
 };
 use members::push_class_like_members;
+use primary_constructors::{
+    extract_primary_constructor_identifier_references,
+    extract_primary_constructor_signature_references,
+};
 use references::extract_identifier_references;
 pub use routes::DartRouteDeclaration;
 use routes::extract_route_declarations;
@@ -303,7 +308,7 @@ pub fn extract_dart_source(path: impl AsRef<Path>, source: &str) -> Result<DartF
     let parsed =
         crate::dart_parser::parse_dart_source_strict(&path, source).map_err(extract_parse_error)?;
     let root = parsed.tree().root_node();
-    let source = parsed.source();
+    let parse_source = parsed.source();
 
     let mut library = None;
     let mut part_of = None;
@@ -312,50 +317,68 @@ pub fn extract_dart_source(path: impl AsRef<Path>, source: &str) -> Result<DartF
     let mut parts = Vec::new();
     let mut declarations = Vec::new();
     let mut members = Vec::new();
-    let references = extract_identifier_references(root, source);
-    let signature_references = extract_signature_references(root, source);
-    let routes = extract_route_declarations(root, source);
+    let mut references = extract_identifier_references(root, parse_source);
+    references.extend(extract_primary_constructor_identifier_references(source));
+    sort_identifier_references(&mut references);
+    let mut signature_references = extract_signature_references(root, parse_source);
+    signature_references.extend(extract_primary_constructor_signature_references(source));
+    sort_signature_references(&mut signature_references);
+    let routes = extract_route_declarations(root, parse_source);
 
     let mut cursor = root.walk();
     for child in root.named_children(&mut cursor) {
         match child.kind() {
-            "library_name" => library = Some(extract_library_name(child, source)),
-            "import_or_export" => extract_directive(child, source, &mut imports, &mut exports),
-            "part_directive" => extract_part_directive(child, source, &mut parts),
-            "part_of_directive" => part_of = Some(extract_part_of_directive(child, source)),
+            "library_name" => library = Some(extract_library_name(child, parse_source)),
+            "import_or_export" => {
+                extract_directive(child, parse_source, &mut imports, &mut exports);
+            }
+            "part_directive" => extract_part_directive(child, parse_source, &mut parts),
+            "part_of_directive" => {
+                part_of = Some(extract_part_of_directive(child, parse_source));
+            }
             "class_declaration" => {
-                push_class_declaration(&mut declarations, child, source);
-                push_class_like_members(&mut members, child, source);
+                push_class_declaration(&mut declarations, child, parse_source);
+                push_class_like_members(&mut members, child, parse_source);
             }
             "mixin_declaration" => {
-                push_named_declaration(&mut declarations, child, source, DeclarationKind::Mixin);
-                push_class_like_members(&mut members, child, source);
+                push_named_declaration(
+                    &mut declarations,
+                    child,
+                    parse_source,
+                    DeclarationKind::Mixin,
+                );
+                push_class_like_members(&mut members, child, parse_source);
             }
             "extension_declaration" => {
                 push_named_declaration(
                     &mut declarations,
                     child,
-                    source,
+                    parse_source,
                     DeclarationKind::Extension,
                 );
-                push_class_like_members(&mut members, child, source);
+                push_class_like_members(&mut members, child, parse_source);
             }
             "extension_type_declaration" => {
                 push_named_declaration(
                     &mut declarations,
                     child,
-                    source,
+                    parse_source,
                     DeclarationKind::ExtensionType,
                 );
-                push_class_like_members(&mut members, child, source);
+                push_class_like_members(&mut members, child, parse_source);
             }
             "enum_declaration" => {
-                push_named_declaration(&mut declarations, child, source, DeclarationKind::Enum);
-                push_class_like_members(&mut members, child, source);
+                push_named_declaration(
+                    &mut declarations,
+                    child,
+                    parse_source,
+                    DeclarationKind::Enum,
+                );
+                push_class_like_members(&mut members, child, parse_source);
             }
-            "type_alias" => push_type_alias_declaration(&mut declarations, child, source),
+            "type_alias" => push_type_alias_declaration(&mut declarations, child, parse_source),
             "top_level_variable_declaration" | "external_variable_declaration" => {
-                push_variable_declarations(&mut declarations, child, source);
+                push_variable_declarations(&mut declarations, child, parse_source);
             }
             "function_declaration"
             | "external_function_declaration"
@@ -363,7 +386,7 @@ pub fn extract_dart_source(path: impl AsRef<Path>, source: &str) -> Result<DartF
             | "external_getter_declaration"
             | "setter_declaration"
             | "external_setter_declaration" => {
-                push_function_declaration(&mut declarations, child, source);
+                push_function_declaration(&mut declarations, child, parse_source);
             }
             _ => {}
         }
@@ -392,6 +415,35 @@ fn extract_parse_error(error: crate::dart_parser::DartParseError) -> ExtractErro
         }
         crate::dart_parser::DartParseError::Syntax { path } => ExtractError::Syntax { path },
     }
+}
+
+fn sort_identifier_references(references: &mut Vec<IdentifierReference>) {
+    references.sort_by(|left, right| {
+        (left.location.line, left.location.column, left.name.as_str()).cmp(&(
+            right.location.line,
+            right.location.column,
+            right.name.as_str(),
+        ))
+    });
+    references.dedup();
+}
+
+fn sort_signature_references(references: &mut Vec<SignatureReference>) {
+    references.sort_by(|left, right| {
+        (
+            left.location.line,
+            left.location.column,
+            left.declaration.as_str(),
+            left.name.as_str(),
+        )
+            .cmp(&(
+                right.location.line,
+                right.location.column,
+                right.declaration.as_str(),
+                right.name.as_str(),
+            ))
+    });
+    references.dedup();
 }
 
 fn push_class_declaration(

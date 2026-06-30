@@ -130,74 +130,13 @@ fn normalize_primary_constructors(source: &str) -> Option<String> {
         let Some((keyword_start, keyword)) = find_next_header_keyword(source, cursor) else {
             break;
         };
-        cursor = keyword_start + keyword.len();
-
-        let Some(name_start) = skip_whitespace(source, cursor) else {
-            continue;
-        };
-        let Some(name_end) = identifier_end(source, name_start) else {
-            continue;
-        };
-        let mut header_cursor = skip_whitespace(source, name_end).unwrap_or(name_end);
-
-        if source.as_bytes().get(header_cursor).copied() == Some(b'<')
-            && let Some(type_params_end) = matching_delimiter(source, header_cursor, b'<', b'>')
+        let after_keyword = keyword_start + keyword.len();
+        if let Some(header) =
+            primary_constructor_header(source, after_keyword, keyword, &mut replacements)
         {
-            header_cursor =
-                skip_whitespace(source, type_params_end + 1).unwrap_or(type_params_end + 1);
-        }
-
-        if source.as_bytes().get(header_cursor).copied() != Some(b'(') {
-            continue;
-        }
-        let Some(params_end) = matching_delimiter(source, header_cursor, b'(', b')') else {
-            continue;
-        };
-        let after_params = skip_whitespace(source, params_end + 1).unwrap_or(params_end + 1);
-        let next = source.as_bytes().get(after_params).copied();
-
-        let terminator = find_header_terminator(source, after_params);
-        match next {
-            Some(b'{') => {
-                replacements.push(Replacement {
-                    start: header_cursor,
-                    end: params_end + 1,
-                    kind: ReplacementKind::Whitespace,
-                });
-                cursor = params_end + 1;
-            }
-            Some(b';') if keyword == "class" => {
-                replacements.push(Replacement {
-                    start: header_cursor,
-                    end: after_params + 1,
-                    kind: ReplacementKind::EmptyBody,
-                });
-                cursor = after_params + 1;
-            }
-            _ if terminator.is_some_and(|(_, byte)| byte == b';') && keyword == "class" => {
-                replacements.push(Replacement {
-                    start: header_cursor,
-                    end: params_end + 1,
-                    kind: ReplacementKind::Whitespace,
-                });
-                if let Some((terminator_start, _)) = terminator {
-                    replacements.push(Replacement {
-                        start: terminator_start,
-                        end: terminator_start + 1,
-                        kind: ReplacementKind::Body,
-                    });
-                }
-                cursor = params_end + 1;
-            }
-            _ if terminator.is_some_and(|(_, byte)| byte == b'{') => {
-                replacements.push(Replacement {
-                    start: header_cursor,
-                    end: params_end + 1,
-                    kind: ReplacementKind::Whitespace,
-                });
-                cursor = params_end + 1;
-            }
-            _ => {}
+            cursor = push_primary_constructor_replacements(source, &mut replacements, &header);
+        } else {
+            cursor = after_keyword;
         }
     }
 
@@ -206,6 +145,131 @@ fn normalize_primary_constructors(source: &str) -> Option<String> {
     }
 
     Some(apply_primary_constructor_replacements(source, replacements))
+}
+
+fn primary_constructor_header(
+    source: &str,
+    cursor: usize,
+    keyword: &'static str,
+    replacements: &mut Vec<Replacement>,
+) -> Option<PrimaryConstructorHeader> {
+    let mut name_start = skip_whitespace(source, cursor)?;
+    if matches!(keyword, "class" | "enum") && starts_keyword(source, name_start, "const") {
+        let const_end = name_start + "const".len();
+        replacements.push(Replacement {
+            start: name_start,
+            end: const_end,
+            kind: ReplacementKind::Whitespace,
+        });
+        name_start = skip_whitespace(source, const_end)?;
+    }
+    let name_end = identifier_end(source, name_start)?;
+    let class_name = source[name_start..name_end].to_owned();
+    let mut header_cursor = skip_whitespace(source, name_end).unwrap_or(name_end);
+
+    if source.as_bytes().get(header_cursor).copied() == Some(b'<')
+        && let Some(type_params_end) = matching_delimiter(source, header_cursor, b'<', b'>')
+    {
+        header_cursor = skip_whitespace(source, type_params_end + 1).unwrap_or(type_params_end + 1);
+    }
+
+    let replacement_start = primary_constructor_replacement_start(source, &mut header_cursor)?;
+    if source.as_bytes().get(header_cursor).copied() != Some(b'(') {
+        return None;
+    }
+    let params_end = matching_delimiter(source, header_cursor, b'(', b')')?;
+    let after_params = skip_whitespace(source, params_end + 1).unwrap_or(params_end + 1);
+    Some(PrimaryConstructorHeader {
+        keyword,
+        class_name,
+        replacement_start,
+        params_end,
+        after_params,
+        next: source.as_bytes().get(after_params).copied(),
+        terminator: find_header_terminator(source, after_params),
+    })
+}
+
+fn primary_constructor_replacement_start(source: &str, header_cursor: &mut usize) -> Option<usize> {
+    if source.as_bytes().get(*header_cursor).copied() != Some(b'.') {
+        return Some(*header_cursor);
+    }
+    let dot_start = *header_cursor;
+    let suffix_start = skip_whitespace(source, *header_cursor + 1).unwrap_or(*header_cursor + 1);
+    let suffix_end = identifier_end(source, suffix_start)?;
+    *header_cursor = skip_whitespace(source, suffix_end).unwrap_or(suffix_end);
+    Some(dot_start)
+}
+
+fn push_primary_constructor_replacements(
+    source: &str,
+    replacements: &mut Vec<Replacement>,
+    header: &PrimaryConstructorHeader,
+) -> usize {
+    match header.next {
+        Some(b'{') => {
+            push_primary_constructor_param_whitespace(replacements, header);
+            push_constructor_body_replacement(source, replacements, header);
+            header.params_end + 1
+        }
+        Some(b';') if header.keyword == "class" => {
+            replacements.push(Replacement {
+                start: header.replacement_start,
+                end: header.after_params + 1,
+                kind: ReplacementKind::EmptyBody,
+            });
+            header.after_params + 1
+        }
+        _ if header
+            .terminator
+            .is_some_and(|(_, byte)| byte == b';' && header.keyword == "class") =>
+        {
+            push_primary_constructor_param_whitespace(replacements, header);
+            if let Some((terminator_start, _)) = header.terminator {
+                replacements.push(Replacement {
+                    start: terminator_start,
+                    end: terminator_start + 1,
+                    kind: ReplacementKind::Body,
+                });
+            }
+            header.params_end + 1
+        }
+        _ if header.terminator.is_some_and(|(_, byte)| byte == b'{') => {
+            push_primary_constructor_param_whitespace(replacements, header);
+            push_constructor_body_replacement(source, replacements, header);
+            header.params_end + 1
+        }
+        _ => header.params_end + 1,
+    }
+}
+
+fn push_primary_constructor_param_whitespace(
+    replacements: &mut Vec<Replacement>,
+    header: &PrimaryConstructorHeader,
+) {
+    replacements.push(Replacement {
+        start: header.replacement_start,
+        end: header.params_end + 1,
+        kind: ReplacementKind::Whitespace,
+    });
+}
+
+fn push_constructor_body_replacement(
+    source: &str,
+    replacements: &mut Vec<Replacement>,
+    header: &PrimaryConstructorHeader,
+) {
+    if let Some((terminator_start, _)) = header.terminator
+        && let Some(body_end) = matching_delimiter(source, terminator_start, b'{', b'}')
+        && let Some(this_start) =
+            find_primary_constructor_body(source, terminator_start + 1, body_end)
+    {
+        replacements.push(Replacement {
+            start: this_start,
+            end: this_start + "this".len(),
+            kind: ReplacementKind::ConstructorBody(header.class_name.clone()),
+        });
+    }
 }
 
 fn apply_primary_constructor_replacements(source: &str, replacements: Vec<Replacement>) -> String {
@@ -230,6 +294,10 @@ fn apply_primary_constructor_replacements(source: &str, replacements: Vec<Replac
                 push_preserved_whitespace(&mut normalized, &span[skip..]);
             }
             ReplacementKind::Body => normalized.push_str("{}"),
+            ReplacementKind::ConstructorBody(name) => {
+                normalized.push_str(&name);
+                normalized.push_str("()");
+            }
         }
         copied = replacement.end;
     }
@@ -371,11 +439,47 @@ struct Replacement {
     kind: ReplacementKind,
 }
 
+struct PrimaryConstructorHeader {
+    keyword: &'static str,
+    class_name: String,
+    replacement_start: usize,
+    params_end: usize,
+    after_params: usize,
+    next: Option<u8>,
+    terminator: Option<(usize, u8)>,
+}
+
 #[derive(Debug)]
 enum ReplacementKind {
     Whitespace,
     EmptyBody,
     Body,
+    ConstructorBody(String),
+}
+
+fn find_primary_constructor_body(source: &str, start: usize, end: usize) -> Option<usize> {
+    let bytes = source.as_bytes();
+    let mut depth = 0usize;
+    let mut cursor = start;
+    while cursor < end {
+        match bytes[cursor] {
+            b'{' | b'(' | b'[' => depth += 1,
+            b'}' | b')' | b']' => depth = depth.saturating_sub(1),
+            b'\'' | b'"' => cursor = skip_quoted(source, cursor)?,
+            _ if depth == 0 && starts_keyword(source, cursor, "this") => {
+                let after_this = skip_whitespace(source, cursor + "this".len())?;
+                if matches!(
+                    source.as_bytes().get(after_this).copied(),
+                    Some(b':' | b'{' | b';')
+                ) {
+                    return Some(cursor);
+                }
+            }
+            _ => {}
+        }
+        cursor += 1;
+    }
+    None
 }
 
 fn find_next_header_keyword(source: &str, start: usize) -> Option<(usize, &'static str)> {
@@ -511,7 +615,12 @@ class Point(
   var int y
 ) extends Shape with Traceable implements Drawable;
 
-enum Tone(final String label) {
+class const ConstPoint._(final int x, final int y) {
+  final int z;
+  this : z = x + y;
+}
+
+enum const Tone(final String label) {
   quiet('q');
 }
 ";
@@ -520,8 +629,9 @@ enum Tone(final String label) {
 
         assert!(!parsed.tree().root_node().has_error());
         assert!(parsed.source().contains("class Point"));
+        assert!(parsed.source().contains("ConstPoint"));
         assert!(parsed.source().contains("extends Shape"));
-        assert!(parsed.source().contains("enum Tone"));
+        assert!(parsed.source().contains("Tone"));
 
         Ok(())
     }

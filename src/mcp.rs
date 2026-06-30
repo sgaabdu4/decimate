@@ -5,6 +5,8 @@ use serde_json::{Map, Value, json};
 use crate::cli::run_from;
 
 mod cli_args;
+#[cfg(test)]
+mod cli_args_tests;
 mod tools;
 
 use cli_args::cli_args_for_tool;

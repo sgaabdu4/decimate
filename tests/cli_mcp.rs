@@ -38,6 +38,12 @@ fn mcp_initialize_and_tools_list_follow_json_rpc_contract() -> Result<(), Box<dy
         assert_eq!(tool["annotations"]["destructiveHint"], false);
         assert_eq!(tool["inputSchema"]["additionalProperties"], false);
     }
+    assert_tool_property(tool_defs, "analyze", "changed_workspaces")?;
+    assert_tool_property(tool_defs, "analyze", "private_type_leaks")?;
+    assert_tool_property(tool_defs, "analyze", "policy_pack")?;
+    assert_tool_property(tool_defs, "check_health", "min_score")?;
+    assert_tool_property(tool_defs, "security_candidates", "gate")?;
+    assert_tool_property(tool_defs, "audit", "dead_code_baseline")?;
 
     Ok(())
 }
@@ -191,6 +197,21 @@ fn tool_names(response: &Value) -> Vec<String> {
         .filter_map(|tool| tool["name"].as_str())
         .map(str::to_owned)
         .collect()
+}
+
+fn assert_tool_property(
+    tools: &[Value],
+    name: &str,
+    property: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let tool = tools
+        .iter()
+        .find(|tool| tool["name"] == name)
+        .ok_or_else(|| format!("missing MCP tool {name}"))?;
+    if tool["inputSchema"]["properties"].get(property).is_none() {
+        return Err(format!("missing MCP property {name}.{property}").into());
+    }
+    Ok(())
 }
 
 fn manifest_tool_names() -> Result<Vec<String>, Box<dyn std::error::Error>> {

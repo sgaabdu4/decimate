@@ -403,6 +403,9 @@ class SaveButton extends StatelessWidget {
         await doWork();
         Navigator.of(context).pop();
       },
+      onLongPress: () async {
+        await logTap();
+      },
       child: const Text('Save'),
     );
   }

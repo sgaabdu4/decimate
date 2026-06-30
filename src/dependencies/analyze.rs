@@ -83,7 +83,7 @@ fn record_directive(
         return;
     }
 
-    if imports_private_src(specifier) {
+    if imports_private_src(specifier) && !is_generated_path(file_path) {
         usage.private_src_imports.push(PrivateSrcImport {
             package: owner.name.clone(),
             pubspec_path: owner.pubspec_path.clone(),
@@ -118,6 +118,16 @@ fn record_directive(
                 location,
             });
     }
+}
+
+fn is_generated_path(path: &Path) -> bool {
+    matches!(
+        path.file_name().and_then(|name| name.to_str()),
+        Some(name)
+            if name.ends_with(".g.dart")
+                || name.ends_with(".freezed.dart")
+                || name.ends_with(".mocks.dart")
+    )
 }
 
 fn unused_dependencies(

@@ -103,10 +103,20 @@ fn mcp_tools() -> Value {
         "note": "Read-only agent tool contracts backed by existing Decimate CLI commands. Mutating fixes are intentionally not advertised.",
         "tools": [
             mcp_tool("analyze", "decimate check --format json", SCHEMA_VERSION, [
-                "root", "config", "issue_types", "entry", "file", "workspace", "changed_since", "runtime_coverage", "production"
+                "root", "config", "issue_types", "entry", "file", "workspace",
+                "changed_workspaces", "changed_since", "baseline", "regression_baseline",
+                "fail_on_regression", "tolerance", "include_entry_exports",
+                "private_type_leaks", "boundary", "boundary_coverage", "boundary_call",
+                "policy_pack", "policy_violations", "mode", "min_tokens", "min_lines",
+                "min_occurrences", "top", "skip_local", "ignore_imports", "no_ignore_imports",
+                "max_cyclomatic", "max_cognitive", "max_crap", "coverage", "runtime_coverage",
+                "min_invocations_hot", "min_observation_volume", "low_traffic_threshold",
+                "coverage_gaps", "file_scores", "hotspots", "targets", "ownership",
+                "complexity_breakdown", "min_score", "production"
             ]),
             mcp_tool("project_info", "decimate list --format json", PROJECT_LIST_SCHEMA_VERSION, [
-                "root", "config", "files", "entry_points", "plugins", "boundaries", "workspaces", "file", "workspace"
+                "root", "config", "files", "entry_points", "plugins", "boundaries",
+                "workspaces", "entry", "file", "workspace", "changed_workspaces", "production"
             ]),
             mcp_tool("inspect_target", "decimate inspect --format json", INSPECT_SCHEMA_VERSION, [
                 "root", "config", "target", "file", "symbol"
@@ -124,19 +134,41 @@ fn mcp_tools() -> Value {
                 "root", "config", "fingerprint"
             ]),
             mcp_tool("find_dupes", "decimate dupes --format json", SCHEMA_VERSION, [
-                "root", "config", "mode", "min_tokens", "min_lines", "min_occurrences", "top"
+                "root", "config", "entry", "file", "workspace", "changed_workspaces",
+                "changed_since", "baseline", "regression_baseline", "fail_on_regression",
+                "tolerance", "production", "mode", "min_tokens", "min_lines",
+                "min_occurrences", "top", "skip_local", "ignore_imports", "no_ignore_imports"
             ]),
             mcp_tool("check_health", "decimate health --format json", SCHEMA_VERSION, [
-                "root", "config", "max_cyclomatic", "max_cognitive", "max_crap", "coverage", "runtime_coverage", "coverage_gaps", "file_scores", "hotspots", "targets", "ownership", "complexity_breakdown"
+                "root", "config", "entry", "file", "workspace", "changed_workspaces",
+                "changed_since", "baseline", "regression_baseline", "fail_on_regression",
+                "tolerance", "production", "max_cyclomatic", "max_cognitive", "max_crap",
+                "coverage", "runtime_coverage", "min_invocations_hot", "min_observation_volume",
+                "low_traffic_threshold", "coverage_gaps", "file_scores", "hotspots",
+                "targets", "ownership", "complexity_breakdown", "min_score", "top"
             ]),
             mcp_tool("security_candidates", "decimate security --format json", SCHEMA_VERSION, [
-                "root", "config", "top", "file", "surface", "production"
+                "root", "config", "entry", "file", "workspace", "changed_workspaces",
+                "changed_since", "baseline", "regression_baseline", "fail_on_regression",
+                "tolerance", "top", "surface", "production", "gate", "diff_file",
+                "ci", "fail_on_issues", "summary"
             ]),
             mcp_tool("feature_flags", "decimate flags --format json", SCHEMA_VERSION, [
-                "root", "config", "top", "changed_since"
+                "root", "config", "entry", "file", "workspace", "changed_workspaces",
+                "changed_since", "baseline", "regression_baseline", "fail_on_regression",
+                "tolerance", "production", "top"
             ]),
             mcp_tool("audit", "decimate audit --format json", SCHEMA_VERSION, [
-                "root", "config", "base", "brief", "max_decisions"
+                "root", "config", "base", "entry", "file", "workspace", "changed_workspaces",
+                "changed_since", "include_entry_exports", "private_type_leaks", "boundary",
+                "boundary_coverage", "boundary_call", "policy_pack", "policy_violations",
+                "mode", "min_tokens", "min_lines", "min_occurrences", "top", "skip_local",
+                "ignore_imports", "no_ignore_imports", "max_cyclomatic", "max_cognitive",
+                "max_crap", "coverage", "runtime_coverage", "min_invocations_hot",
+                "min_observation_volume", "low_traffic_threshold", "coverage_gaps",
+                "file_scores", "hotspots", "targets", "ownership", "complexity_breakdown",
+                "min_score", "dead_code_baseline", "health_baseline", "dupes_baseline",
+                "production", "brief", "max_decisions"
             ]),
             mcp_tool("decision_surface", "decimate decision-surface --format json", DECISION_SURFACE_SCHEMA_VERSION, [
                 "root", "config", "base", "max_decisions"
