@@ -12,9 +12,11 @@ use crate::{
 
 mod path_filters;
 mod private_type_leaks;
+mod riverpod;
 use path_filters::{is_library_source, is_private, is_public_library_entry};
 pub use private_type_leaks::PrivateTypeLeak;
 use private_type_leaks::private_type_leaks;
+use riverpod::extend_generated_provider_owner_references;
 
 /// Symbol-level dead-code result.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -141,6 +143,7 @@ impl SymbolIndex {
                     .push(IndexedReference { path: path.clone() });
             }
         }
+        extend_generated_provider_owner_references(&mut references_by_name, &declarations);
 
         Self {
             declarations,

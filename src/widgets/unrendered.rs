@@ -121,6 +121,10 @@ fn object_constructor_names(root: Node<'_>, source: &str) -> Vec<String> {
             && let Some(constructor) = constructor_type_name(node, source)
         {
             constructors.extend(constructor_name_candidates(&constructor));
+        } else if is_arrow_body_constructor_identifier(node, source)
+            && let Ok(constructor) = node.utf8_text(source.as_bytes())
+        {
+            constructors.extend(constructor_name_candidates(constructor));
         }
     });
     constructors
@@ -129,7 +133,11 @@ fn object_constructor_names(root: Node<'_>, source: &str) -> Vec<String> {
 fn is_object_constructor(node: Node<'_>) -> bool {
     matches!(
         node.kind(),
-        "call_expression" | "constructor_invocation" | "const_object_expression" | "new_expression"
+        "call_expression"
+            | "constructor_invocation"
+            | "const_object_expression"
+            | "function_expression_invocation"
+            | "new_expression"
     )
 }
 
@@ -146,6 +154,20 @@ fn constructor_type_name(node: Node<'_>, source: &str) -> Option<String> {
         .unwrap_or("")
         .replace(' ', "");
     (!constructor.is_empty()).then_some(constructor)
+}
+
+fn is_arrow_body_constructor_identifier(node: Node<'_>, source: &str) -> bool {
+    if !matches!(node.kind(), "identifier" | "type_identifier")
+        || node
+            .parent()
+            .is_none_or(|parent| parent.kind() != "function_expression_body")
+    {
+        return false;
+    }
+    let Some(suffix) = source.get(node.end_byte()..) else {
+        return false;
+    };
+    suffix.trim_start().starts_with("()")
 }
 
 fn constructor_name_candidates(constructor: &str) -> Vec<String> {
@@ -327,6 +349,26 @@ void main() {
             names,
             vec!["LiveCard", "LegacyCard", "PrefixedCard", "DeadCard"]
         );
+        Ok(())
+    }
+
+    #[test]
+    fn object_constructor_names_include_material_page_route_builders()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let source = r"
+void open(BuildContext context) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (BuildContext context) => CartScreen(),
+    ),
+  );
+}
+";
+        let parsed = parse_tree(Path::new("lib/catalog.dart"), source)?;
+        let names = object_constructor_names(parsed.tree().root_node(), parsed.source());
+
+        assert!(names.iter().any(|name| name == "CartScreen"));
         Ok(())
     }
 }
