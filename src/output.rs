@@ -412,6 +412,10 @@ fn apply_dependency_summary(
         .dependency_hygiene
         .as_ref()
         .map_or(0, |report| report.unlisted_dependencies.len());
+    summary.private_src_imports = results
+        .dependency_hygiene
+        .as_ref()
+        .map_or(0, |report| report.private_src_imports.len());
 }
 
 fn apply_cleanup_summary(
@@ -570,6 +574,7 @@ fn apply_scoped_counts(summary: &mut ReportSummary, findings: &[Finding]) {
     summary.misconfigured_dependency_overrides =
         kind_count(findings, FindingKind::MisconfiguredDependencyOverride);
     summary.unlisted_dependencies = kind_count(findings, FindingKind::UnlistedDependency);
+    summary.private_src_imports = kind_count(findings, FindingKind::PrivateSrcImport);
     summary.dead_files = kind_count(findings, FindingKind::DeadFile);
     summary.unused_exports = kind_count(findings, FindingKind::UnusedExport);
     summary.unused_types = kind_count(findings, FindingKind::UnusedType);

@@ -6,31 +6,18 @@ pub const EXPLAIN_SCHEMA_VERSION: &str = "decimate.explain.v1";
 /// Explanation returned by `decimate explain`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExplainReport {
-    /// Schema identifier.
     pub schema_version: String,
-    /// Typed JSON envelope kind.
     pub kind: String,
-    /// Stable Decimate rule id.
     pub id: String,
-    /// Human-readable issue name.
     pub name: String,
-    /// Canonical issue type.
     pub issue_type: String,
-    /// Accepted aliases for the issue type.
     pub aliases: Vec<String>,
-    /// One-sentence meaning.
     pub summary: String,
-    /// Why Decimate reports this issue.
     pub rationale: String,
-    /// Small Dart-oriented example.
     pub example: String,
-    /// Recommended agent action.
     pub how_to_fix: String,
-    /// Suppression comments supported for this issue.
     pub suppressions: Vec<String>,
-    /// Read-only follow-up commands that may apply.
     pub related_commands: Vec<String>,
-    /// Relevant upstream or Dart documentation.
     pub docs: String,
 }
 
@@ -537,6 +524,18 @@ const ISSUES: &[IssueExplanation] = &[
         "Add the package to the correct pubspec section or remove the import.",
         &[],
         &["decimate trace-dependency --format json --dependency <package>"],
+    ),
+    issue!(
+        "private-src-import",
+        "decimate/private-src-import",
+        &["private-src-import", "private-src-imports"],
+        "Private src import",
+        "A Dart file imports or exports another package's private `lib/src` implementation library.",
+        "Dart package `lib/src` directories are implementation details; importing them couples code to APIs the dependency does not publish.",
+        "import 'package:shared/src/internal.dart'; reaches into shared's private implementation tree.",
+        "Import a public library from the package or ask the dependency owner to expose a supported API.",
+        next_line_suppressions!("private-src-import"),
+        &["decimate check --format json --private-src-imports"],
     ),
     issue!(
         "code-duplication",

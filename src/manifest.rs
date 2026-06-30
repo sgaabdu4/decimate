@@ -34,7 +34,7 @@ pub fn decimate_schema() -> Value {
         "output_formats": ["human", "json", "sarif"],
         "plugins": plugins(),
         "environment_variables": environment_variables(),
-        "mcp_tools": [],
+        "mcp_tools": mcp_tools(),
         "exit_codes": [
             { "code": 0, "meaning": "success or no error-severity findings" },
             { "code": 1, "meaning": "error-severity findings or skipped apply fixes" },
@@ -97,6 +97,72 @@ fn environment_variables() -> Value {
     ])
 }
 
+fn mcp_tools() -> Value {
+    json!({
+        "server": "decimate-mcp",
+        "note": "Read-only agent tool contracts backed by existing Decimate CLI commands. Mutating fixes are intentionally not advertised.",
+        "tools": [
+            mcp_tool("analyze", "decimate check --format json", SCHEMA_VERSION, [
+                "root", "config", "issue_types", "entry", "file", "workspace", "changed_since", "runtime_coverage"
+            ]),
+            mcp_tool("project_info", "decimate list --format json", PROJECT_LIST_SCHEMA_VERSION, [
+                "root", "config", "files", "plugins", "boundaries", "workspace"
+            ]),
+            mcp_tool("inspect_target", "decimate inspect --format json", INSPECT_SCHEMA_VERSION, [
+                "root", "config", "file", "symbol", "dependency"
+            ]),
+            mcp_tool("trace_file", "decimate trace-file --format json", TRACE_SCHEMA_VERSION, [
+                "root", "config", "file", "entry"
+            ]),
+            mcp_tool("trace_export", "decimate trace-symbol --format json", TRACE_SCHEMA_VERSION, [
+                "root", "config", "file", "symbol"
+            ]),
+            mcp_tool("trace_dependency", "decimate trace-dependency --format json", TRACE_SCHEMA_VERSION, [
+                "root", "config", "dependency", "workspace"
+            ]),
+            mcp_tool("trace_clone", "decimate trace-clone --format json", TRACE_SCHEMA_VERSION, [
+                "root", "config", "fingerprint"
+            ]),
+            mcp_tool("find_dupes", "decimate dupes --format json", SCHEMA_VERSION, [
+                "root", "config", "mode", "min_tokens", "min_lines", "top"
+            ]),
+            mcp_tool("check_health", "decimate health --format json", SCHEMA_VERSION, [
+                "root", "config", "max_cyclomatic", "max_cognitive", "runtime_coverage"
+            ]),
+            mcp_tool("security_candidates", "decimate security --format json", SCHEMA_VERSION, [
+                "root", "config", "security_candidates", "production"
+            ]),
+            mcp_tool("feature_flags", "decimate flags --format json", SCHEMA_VERSION, [
+                "root", "config", "top", "changed_since"
+            ]),
+            mcp_tool("audit", "decimate audit --format json", SCHEMA_VERSION, [
+                "root", "config", "base", "brief", "max_decisions"
+            ]),
+            mcp_tool("decision_surface", "decimate decision-surface --format json", DECISION_SURFACE_SCHEMA_VERSION, [
+                "root", "config", "base", "max_decisions"
+            ]),
+            mcp_tool("decimate_explain", "decimate explain --format json", EXPLAIN_SCHEMA_VERSION, [
+                "issue_type", "rule_id"
+            ])
+        ]
+    })
+}
+
+fn mcp_tool<const N: usize>(
+    name: &str,
+    command: &str,
+    schema: &str,
+    key_params: [&str; N],
+) -> Value {
+    json!({
+        "name": name,
+        "read_only": true,
+        "command": command,
+        "schema": schema,
+        "key_params": key_params.to_vec()
+    })
+}
+
 fn commands() -> Value {
     let mut commands = Vec::new();
     append_commands(&mut commands, analysis_commands());
@@ -119,7 +185,7 @@ fn analysis_commands() -> Value {
             "kind": "combined",
             "description": "Run all enabled graph, symbol, dependency, duplicate, health, flag, and security checks.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks", "--unused-files", "--unused-exports", "--unused-types", "--unused-deps", "--unlisted-deps", "--duplicate-exports", "--circular-deps", "--re-export-cycles", "--boundary-violations", "--unused-enum-members", "--unused-class-members", "--unresolved-imports", "--stale-suppressions", "--unused-dependency-overrides", "--misconfigured-dependency-overrides"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks", "--unused-files", "--unused-exports", "--unused-types", "--unused-deps", "--unlisted-deps", "--private-src-imports", "--duplicate-exports", "--circular-deps", "--re-export-cycles", "--boundary-violations", "--unused-enum-members", "--unused-class-members", "--unresolved-imports", "--stale-suppressions", "--unused-dependency-overrides", "--misconfigured-dependency-overrides"]
         },
         {
             "name": "audit",
@@ -147,7 +213,7 @@ fn analysis_commands() -> Value {
             "kind": "dead-code",
             "description": "Find unreachable Dart files and conservative symbol-level dead code.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--include-entry-exports", "--private-type-leaks", "--unused-files", "--unused-exports", "--unused-types", "--unused-deps", "--unlisted-deps", "--duplicate-exports", "--unused-enum-members", "--unused-class-members", "--unresolved-imports", "--stale-suppressions", "--unused-dependency-overrides", "--misconfigured-dependency-overrides"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--include-entry-exports", "--private-type-leaks", "--unused-files", "--unused-exports", "--unused-types", "--unused-deps", "--unlisted-deps", "--private-src-imports", "--duplicate-exports", "--unused-enum-members", "--unused-class-members", "--unresolved-imports", "--stale-suppressions", "--unused-dependency-overrides", "--misconfigured-dependency-overrides"]
         },
         {
             "name": "cycles",
@@ -393,6 +459,7 @@ fn issue_types() -> Value {
         "unused-dependency-override",
         "misconfigured-dependency-override",
         "unlisted-dependency",
+        "private-src-import",
         "code-duplication",
         "high-cyclomatic-complexity",
         "high-cognitive-complexity",

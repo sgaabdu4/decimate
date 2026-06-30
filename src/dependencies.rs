@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -6,18 +6,24 @@ use serde::{Deserialize, Serialize};
 use serde_yaml_ng::{Mapping, Value};
 use thiserror::Error;
 
-use crate::dependency_scripts::package_used_in_tooling;
 use crate::graph::normalize_path;
-use crate::{DependencyKind, Location, scan::ScannedProject};
+use crate::{DependencyKind, Location};
 
+mod analyze;
 mod discovery;
 mod overrides;
+mod private_src_imports;
 mod pubspec_document;
 mod pubspec_entry;
+mod usage;
+pub use analyze::analyze_dependency_hygiene;
 use discovery::discover_packages;
 use overrides::misconfigured_dependency_overrides;
 pub use overrides::{DependencyOverrideMisconfigReason, MisconfiguredDependencyOverride};
+pub use private_src_imports::PrivateSrcImport;
+use private_src_imports::imports_private_src;
 use pubspec_document::{declared_dependencies_from_source, dependency_location};
+use usage::{DependencyUsage, allows_dev_dependency};
 
 /// Dart pub dependency hygiene findings.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -28,6 +34,8 @@ pub struct DependencyHygieneReport {
     pub misconfigured_dependency_overrides: Vec<MisconfiguredDependencyOverride>,
     /// Imported packages absent from the importing package's pubspec.
     pub unlisted_dependencies: Vec<UnlistedPackageDependency>,
+    /// Imports into another package's private `lib/src` implementation tree.
+    pub private_src_imports: Vec<PrivateSrcImport>,
 }
 
 /// A declared pub dependency that has no Dart import/export usage.
@@ -177,123 +185,6 @@ pub enum DependencyHygieneError {
     },
 }
 
-/// Analyze Dart `package:` imports against pubspec dependency declarations.
-///
-/// # Errors
-///
-/// Returns [`DependencyHygieneError`] if pubspec discovery or parsing fails.
-pub fn analyze_dependency_hygiene(
-    project: &ScannedProject,
-) -> Result<DependencyHygieneReport, DependencyHygieneError> {
-    let packages = discover_packages(&project.root)?;
-    let mut used_by_package = BTreeMap::<PathBuf, BTreeMap<String, DependencyUsage>>::new();
-    let mut unlisted_by_identity = BTreeMap::<(PathBuf, String), UnlistedPackageDependency>::new();
-
-    for file in &project.files {
-        let Some(owner) = owning_package(&packages, &file.path) else {
-            continue;
-        };
-
-        for (specifier, kind, location) in file
-            .imports
-            .iter()
-            .map(|import| (&import.uri, DependencyKind::Import, import.location))
-            .chain(
-                file.exports
-                    .iter()
-                    .map(|export| (&export.uri, DependencyKind::Export, export.location)),
-            )
-        {
-            let Some(dependency) = package_name(specifier) else {
-                continue;
-            };
-            if dependency == owner.name {
-                continue;
-            }
-
-            let usage = used_by_package
-                .entry(owner.root.clone())
-                .or_default()
-                .entry(dependency.clone())
-                .or_default();
-            usage.record(&owner.root, &file.path);
-
-            if !owner.declares_dependency_for_path(&dependency, &file.path) {
-                unlisted_by_identity
-                    .entry((owner.root.clone(), dependency.clone()))
-                    .or_insert_with(|| UnlistedPackageDependency {
-                        package: owner.name.clone(),
-                        pubspec_path: owner.pubspec_path.clone(),
-                        path: file.path.clone(),
-                        dependency,
-                        specifier: specifier.clone(),
-                        kind,
-                        declared_section: owner.declared_section(specifier),
-                        location,
-                    });
-            }
-        }
-    }
-
-    let mut unused_dependencies = Vec::new();
-    for package in &packages {
-        let used = used_by_package.get(&package.root);
-        for dependency in &package.dependencies {
-            if dependency.name == package.name {
-                continue;
-            }
-            let mut usage = used
-                .and_then(|used| used.get(&dependency.name))
-                .copied()
-                .unwrap_or_default();
-            if package_used_in_tooling(&package.root, &dependency.name) {
-                usage.record_tooling();
-            }
-            let usage = usage.any().then_some(usage);
-            if let Some(issue) =
-                dependency_issue(dependency, usage.as_ref(), package.locked_packages.as_ref())
-            {
-                unused_dependencies.push(UnusedPackageDependency {
-                    package: package.name.clone(),
-                    pubspec_path: dependency.source_path.clone(),
-                    dependency: dependency.name.clone(),
-                    section: dependency.section,
-                    issue,
-                    location: dependency.location,
-                    safe_to_delete: dependency.safe_to_delete
-                        && matches!(
-                            issue,
-                            DependencyIssue::UnusedRuntimeDependency
-                                | DependencyIssue::UnusedDevDependency
-                        ),
-                });
-            }
-        }
-    }
-
-    unused_dependencies.sort_by(|left, right| {
-        (
-            &left.package,
-            left.section.as_pubspec_key(),
-            &left.dependency,
-        )
-            .cmp(&(
-                &right.package,
-                right.section.as_pubspec_key(),
-                &right.dependency,
-            ))
-    });
-
-    Ok(DependencyHygieneReport {
-        unused_dependencies,
-        misconfigured_dependency_overrides: packages
-            .into_iter()
-            .flat_map(|package| package.misconfigured_dependency_overrides)
-            .collect(),
-        unlisted_dependencies: unlisted_by_identity.into_values().collect(),
-    })
-}
-
 /// Find local pubspec declarations for one dependency package.
 ///
 /// # Errors
@@ -388,14 +279,6 @@ impl PubPackage {
     }
 }
 
-fn allows_dev_dependency(package_root: &Path, path: &Path) -> bool {
-    let relative = path.strip_prefix(package_root).unwrap_or(path);
-    !matches!(
-        relative.components().next(),
-        Some(std::path::Component::Normal(name)) if name == "lib" || name == "bin"
-    )
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct DeclaredDependency {
     name: String,
@@ -403,30 +286,6 @@ struct DeclaredDependency {
     section: DependencySection,
     location: Location,
     safe_to_delete: bool,
-}
-
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-struct DependencyUsage {
-    production: bool,
-    development: bool,
-}
-
-impl DependencyUsage {
-    fn record(&mut self, package_root: &Path, path: &Path) {
-        if allows_dev_dependency(package_root, path) {
-            self.development = true;
-        } else {
-            self.production = true;
-        }
-    }
-
-    fn record_tooling(&mut self) {
-        self.development = true;
-    }
-
-    const fn any(self) -> bool {
-        self.production || self.development
-    }
 }
 
 fn dependency_issue(

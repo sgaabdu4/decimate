@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::{
-    DependencyHygieneReport, DependencySection, MisconfiguredDependencyOverride,
+    DependencyHygieneReport, DependencySection, MisconfiguredDependencyOverride, PrivateSrcImport,
     UnlistedPackageDependency, UnusedPackageDependency,
 };
 
@@ -64,9 +64,16 @@ pub(crate) fn filter_ignored_dependencies(
     report
         .unlisted_dependencies
         .retain(|dependency| !unlisted_dependency_matches(dependency, ignored));
+    report
+        .private_src_imports
+        .retain(|dependency| !private_src_import_matches(dependency, ignored));
 }
 
 fn unlisted_dependency_matches(dependency: &UnlistedPackageDependency, ignored: &[String]) -> bool {
+    ignored_dependency_matches(&dependency.dependency, ignored)
+}
+
+fn private_src_import_matches(dependency: &PrivateSrcImport, ignored: &[String]) -> bool {
     ignored_dependency_matches(&dependency.dependency, ignored)
 }
 

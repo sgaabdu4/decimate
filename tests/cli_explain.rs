@@ -350,6 +350,42 @@ fn explain_command_emits_typed_dependency_contracts() -> Result<(), Box<dyn std:
 }
 
 #[test]
+fn explain_command_emits_private_src_import_contract() -> Result<(), Box<dyn std::error::Error>> {
+    let mut output = Vec::new();
+
+    let code = run_from(
+        [
+            "decimate",
+            "explain",
+            "private-src-imports",
+            "--format",
+            "json",
+        ],
+        &mut output,
+    )?;
+
+    let json = serde_json::from_slice::<Value>(&output)?;
+    assert_eq!(code, 0);
+    assert_eq!(json["id"], "decimate/private-src-import");
+    assert_eq!(json["issue_type"], "private-src-import");
+    assert_eq!(json["name"], "Private src import");
+    assert!(json["suppressions"].as_array().is_some_and(|comments| {
+        comments
+            .iter()
+            .any(|comment| comment == "// decimate-ignore-next-line private-src-import")
+    }));
+    assert!(json["related_commands"].as_array().is_some_and(|commands| {
+        commands.iter().any(|command| {
+            command
+                .as_str()
+                .is_some_and(|text| text.contains("--private-src-imports"))
+        })
+    }));
+
+    Ok(())
+}
+
+#[test]
 fn explain_command_renders_human_contract() -> Result<(), Box<dyn std::error::Error>> {
     let mut output = Vec::new();
 

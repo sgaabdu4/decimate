@@ -4,7 +4,8 @@ use super::format::{dependency_kind, display_path};
 use super::{Finding, FindingAction, FindingEdge, FindingKind, Severity};
 use crate::{
     DependencyHygieneReport, DependencyIssue, DependencyOverrideMisconfigReason, DependencySection,
-    MisconfiguredDependencyOverride, UnlistedPackageDependency, UnusedPackageDependency,
+    MisconfiguredDependencyOverride, PrivateSrcImport, UnlistedPackageDependency,
+    UnusedPackageDependency,
 };
 
 pub(super) fn add_dependency_hygiene_findings(
@@ -29,6 +30,12 @@ pub(super) fn add_dependency_hygiene_findings(
             .unlisted_dependencies
             .iter()
             .map(|dependency| unlisted_dependency_finding(root, dependency)),
+    );
+    findings.extend(
+        report
+            .private_src_imports
+            .iter()
+            .map(|dependency| private_src_import_finding(root, dependency)),
     );
 }
 
@@ -281,5 +288,40 @@ fn unlisted_action_description(dependency: &UnlistedPackageDependency) -> &'stat
         "Declare the imported package in dependencies or dev_dependencies; dependency_overrides alone does not add it"
     } else {
         "Add the imported package to the importing package's pubspec.yaml"
+    }
+}
+
+fn private_src_import_finding(root: &Path, dependency: &PrivateSrcImport) -> Finding {
+    let path = display_path(root, &dependency.path);
+    Finding {
+        rule_id: "decimate/private-src-import".to_owned(),
+        fingerprint: None,
+        kind: FindingKind::PrivateSrcImport,
+        severity: Severity::Error,
+        message: format!(
+            "{} imports private implementation library {} from package {}",
+            dependency.package, dependency.specifier, dependency.dependency
+        ),
+        path: path.clone(),
+        line: dependency.location.line,
+        column: dependency.location.column,
+        safe_to_delete: false,
+        files: Vec::new(),
+        edge: Some(FindingEdge {
+            from: path.clone(),
+            to: dependency.dependency.clone(),
+            specifier: dependency.specifier.clone(),
+            kind: dependency_kind(dependency.kind),
+        }),
+        actions: vec![
+            FindingAction::new(
+                "replace-package-private-import",
+                "Import a public library from the package or move shared code behind a public API",
+                false,
+            )
+            .with_target_path(path)
+            .with_target_dependency(dependency.dependency.clone())
+            .with_suppression_comment("// decimate-ignore-next-line private-src-import"),
+        ],
     }
 }

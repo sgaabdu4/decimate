@@ -566,7 +566,6 @@ fn complexity_kind(kind: FindingKind) -> bool {
             | FindingKind::HighCrapScore
     )
 }
-
 fn kind_suffix(kind: FindingKind) -> &'static str {
     match kind {
         FindingKind::HighCyclomaticComplexity => "high-cyclomatic-complexity",
@@ -576,7 +575,6 @@ fn kind_suffix(kind: FindingKind) -> &'static str {
         _ => "",
     }
 }
-
 fn recompute_summary(report: &mut JsonReport) {
     report.summary.unresolved_dependencies =
         kind_count(&report.findings, FindingKind::UnresolvedDependency);
@@ -595,6 +593,8 @@ fn recompute_summary(report: &mut JsonReport) {
     );
     report.summary.unlisted_dependencies =
         kind_count(&report.findings, FindingKind::UnlistedDependency);
+    report.summary.private_src_imports =
+        kind_count(&report.findings, FindingKind::PrivateSrcImport);
     report.summary.dead_files = kind_count(&report.findings, FindingKind::DeadFile);
     report.summary.unused_exports = kind_count(&report.findings, FindingKind::UnusedExport);
     report.summary.unused_types = kind_count(&report.findings, FindingKind::UnusedType);

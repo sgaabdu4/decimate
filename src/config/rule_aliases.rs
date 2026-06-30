@@ -128,6 +128,9 @@ fn all_dependency_aliases() -> Vec<&'static str> {
         "decimate/misconfigured-dependency-override",
         "misconfigured-dependency-override",
         "misconfigured-dependency-overrides",
+        "decimate/private-src-import",
+        "private-src-import",
+        "private-src-imports",
     ]
     .into()
 }
@@ -402,6 +405,11 @@ fn dependency_kind_aliases(kind: FindingKind) -> Option<Vec<&'static str>> {
             "unlisted-dependency",
             "unlisted-dependencies",
             "unlisted-deps",
+        ]),
+        FindingKind::PrivateSrcImport => Some(vec![
+            "decimate/private-src-import",
+            "private-src-import",
+            "private-src-imports",
         ]),
         _ => None,
     }

@@ -147,6 +147,7 @@ fn recompute_summary(report: &mut JsonReport) {
         FindingKind::MisconfiguredDependencyOverride,
     );
     summary.unlisted_dependencies = kind_count(&report.findings, FindingKind::UnlistedDependency);
+    summary.private_src_imports = kind_count(&report.findings, FindingKind::PrivateSrcImport);
     summary.dead_files = kind_count(&report.findings, FindingKind::DeadFile);
     summary.unused_exports = kind_count(&report.findings, FindingKind::UnusedExport);
     summary.unused_types = kind_count(&report.findings, FindingKind::UnusedType);

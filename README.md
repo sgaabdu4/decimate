@@ -37,6 +37,7 @@ Decimate currently reports:
 - architecture boundary violations, boundary coverage gaps, and forbidden calls
 - declarative policy-pack violations
 - unused, unlisted, misplaced, and override-related Pub dependencies
+- cross-package imports/exports into another package's private `lib/src` tree
 - duplicated Dart code blocks with stable `dup:<id>` fingerprints
 - cyclomatic, cognitive, CRAP, coverage-gap, hotspot, ownership, and
   refactoring-target health signals
@@ -144,8 +145,8 @@ decimate check . --unused-files --unused-deps --format json
 Issue filters follow Fallow naming where Decimate has real Dart data:
 `--unused-files`, `--unused-exports`, `--unused-types`, `--unused-deps`,
 `--unlisted-deps`, `--duplicate-exports`, `--private-type-leaks`,
-`--unused-enum-members`, `--unused-class-members`, `--unresolved-imports`,
-`--stale-suppressions`,
+`--private-src-imports`, `--unused-enum-members`, `--unused-class-members`,
+`--unresolved-imports`, `--stale-suppressions`,
 `--unused-dependency-overrides`, and `--misconfigured-dependency-overrides`.
 The check command also supports graph and architecture selectors:
 `--circular-deps`, `--re-export-cycles`, `--boundary-violations`, and
@@ -264,6 +265,13 @@ decimate report-schema --format json
 decimate config-schema --format json
 decimate rule-pack-schema --format json
 ```
+
+The manifest includes `mcp_tools` metadata for read-only agent wrappers over
+existing Decimate commands such as `analyze`, `project_info`, `inspect_target`,
+`trace_file`, `trace_export`, `trace_dependency`, `find_dupes`,
+`check_health`, `security_candidates`, `feature_flags`, `audit`,
+`decision_surface`, and `decimate_explain`. This is a contract manifest, not a
+running stdio MCP server yet.
 
 Important schemas:
 
@@ -391,10 +399,12 @@ Decimate also adds Dart-specific graph intelligence that Fallow does not need:
   resolution
 - `pubspec.yaml`, `pubspec_overrides.yaml`, `dev_dependencies`,
   `dependency_overrides`, and `pubspec.lock` hygiene
+- cross-package `package:other/src/...` private implementation import hygiene
 
 Known gaps before claiming full product parity with Fallow:
 
-- no MCP/server API yet
+- MCP tool contracts are exposed in `decimate schema`, but there is no stdio MCP
+  server implementation yet
 - no embedded Node/NAPI-style bindings, because Decimate is not a JS tool
 - no hosted/cloud continuous runtime monitoring
 - no `watch`, `migrate`, telemetry, license, editor, or viz commands yet

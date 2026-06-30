@@ -309,6 +309,7 @@ const fn kind_key(kind: FindingKind) -> &'static str {
         FindingKind::UnusedDependencyOverride => "unused-dependency-override",
         FindingKind::MisconfiguredDependencyOverride => "misconfigured-dependency-override",
         FindingKind::UnlistedDependency => "unlisted-dependency",
+        FindingKind::PrivateSrcImport => "private-src-import",
         FindingKind::CodeDuplication => "code-duplication",
         FindingKind::HighCyclomaticComplexity => "high-cyclomatic-complexity",
         FindingKind::HighCognitiveComplexity => "high-cognitive-complexity",

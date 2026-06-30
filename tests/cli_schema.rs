@@ -116,7 +116,19 @@ fn assert_manifest_identity(json: &Value) {
         env.iter()
             .any(|variable| variable["name"] == "DECIMATE_BASE")
     }));
-    assert!(json["mcp_tools"].as_array().is_some_and(Vec::is_empty));
+    assert_eq!(json["mcp_tools"]["server"], "decimate-mcp");
+    assert!(json["mcp_tools"]["tools"].as_array().is_some_and(|tools| {
+        tools.iter().any(|tool| {
+            tool["name"] == "analyze"
+                && tool["read_only"] == true
+                && tool["command"] == "decimate check --format json"
+        })
+    }));
+    assert!(json["mcp_tools"]["tools"].as_array().is_some_and(|tools| {
+        tools.iter().any(|tool| {
+            tool["name"] == "decimate_explain" && tool["schema"] == "decimate.explain.v1"
+        })
+    }));
 }
 
 fn assert_manifest_metadata(json: &Value) {

@@ -51,6 +51,10 @@ fn shared_issue_filter_command(command: Command) -> Command {
             "Report only imports missing from pubspec dependencies",
         ))
         .arg(filter_arg(
+            "private-src-imports",
+            "Report only cross-package lib/src imports",
+        ))
+        .arg(filter_arg(
             "duplicate-exports",
             "Report only duplicated public API exports",
         ))
@@ -135,6 +139,12 @@ fn push_dependency_filters(matches: &ArgMatches, kinds: &mut Vec<FindingKind>) {
         kinds,
         "unlisted-deps",
         &[FindingKind::UnlistedDependency],
+    );
+    push_flag(
+        matches,
+        kinds,
+        "private-src-imports",
+        &[FindingKind::PrivateSrcImport],
     );
     push_flag(
         matches,

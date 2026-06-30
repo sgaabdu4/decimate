@@ -157,6 +157,8 @@ pub struct ReportSummary {
     pub misconfigured_dependency_overrides: usize,
     /// Imported pub packages absent from pubspec dependencies.
     pub unlisted_dependencies: usize,
+    /// Imports into another package's private `lib/src` implementation tree.
+    pub private_src_imports: usize,
     /// Unreachable files.
     pub dead_files: usize,
     /// Unused public top-level declarations.
@@ -340,6 +342,8 @@ pub enum FindingKind {
     MisconfiguredDependencyOverride,
     /// Imported pub package is missing from pubspec.
     UnlistedDependency,
+    /// Import reaches into another package's private `lib/src` implementation tree.
+    PrivateSrcImport,
     /// Duplicated Dart code block.
     CodeDuplication,
     /// Function exceeded the cyclomatic complexity threshold.

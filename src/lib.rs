@@ -78,8 +78,9 @@ pub use decision_surface::{
 pub use dependencies::{
     DeclaredPackageDependency, DependencyHygieneError, DependencyHygieneReport, DependencyIssue,
     DependencyOverrideMisconfigReason, DependencySection, LocalPubPackage,
-    MisconfiguredDependencyOverride, UnlistedPackageDependency, UnusedPackageDependency,
-    analyze_dependency_hygiene, declared_package_dependencies, local_pub_packages,
+    MisconfiguredDependencyOverride, PrivateSrcImport, UnlistedPackageDependency,
+    UnusedPackageDependency, analyze_dependency_hygiene, declared_package_dependencies,
+    local_pub_packages,
 };
 pub use dupes::{
     CloneTraceReport, CodeClone, CodeCloneInstance, DuplicateCodeError, DuplicateCodeReport,
