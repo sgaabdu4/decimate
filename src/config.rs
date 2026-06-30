@@ -7,10 +7,11 @@ use thiserror::Error;
 
 use crate::graph::normalize_path;
 use crate::{
-    BoundaryCallRule, BoundaryRule, DuplicateMode, DuplicateOptions, FeatureFlagOptions,
-    HealthOptions, SecurityCategory, SecurityOptions,
+    BoundaryCallRule, BoundaryPreset, BoundaryRule, DuplicateMode, DuplicateOptions,
+    FeatureFlagOptions, HealthOptions, SecurityCategory, SecurityOptions,
 };
 
+mod boundary_config;
 mod cache;
 mod dependencies;
 mod health;
@@ -18,6 +19,7 @@ mod jsonc;
 mod policy;
 mod rule_aliases;
 mod rules;
+use boundary_config::RawBoundaries;
 pub use cache::CacheConfig;
 pub use dependencies::IgnoreDependencyOverrideRule;
 pub(crate) use dependencies::{filter_ignored_dependencies, filter_ignored_dependency_overrides};
@@ -45,8 +47,12 @@ pub struct DecimateConfig {
     pub include_entry_exports: bool,
     /// Architecture boundary rules.
     pub boundaries: Vec<BoundaryRule>,
+    /// Built-in architecture boundary presets expanded into boundary rules.
+    pub boundary_presets: Vec<BoundaryPreset>,
     /// Whether configured boundaries must cover every Dart library file.
     pub boundary_coverage: bool,
+    /// Root-relative globs exempt from boundary coverage gaps.
+    pub boundary_allow_unmatched: Vec<String>,
     /// Boundary-local forbidden call rules.
     pub boundary_calls: Vec<BoundaryCallRule>,
     /// Declarative policy pack paths.
@@ -230,8 +236,8 @@ pub fn config_schema() -> Value {
             "cli": cli_schema(),
             "entry": path_list_schema(),
             "entries": path_list_schema(),
-            "boundary": boundary_list_schema(),
-            "boundaries": boundary_list_schema(),
+            "boundary": boundary_config::boundary_schema(),
+            "boundaries": boundary_config::boundary_schema(),
             "boundary_coverage": { "type": "boolean" },
             "boundaryCoverage": { "type": "boolean" },
             "boundary_calls": policy::boundary_calls_schema(),
@@ -327,7 +333,7 @@ struct RawConfig {
     #[serde(alias = "includeEntryExports")]
     include_entry_exports: Option<bool>,
     #[serde(alias = "boundary")]
-    boundaries: Vec<RawBoundary>,
+    boundaries: RawBoundaries,
     #[serde(alias = "boundaryCoverage")]
     boundary_coverage: Option<bool>,
     #[serde(alias = "boundaryCalls")]
@@ -358,27 +364,13 @@ struct RawCliConfig {
     #[serde(alias = "includeEntryExports")]
     include_entry_exports: Option<bool>,
     #[serde(alias = "boundary")]
-    boundaries: Vec<RawBoundary>,
+    boundaries: RawBoundaries,
     #[serde(alias = "boundaryCoverage")]
     boundary_coverage: Option<bool>,
     #[serde(alias = "boundaryCalls")]
     boundary_calls: Vec<policy::RawBoundaryCall>,
     #[serde(alias = "rulePacks")]
     rule_packs: Vec<PathBuf>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(untagged)]
-enum RawBoundary {
-    String(String),
-    Object(RawBoundaryObject),
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct RawBoundaryObject {
-    from: PathBuf,
-    disallow: PathBuf,
 }
 
 impl RawConfig {
@@ -388,12 +380,10 @@ impl RawConfig {
         let mut entry_points = self.entry;
         entry_points.extend(self.cli.entry);
 
-        let mut raw_boundaries = self.boundaries;
-        raw_boundaries.extend(self.cli.boundaries);
-        let boundaries = raw_boundaries
-            .into_iter()
-            .map(parse_boundary)
-            .collect::<Result<Vec<_>, _>>()?;
+        let mut boundary_settings = self.boundaries.into_settings()?;
+        boundary_settings.merge(self.cli.boundaries.into_settings()?);
+        let boundary_require_all_files = boundary_settings.require_all_files;
+        let (boundaries, boundary_presets, boundary_allow_unmatched) = boundary_settings.finish();
         let mut raw_boundary_calls = self.boundary_calls;
         raw_boundary_calls.extend(self.cli.boundary_calls);
         let boundary_calls = raw_boundary_calls
@@ -414,11 +404,14 @@ impl RawConfig {
                 .or(self.include_entry_exports)
                 .unwrap_or_default(),
             boundaries,
+            boundary_presets,
             boundary_coverage: self
                 .cli
                 .boundary_coverage
                 .or(self.boundary_coverage)
+                .or(boundary_require_all_files)
                 .unwrap_or_default(),
+            boundary_allow_unmatched,
             boundary_calls,
             policy_packs,
             ignore_patterns: self.ignore_patterns,
@@ -520,34 +513,6 @@ fn config_format(path: &Path, source: &str) -> ConfigFormat {
     }
 }
 
-fn parse_boundary(raw: RawBoundary) -> Result<BoundaryRule, ConfigError> {
-    match raw {
-        RawBoundary::String(value) => parse_boundary_string(&value),
-        RawBoundary::Object(object) => {
-            if object.from.as_os_str().is_empty() || object.disallow.as_os_str().is_empty() {
-                return Err(ConfigError::BoundaryRule {
-                    value: format!("{object:?}"),
-                });
-            }
-            Ok(BoundaryRule::new(object.from, object.disallow))
-        }
-    }
-}
-
-fn parse_boundary_string(value: &str) -> Result<BoundaryRule, ConfigError> {
-    let Some((from, disallow)) = value.split_once(':') else {
-        return Err(ConfigError::BoundaryRule {
-            value: value.to_owned(),
-        });
-    };
-    if from.is_empty() || disallow.is_empty() {
-        return Err(ConfigError::BoundaryRule {
-            value: value.to_owned(),
-        });
-    }
-    Ok(BoundaryRule::new(from, disallow))
-}
-
 fn format_schema() -> Value {
     json!({ "type": "string", "enum": ["human", "json"] })
 }
@@ -563,8 +528,8 @@ fn cli_schema() -> Value {
             "includeEntryExports": { "type": "boolean" },
             "entry": path_list_schema(),
             "entries": path_list_schema(),
-            "boundary": boundary_list_schema(),
-            "boundaries": boundary_list_schema(),
+            "boundary": boundary_config::boundary_schema(),
+            "boundaries": boundary_config::boundary_schema(),
             "boundary_coverage": { "type": "boolean" },
             "boundaryCoverage": { "type": "boolean" },
             "boundary_calls": policy::boundary_calls_schema(),
@@ -581,26 +546,6 @@ fn path_list_schema() -> Value {
 
 fn string_list_schema() -> Value {
     json!({ "type": "array", "items": { "type": "string" } })
-}
-
-fn boundary_list_schema() -> Value {
-    json!({
-        "type": "array",
-        "items": {
-            "oneOf": [
-                { "type": "string", "pattern": "^.+:.+$" },
-                {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "required": ["from", "disallow"],
-                    "properties": {
-                        "from": { "type": "string" },
-                        "disallow": { "type": "string" }
-                    }
-                }
-            ]
-        }
-    })
 }
 
 fn dupes_schema() -> Value {

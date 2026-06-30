@@ -219,8 +219,10 @@ Current implemented parity:
 
 - file-level dead code reachability
 - circular dependency detection
-- simple directory boundary rules, opt-in boundary coverage checks for unzoned
-  Dart library files, forbidden direct boundary-call checks, and
+- simple directory boundary rules, built-in `layered`, `hexagonal`,
+  `feature-sliced`, and `bulletproof` boundary presets, opt-in boundary
+  coverage checks for unzoned Dart library files with `allowUnmatched`
+  exceptions, forbidden direct boundary-call checks, and
   `decimate list --boundaries` boundary inventory
 - declarative policy rule packs for banned Dart import/export URI patterns and
   direct call patterns, plus `decimate rule-pack-schema`
@@ -399,8 +401,9 @@ Current implemented parity:
 - `.decimaterc`, JSON/JSONC, and TOML config discovery with strict unknown-key
   rejection, root-relative explicit `--config`, `decimate config`,
   `decimate config-schema`, `decimate report-schema`, config-driven `format`,
-  `entry`, `boundary`, `ignore_patterns`, and analyzer defaults for health,
-  dupes, flags, security, plus strict `cache.enabled` / `cache.path` metadata
+  `entry`, `boundary`, Fallow-style `[boundaries]` preset/rule/coverage
+  objects, `ignore_patterns`, and analyzer defaults for health, dupes, flags,
+  security, plus strict `cache.enabled` / `cache.path` metadata
 - config `rules` support for Fallow-style `"error"`, `"warn"`, and `"off"`
   severities, including Fallow aliases like `unused-files`, `unused-exports`,
   `unresolved-imports`, `unused-deps`, `unlisted-deps`, `circular-deps`, and

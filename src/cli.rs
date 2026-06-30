@@ -249,6 +249,7 @@ struct CommandRequest {
     symbol_options: SymbolRequestOptions,
     boundaries: Vec<BoundaryRule>,
     boundary_coverage: bool,
+    boundary_allow_unmatched: Vec<String>,
     boundary_calls: Vec<BoundaryCallRule>,
     policy_packs: Vec<PathBuf>,
     audit_base: Option<String>,
@@ -547,7 +548,9 @@ fn request_from_matches(matches: &ArgMatches) -> Result<CommandRequest, CliError
         .copied()
         .unwrap_or_default()
         || config.boundary_coverage;
-    let audit_base = audit_base_for(command, subcommand);
+    let audit_base = (command == ReportCommand::Audit)
+        .then(|| subcommand.get_one::<String>("base").cloned())
+        .flatten();
     let file_paths = scope_args::file_paths(command, subcommand);
     let workspace_patterns = scope_args::workspace_patterns(command, subcommand);
     let changed_workspaces = scope_args::changed_workspaces(command, subcommand);
@@ -577,6 +580,7 @@ fn request_from_matches(matches: &ArgMatches) -> Result<CommandRequest, CliError
         symbol_options,
         boundaries,
         boundary_coverage,
+        boundary_allow_unmatched: config.boundary_allow_unmatched.clone(),
         boundary_calls,
         policy_packs,
         audit_base,
@@ -627,14 +631,6 @@ fn validate_security_cli(
         return Err(CliError::UnsupportedSecurityTopScope);
     }
     Ok(())
-}
-
-fn audit_base_for(command: ReportCommand, subcommand: &ArgMatches) -> Option<String> {
-    if command == ReportCommand::Audit {
-        subcommand.get_one::<String>("base").cloned()
-    } else {
-        None
-    }
 }
 
 fn baseline_paths(command: ReportCommand, subcommand: &ArgMatches) -> Vec<PathBuf> {

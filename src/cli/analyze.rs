@@ -172,7 +172,11 @@ fn analyze_project_boundary_coverage(
 ) -> Vec<crate::BoundaryCoverageGap> {
     match request.command {
         ReportCommand::Check | ReportCommand::Audit if request.boundary_coverage => {
-            detect_boundary_coverage(project, &request.boundaries)
+            detect_boundary_coverage(
+                project,
+                &request.boundaries,
+                &request.boundary_allow_unmatched,
+            )
         }
         ReportCommand::Check
         | ReportCommand::Audit

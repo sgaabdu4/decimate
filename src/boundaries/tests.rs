@@ -19,7 +19,8 @@ fn reports_library_files_not_covered_by_boundary_zones() -> Result<(), Box<dyn s
     )?;
     let project = scan_project(fixture.path())?;
 
-    let gaps = detect_boundary_coverage(&project, &[BoundaryRule::new("lib/domain", "lib/ui")]);
+    let gaps =
+        detect_boundary_coverage(&project, &[BoundaryRule::new("lib/domain", "lib/ui")], &[]);
 
     assert_eq!(
         gaps.iter()
@@ -42,7 +43,8 @@ fn skips_generated_and_non_library_files() -> Result<(), Box<dyn std::error::Err
     write(&fixture, "test/orphan_test.dart", "void main() {}\n")?;
     let project = scan_project(fixture.path())?;
 
-    let gaps = detect_boundary_coverage(&project, &[BoundaryRule::new("lib/domain", "lib/ui")]);
+    let gaps =
+        detect_boundary_coverage(&project, &[BoundaryRule::new("lib/domain", "lib/ui")], &[]);
 
     assert!(gaps.is_empty());
 

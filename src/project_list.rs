@@ -5,7 +5,8 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BoundaryInventory, BoundaryRule, DartFile, LocalPubPackage, ScannedProject, boundary_inventory,
+    BoundaryInventory, BoundaryPreset, BoundaryRule, DartFile, LocalPubPackage, ScannedProject,
+    boundary_inventory,
 };
 
 /// Stable JSON schema version for project-list reports.
@@ -151,6 +152,10 @@ pub struct ListedPlugin {
 pub struct ListedBoundaries {
     /// Whether any boundaries are configured.
     pub configured: bool,
+    /// Built-in presets contributing boundary rules.
+    pub presets: Vec<String>,
+    /// Root-relative globs exempt from boundary coverage gaps.
+    pub allow_unmatched: Vec<String>,
     /// Configured zones.
     pub zones: Vec<ListedBoundaryZone>,
     /// Configured access rules.
@@ -179,6 +184,17 @@ pub struct ListedBoundaryRule {
     pub covered_files: usize,
 }
 
+/// Effective architecture boundary settings for project-list reports.
+#[derive(Debug, Clone, Copy)]
+pub struct ProjectListBoundaryConfig<'a> {
+    /// Configured access rules.
+    pub rules: &'a [BoundaryRule],
+    /// Built-in presets contributing rules.
+    pub presets: &'a [BoundaryPreset],
+    /// Root-relative coverage exceptions.
+    pub allow_unmatched: &'a [String],
+}
+
 /// Build a project-list report.
 #[must_use]
 pub fn project_list_report(
@@ -186,11 +202,16 @@ pub fn project_list_report(
     packages: &[LocalPubPackage],
     entry_points: &[PathBuf],
     entry_source: &str,
-    boundaries: &[BoundaryRule],
+    boundaries: ProjectListBoundaryConfig<'_>,
     options: &ProjectListOptions,
 ) -> ProjectListReport {
     let plugins = list_plugins(packages);
-    let boundary_inventory = boundary_inventory(project, boundaries);
+    let boundary_inventory = boundary_inventory(
+        project,
+        boundaries.rules,
+        boundaries.presets,
+        boundaries.allow_unmatched,
+    );
     ProjectListReport {
         schema_version: PROJECT_LIST_SCHEMA_VERSION.to_owned(),
         tool: "decimate".to_owned(),
@@ -302,6 +323,12 @@ fn list_plugins(packages: &[LocalPubPackage]) -> Vec<ListedPlugin> {
 fn list_boundaries(root: &Path, inventory: &BoundaryInventory) -> ListedBoundaries {
     ListedBoundaries {
         configured: inventory.configured,
+        presets: inventory
+            .presets
+            .iter()
+            .map(|preset| preset.as_str().to_owned())
+            .collect(),
+        allow_unmatched: inventory.allow_unmatched.clone(),
         zones: inventory
             .zones
             .iter()

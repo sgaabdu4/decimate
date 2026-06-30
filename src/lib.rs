@@ -53,8 +53,8 @@ pub use baseline::{
     regression_baseline_from_report, save_baseline, save_regression_baseline,
 };
 pub use boundaries::{
-    BoundaryAccessRule, BoundaryCoverageGap, BoundaryInventory, BoundaryZone, boundary_inventory,
-    detect_boundary_coverage,
+    BoundaryAccessRule, BoundaryCoverageGap, BoundaryInventory, BoundaryPreset, BoundaryZone,
+    boundary_inventory, boundary_preset_rules, detect_boundary_coverage,
 };
 pub use ci_template::{
     CI_TEMPLATE_SCHEMA_VERSION, CiTemplateError, CiTemplateFile, CiTemplatePlatform,
@@ -162,8 +162,9 @@ pub use policy::{
 };
 pub use project_list::{
     ListedBoundaries, ListedBoundaryRule, ListedBoundaryZone, ListedEntryPoint, ListedFile,
-    ListedPlugin, ListedWorkspace, PROJECT_LIST_SCHEMA_VERSION, ProjectListOptions,
-    ProjectListReport, ProjectListSection, ProjectListSummary, project_list_report,
+    ListedPlugin, ListedWorkspace, PROJECT_LIST_SCHEMA_VERSION, ProjectListBoundaryConfig,
+    ProjectListOptions, ProjectListReport, ProjectListSection, ProjectListSummary,
+    project_list_report,
 };
 pub use report_schema::report_schema;
 pub use routes::{

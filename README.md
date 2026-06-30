@@ -389,6 +389,14 @@ targets = true
 mode = "semantic"
 min_tokens = 80
 
+[boundaries]
+presets = ["layered"]
+rules = ["lib/domain:lib/ui"]
+
+[boundaries.coverage]
+requireAllFiles = true
+allowUnmatched = ["lib/generated/**"]
+
 [security]
 surface = true
 categories = ["hardcoded-secret", "insecure-transport", "tls-bypass"]
@@ -408,7 +416,13 @@ unused-exports = "warn"
 security-candidate = "warn"
 ```
 
-Architecture boundaries can be passed on the CLI:
+Boundary presets expand to path rules for common Fallow-style architecture
+shapes: `layered`, `hexagonal`, `feature-sliced`, and `bulletproof`.
+`coverage.requireAllFiles` reports Dart library files outside every configured
+zone, while `coverage.allowUnmatched` keeps generated or intentionally external
+paths out of that coverage check.
+
+Architecture boundaries can also be passed directly on the CLI:
 
 ```bash
 decimate check . \
@@ -452,7 +466,7 @@ Flutter:
 - `decimate init --agents` onboarding for config and agent guidance
 - `decimate hooks install --target git` pre-commit audit hook management
 - dead code, unused exports/types/members, and dependency hygiene
-- cycles, re-export cycles, boundaries, policy packs, and suppressions
+- cycles, re-export cycles, boundary presets, policy packs, and suppressions
 - duplication detection with traceable fingerprints
 - health, complexity, CRAP, coverage gaps, hotspots, ownership, and targets
 - Flutter typed and raw GoRouter route-collision checks
@@ -487,6 +501,9 @@ Known gaps before claiming full product parity with Fallow:
 - no hosted/cloud continuous runtime monitoring
 - no `watch`, `migrate`, telemetry, license, editor, or viz commands yet
 - hook parity is Git-only; no managed agent hook target yet
+- architecture boundaries support rules, presets, coverage, and forbidden calls,
+  but not Fallow's named zones, auto-discovery/logical groups, or allow-list
+  rule matrix yet
 - coverage upload commands are intentionally offline dry-runs; real hosted
   source-map/inventory uploads and `coverage analyze --cloud` are not enabled
   yet

@@ -89,6 +89,7 @@ pub(super) fn run_fix<W: Write>(subcommand: &ArgMatches, mut writer: W) -> Resul
         },
         boundaries: config.boundaries.clone(),
         boundary_coverage: false,
+        boundary_allow_unmatched: config.boundary_allow_unmatched.clone(),
         boundary_calls: Vec::new(),
         policy_packs: Vec::new(),
         audit_base: None,

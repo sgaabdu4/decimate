@@ -193,6 +193,7 @@ fn config_schema_command_emits_json_schema() -> Result<(), Box<dyn std::error::E
     assert_eq!(json["properties"]["production"]["type"], "boolean");
     assert_eq!(json["properties"]["includeEntryExports"]["type"], "boolean");
     assert_eq!(json["properties"]["boundaryCoverage"]["type"], "boolean");
+    assert_boundary_config_schema(&json);
     assert_eq!(json["properties"]["boundaryCalls"]["type"], "array");
     assert_eq!(json["properties"]["rulePacks"]["type"], "array");
     assert_eq!(
@@ -202,6 +203,10 @@ fn config_schema_command_emits_json_schema() -> Result<(), Box<dyn std::error::E
     assert_eq!(
         json["properties"]["cli"]["properties"]["includeEntryExports"]["type"],
         "boolean"
+    );
+    assert_eq!(
+        json["properties"]["cli"]["properties"]["boundaries"]["oneOf"][1]["type"],
+        "object"
     );
     assert_eq!(
         json["properties"]["cli"]["properties"]["boundaryCalls"]["type"],
@@ -258,6 +263,22 @@ fn config_schema_command_emits_json_schema() -> Result<(), Box<dyn std::error::E
     );
 
     Ok(())
+}
+
+fn assert_boundary_config_schema(json: &Value) {
+    let boundary_object = &json["properties"]["boundaries"]["oneOf"][1];
+    assert_eq!(boundary_object["type"], "object");
+    for preset in ["layered", "hexagonal", "feature-sliced", "bulletproof"] {
+        assert_array_contains(&boundary_object["properties"]["preset"]["enum"], preset);
+    }
+    assert_eq!(
+        boundary_object["properties"]["coverage"]["properties"]["requireAllFiles"]["type"],
+        "boolean"
+    );
+    assert_eq!(
+        boundary_object["properties"]["coverage"]["properties"]["allowUnmatched"]["items"]["type"],
+        "string"
+    );
 }
 
 #[test]

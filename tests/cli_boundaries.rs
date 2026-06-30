@@ -41,6 +41,72 @@ fn list_boundaries_reports_zones_rules_and_uncovered_files()
 }
 
 #[test]
+fn list_boundaries_reports_presets_and_allow_unmatched() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = boundary_fixture()?;
+    write(
+        &fixture,
+        ".decimaterc",
+        "\
+[boundaries]
+preset = \"layered\"
+allowUnmatched = [\"lib/data/**\"]
+",
+    )?;
+
+    let (code, json) = run_json([
+        "decimate",
+        "list",
+        fixture.path().to_str().unwrap_or("."),
+        "--format",
+        "json",
+        "--boundaries",
+    ])?;
+
+    assert_eq!(code, 0);
+    assert_eq!(json["boundaries"]["configured"], true);
+    assert_eq!(json["boundaries"]["presets"][0], "layered");
+    assert_eq!(json["boundaries"]["allow_unmatched"][0], "lib/data/**");
+    assert!(
+        json["boundaries"]["uncovered_files"]
+            .as_array()
+            .is_some_and(Vec::is_empty)
+    );
+
+    Ok(())
+}
+
+#[test]
+fn boundary_preset_config_reports_architecture_violations() -> Result<(), Box<dyn std::error::Error>>
+{
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(&fixture, "lib/main.dart", "void main() {}\n")?;
+    write(
+        &fixture,
+        "lib/domain/model.dart",
+        "import '../ui/page.dart';\nclass Model { final page = Page(); }\n",
+    )?;
+    write(&fixture, "lib/ui/page.dart", "class Page {}\n")?;
+    write(
+        &fixture,
+        ".decimaterc",
+        "[cli]\nformat = \"json\"\n\n[boundaries]\npreset = \"layered\"\n",
+    )?;
+
+    let (code, json) = run_json(["decimate", "check", fixture.path().to_str().unwrap_or(".")])?;
+
+    assert_eq!(code, 1);
+    assert_eq!(json["summary"]["boundary_violations"], 1);
+    assert!(json["findings"].as_array().is_some_and(|findings| {
+        findings.iter().any(|finding| {
+            finding["kind"] == "boundary-violation" && finding["path"] == "lib/domain/model.dart"
+        })
+    }));
+
+    Ok(())
+}
+
+#[test]
 fn check_boundary_coverage_is_opt_in_and_actionable() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = boundary_fixture()?;
 
@@ -78,6 +144,35 @@ fn check_boundary_coverage_is_opt_in_and_actionable() -> Result<(), Box<dyn std:
         finding["actions"][0]["suppression_comment"],
         "// decimate-ignore-next-line boundary-violation"
     );
+
+    Ok(())
+}
+
+#[test]
+fn boundary_coverage_allow_unmatched_suppresses_unzoned_files()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = boundary_fixture()?;
+    write(
+        &fixture,
+        ".decimaterc",
+        "\
+[cli]
+format = \"json\"
+
+[boundaries]
+rules = [\"lib/domain:lib/ui\"]
+
+[boundaries.coverage]
+requireAllFiles = true
+allowUnmatched = [\"lib/data/**\"]
+",
+    )?;
+
+    let (code, json) = run_json(["decimate", "check", fixture.path().to_str().unwrap_or(".")])?;
+
+    assert_eq!(code, 0);
+    assert_eq!(json["summary"]["boundary_coverage"], 0);
+    assert_eq!(json["summary"]["findings"], 0);
 
     Ok(())
 }

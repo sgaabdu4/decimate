@@ -104,7 +104,11 @@ fn run_list_with_options<W: Write>(
         &packages,
         &entries,
         entry_source,
-        &config.boundaries,
+        crate::ProjectListBoundaryConfig {
+            rules: &config.boundaries,
+            presets: &config.boundary_presets,
+            allow_unmatched: &config.boundary_allow_unmatched,
+        },
         options,
     );
     command_name.clone_into(&mut report.command);
@@ -135,6 +139,7 @@ fn scoped_project(
         symbol_options: super::SymbolRequestOptions::default(),
         boundaries: Vec::new(),
         boundary_coverage: false,
+        boundary_allow_unmatched: Vec::new(),
         boundary_calls: Vec::new(),
         policy_packs: Vec::new(),
         audit_base: None,
