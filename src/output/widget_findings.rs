@@ -3,9 +3,9 @@ use std::path::Path;
 use super::format::display_path;
 use super::{Finding, FindingAction, FindingKind, Severity};
 use crate::{
-    ManualRiverpodProvider, MissingContextMountedAfterAwait, MissingRefMountedAfterAwait,
-    PrivateWidgetClass, RiverpodWatchInNotifierMethod, UnrenderedWidgetClass, UnusedWidgetParam,
-    WidgetReport, WidgetTopLevelFunction,
+    MissingContextMountedAfterAwait, MissingRefMountedAfterAwait, PrivateWidgetClass,
+    RiverpodWatchInNotifierMethod, UnrenderedWidgetClass, UnusedWidgetParam, WidgetReport,
+    WidgetTopLevelFunction,
 };
 
 pub(super) fn add_widget_findings(root: &Path, report: &WidgetReport, findings: &mut Vec<Finding>) {
@@ -26,12 +26,6 @@ pub(super) fn add_widget_findings(root: &Path, report: &WidgetReport, findings: 
             .unused_params
             .iter()
             .map(|unused| unused_widget_param_finding(root, unused)),
-    );
-    findings.extend(
-        report
-            .manual_riverpod_providers
-            .iter()
-            .map(|provider| manual_riverpod_provider_finding(root, provider)),
     );
     findings.extend(
         report
@@ -157,40 +151,6 @@ fn unused_widget_param_finding(root: &Path, unused: &UnusedWidgetParam) -> Findi
             .with_target_symbol(target_symbol)
             .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
             .with_suppression_comment("// decimate-ignore-next-line unused-widget-param"),
-        ],
-    }
-}
-
-fn manual_riverpod_provider_finding(root: &Path, provider: &ManualRiverpodProvider) -> Finding {
-    let path = display_path(root, &provider.path);
-    Finding {
-        rule_id: "decimate/manual-riverpod-provider".to_owned(),
-        fingerprint: Some(format!(
-            "manual-riverpod-provider:{path}:{}",
-            provider.provider_name
-        )),
-        kind: FindingKind::ManualRiverpodProvider,
-        severity: Severity::Warning,
-        message: format!(
-            "Riverpod provider {} uses manual {} wiring; prefer generated @riverpod providers",
-            provider.provider_name, provider.provider_type
-        ),
-        path: path.clone(),
-        line: provider.location.line,
-        column: provider.location.column,
-        safe_to_delete: false,
-        files: Vec::new(),
-        edge: None,
-        actions: vec![
-            FindingAction::new(
-                "migrate-riverpod-codegen",
-                "Replace the manual provider declaration with a generated @riverpod provider owner",
-                false,
-            )
-            .with_target_path(path.clone())
-            .with_target_symbol(provider.provider_name.clone())
-            .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
-            .with_suppression_comment("// decimate-ignore-next-line manual-riverpod-provider"),
         ],
     }
 }

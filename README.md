@@ -21,34 +21,41 @@ treats a project as a graph:
 The goal is simple: make cleanup, architectural review, and AI-assisted code
 maintenance cheap enough to run constantly.
 
-## What Decimate Finds
+## What Decimate Reports
 
-Decimate currently reports:
+Decimate follows Fallow's product shape, adapted to Dart and Flutter:
 
-- unreachable Dart files
-- unused public top-level declarations and type aliases
-- unused enum constants and private class-like members
-- private Dart library types leaking through public signatures
-- duplicate public exports
-- typed and raw GoRouter route path and name collisions
-- circular dependencies and export-only barrel cycles
-- invalid `part` / `part of` relationships
-- unresolved local imports, exports, parts, and augmentations
-- architecture boundary violations, boundary coverage gaps, and forbidden calls
-- declarative policy-pack violations
-- unused, unlisted, misplaced, and override-related Pub dependencies
-- cross-package imports/exports into another package's private `lib/src` tree
-- duplicated Dart code blocks with stable `dup:<id>` fingerprints
-- cyclomatic, cognitive, CRAP, coverage-gap, hotspot, ownership, and
-  refactoring-target health signals
-- feature flag usage in Dart compile-time environment reads, `Platform`
-  environment gates, Firebase Remote Config, and LaunchDarkly-style SDK calls
-- manual Riverpod provider declarations that should move to generated
-  `@riverpod` owners
-- Flutter widget classes that are never constructed from reachable production
-  code
-- local, unverified Dart and Flutter security review candidates
-- stale suppressions and missing suppression reasons
+- **Quality score**: maintainability, complexity, duplication, dependency
+  hygiene, architecture, ownership, coverage gaps, hotspots, and refactoring
+  targets.
+- **PR risk**: changed-code analysis through `decimate audit`, `review`, and
+  `decision-surface`, with verdicts and pre-existing versus introduced finding
+  attribution.
+- **Hotspots**: functions and files ranked by complexity, size, coupling,
+  ownership, coverage, and optional runtime importance.
+- **Duplication**: exact and semantic Dart clone families with stable
+  `dup:<id>` fingerprints and traceable instances.
+- **Architecture**: circular dependencies, re-export cycles, boundary
+  violations, boundary coverage gaps, forbidden calls, policy packs, Dart
+  `part` / `part of` issues, `library augment` edges, and GoRouter route
+  collisions.
+- **Dependency hygiene**: unused, unlisted, misplaced, test-only,
+  override-related, unresolved, duplicate-export, and cross-package
+  `lib/src` dependency issues across Pub packages and workspaces.
+- **Cleanup opportunities**: unreachable files, unused exports, unused types,
+  unused enum constants, unused private class-like members, unused widget
+  constructor params, unrendered widget classes, stale suppressions, and
+  conservative review-safe fix actions.
+- **Runtime intelligence**: optional LCOV, V8, and Istanbul coverage ingestion
+  for hot paths, cold code, runtime-weighted health, cleanup confidence, and
+  runtime-backed review context.
+- **Agent-ready context**: structured JSON, schemas, an MCP server, trace
+  commands, inspect bundles, safe-fix previews, and machine-actionable
+  `actions`.
+
+Decimate is deliberately not a Flutter style guide. Opinionated framework
+preferences, such as requiring Riverpod code generation, are outside the core
+scope.
 
 Every JSON finding includes file paths, line numbers, severity, `safe_to_delete`,
 and machine-actionable `actions`.
@@ -437,10 +444,7 @@ Flutter:
 - duplication detection with traceable fingerprints
 - health, complexity, CRAP, coverage gaps, hotspots, ownership, and targets
 - Flutter typed and raw GoRouter route-collision checks
-- private Flutter widget class visibility checks
-- top-level Flutter widget helper boundary checks
 - unused Flutter widget constructor parameter checks
-- manual Riverpod provider wiring checks
 - unrendered Flutter widget class checks
 - feature flag inventory
 - local security candidates with SARIF, surface inventory, and changed-code gates
@@ -473,8 +477,9 @@ Known gaps before claiming full product parity with Fallow:
 - coverage upload commands are intentionally offline dry-runs; real hosted
   source-map/inventory uploads and `coverage analyze --cloud` are not enabled
   yet
-- broader Flutter-framework intelligence is still partial: deeper Riverpod
-  dependency semantics and richer widget lifecycle heuristics are not complete
+- broader Flutter-framework graph intelligence is still partial: Bloc/Cubit,
+  Riverpod dependency reachability, and richer route/state-management usage
+  evidence are not complete
 - feature flags are inventory-focused and do not yet model owner, expiry, stale
   rollout state, or runtime stale-flag evidence as richly as Fallow
 - security candidates are Dart/Flutter-focused and configurable by category, but

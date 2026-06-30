@@ -62,6 +62,10 @@ pub fn missing_suppression_reasons_enabled(rules: &RuleConfig) -> bool {
 pub fn apply_rules_to_report(report: &mut JsonReport, rules: &RuleConfig) -> Result<(), RuleError> {
     let rules = RuleMatcher::new(rules)?;
     if rules.is_empty() {
+        report
+            .findings
+            .retain(|finding| default_rule_level(finding.kind) != RuleLevel::Off);
+        recompute_summary(report);
         return Ok(());
     }
 
@@ -132,6 +136,10 @@ fn apply_finding_level(finding: &mut Finding, rules: &RuleMatcher) -> RuleLevel 
 
 fn recompute_summary(report: &mut JsonReport) {
     let summary = &mut report.summary;
+    let previous_feature_flags = summary.feature_flags;
+    let previous_feature_flag_occurrences = summary.feature_flag_occurrences;
+    let previous_security_candidates = summary.security_candidates;
+    let previous_security_candidate_occurrences = summary.security_candidate_occurrences;
     summary.unresolved_dependencies =
         kind_count(&report.findings, FindingKind::UnresolvedDependency);
     summary.part_of_violations = kind_count(&report.findings, FindingKind::PartOfViolation);
@@ -162,8 +170,6 @@ fn recompute_summary(report: &mut JsonReport) {
         FindingKind::WidgetTopLevelFunctionBoundary,
     );
     summary.unused_widget_params = kind_count(&report.findings, FindingKind::UnusedWidgetParam);
-    summary.manual_riverpod_providers =
-        kind_count(&report.findings, FindingKind::ManualRiverpodProvider);
     summary.unrendered_widgets = kind_count(&report.findings, FindingKind::UnrenderedWidget);
     summary.missing_context_mounted_after_await = kind_count(
         &report.findings,
@@ -181,17 +187,26 @@ fn recompute_summary(report: &mut JsonReport) {
     summary.hotspots = report.hotspots.len();
     summary.refactoring_targets = report.refactoring_targets.len();
     summary.feature_flags = report.feature_flags.len();
-    summary.feature_flag_occurrences = report
-        .feature_flags
-        .iter()
-        .map(|flag| flag.occurrences.len())
-        .sum();
+    summary.feature_flag_occurrences = if previous_feature_flags == report.feature_flags.len() {
+        previous_feature_flag_occurrences
+    } else {
+        report
+            .feature_flags
+            .iter()
+            .map(|flag| flag.occurrences.len())
+            .sum()
+    };
     summary.security_candidates = report.security_candidates.len();
-    summary.security_candidate_occurrences = report
-        .security_candidates
-        .iter()
-        .map(|candidate| candidate.occurrences.len())
-        .sum();
+    summary.security_candidate_occurrences =
+        if previous_security_candidates == report.security_candidates.len() {
+            previous_security_candidate_occurrences
+        } else {
+            report
+                .security_candidates
+                .iter()
+                .map(|candidate| candidate.occurrences.len())
+                .sum()
+        };
     summary.attack_surface = report.attack_surface.len();
     summary.missing_entry_points = kind_count(&report.findings, FindingKind::MissingEntryPoint);
     summary.cycles = kind_count(&report.findings, FindingKind::CircularDependency);
@@ -210,6 +225,13 @@ fn kind_count(findings: &[Finding], kind: FindingKind) -> usize {
     findings
         .iter()
         .filter(|finding| finding.kind == kind)
+        .count()
+}
+
+fn dependency_count(findings: &[Finding]) -> usize {
+    findings
+        .iter()
+        .filter(|finding| is_dependency_hygiene_kind(finding.kind))
         .count()
 }
 
@@ -292,23 +314,15 @@ impl<'a> RuleMatcher<'a> {
 const fn default_rule_level(kind: FindingKind) -> RuleLevel {
     match kind {
         FindingKind::UnusedDependencyOverride
-        | FindingKind::PrivateWidgetClass
-        | FindingKind::WidgetTopLevelFunctionBoundary
         | FindingKind::UnusedWidgetParam
-        | FindingKind::ManualRiverpodProvider
-        | FindingKind::UnrenderedWidget
+        | FindingKind::UnrenderedWidget => RuleLevel::Warn,
+        FindingKind::PrivateWidgetClass
+        | FindingKind::WidgetTopLevelFunctionBoundary
         | FindingKind::MissingContextMountedAfterAwait
         | FindingKind::MissingRefMountedAfterAwait
-        | FindingKind::RiverpodWatchInNotifierMethod => RuleLevel::Warn,
+        | FindingKind::RiverpodWatchInNotifierMethod => RuleLevel::Off,
         _ => RuleLevel::Error,
     }
-}
-
-fn dependency_count(findings: &[Finding]) -> usize {
-    findings
-        .iter()
-        .filter(|finding| is_dependency_hygiene_kind(finding.kind))
-        .count()
 }
 
 fn dependency_override_count(findings: &[Finding]) -> usize {
@@ -323,6 +337,5 @@ const fn is_dependency_hygiene_kind(kind: FindingKind) -> bool {
             | FindingKind::UnusedDevDependency
             | FindingKind::TestOnlyDependency
             | FindingKind::UnusedDependencyOverride
-            | FindingKind::MisconfiguredDependencyOverride
     )
 }

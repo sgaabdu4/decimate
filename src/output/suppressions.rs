@@ -289,7 +289,6 @@ const fn kind_key(kind: FindingKind) -> &'static str {
         FindingKind::PrivateWidgetClass => "private-widget-class",
         FindingKind::WidgetTopLevelFunctionBoundary => "widget-top-level-function-boundary",
         FindingKind::UnusedWidgetParam => "unused-widget-param",
-        FindingKind::ManualRiverpodProvider => "manual-riverpod-provider",
         FindingKind::UnrenderedWidget => "unrendered-widget",
         FindingKind::MissingContextMountedAfterAwait => "missing-context-mounted-after-await",
         FindingKind::MissingRefMountedAfterAwait => "missing-ref-mounted-after-await",

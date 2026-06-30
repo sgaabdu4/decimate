@@ -181,8 +181,6 @@ pub struct ReportSummary {
     pub widget_top_level_functions: usize,
     /// Flutter widget constructor params that are never read.
     pub unused_widget_params: usize,
-    /// Top-level manual Riverpod provider declarations.
-    pub manual_riverpod_providers: usize,
     /// Flutter widget classes with no reachable object construction.
     pub unrendered_widgets: usize,
     /// Widget or `State` awaits missing an immediate `context.mounted` guard.
@@ -302,8 +300,6 @@ pub enum FindingKind {
     WidgetTopLevelFunctionBoundary,
     /// Flutter widget constructor param is never read by the widget.
     UnusedWidgetParam,
-    /// Riverpod provider is manually wired instead of generated.
-    ManualRiverpodProvider,
     /// Flutter widget class is never constructed from reachable production code.
     UnrenderedWidget,
     /// Widget or `State` await lacks an immediate `context.mounted` guard.

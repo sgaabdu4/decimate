@@ -7,6 +7,11 @@ use tempfile::TempDir;
 #[test]
 fn check_reports_widget_lifecycle_findings() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = lifecycle_fixture()?;
+    write(
+        &fixture,
+        ".decimaterc.json",
+        r#"{ "rules": { "missing-context-mounted-after-await": "warn", "missing-ref-mounted-after-await": "warn", "riverpod-watch-in-notifier-method": "warn" } }"#,
+    )?;
     let mut output = Vec::new();
 
     let code = run_check(&fixture, &mut output)?;

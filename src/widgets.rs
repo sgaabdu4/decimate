@@ -13,7 +13,6 @@ use crate::{DeadCodeReport, Location, ScannedProject};
 
 mod lifecycle;
 mod params;
-mod providers;
 mod top_level;
 mod unrendered;
 
@@ -22,7 +21,6 @@ pub use lifecycle::{
     MissingContextMountedAfterAwait, MissingRefMountedAfterAwait, RiverpodWatchInNotifierMethod,
 };
 use params::constructor_params;
-use providers::manual_riverpod_providers;
 use top_level::top_level_widget_functions;
 use unrendered::unrendered_widgets;
 
@@ -37,8 +35,6 @@ pub struct WidgetReport {
     pub private_widget_classes: Vec<PrivateWidgetClass>,
     /// Top-level Flutter widget helper functions.
     pub top_level_functions: Vec<WidgetTopLevelFunction>,
-    /// Manual Riverpod provider declarations.
-    pub manual_riverpod_providers: Vec<ManualRiverpodProvider>,
     /// Flutter widget classes with no reachable object construction.
     pub unrendered_widgets: Vec<UnrenderedWidgetClass>,
     /// Widget or `State` awaits missing an immediate `context.mounted` guard.
@@ -87,19 +83,6 @@ pub struct WidgetTopLevelFunction {
     /// Function return type when declared.
     pub return_type: Option<String>,
     /// Location of the function identifier.
-    pub location: Location,
-}
-
-/// A top-level manual Riverpod provider declaration.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ManualRiverpodProvider {
-    /// Dart file containing the provider declaration.
-    pub path: PathBuf,
-    /// Top-level provider variable name.
-    pub provider_name: String,
-    /// Manual Riverpod provider constructor.
-    pub provider_type: String,
-    /// Location of the provider constructor expression.
     pub location: Location,
 }
 
@@ -182,7 +165,6 @@ pub fn analyze_widgets(
         unused_params: findings.unused_params,
         private_widget_classes: findings.private_widget_classes,
         top_level_functions: findings.top_level_functions,
-        manual_riverpod_providers: findings.manual_riverpod_providers,
         unrendered_widgets,
         missing_context_mounted_after_await: findings.missing_context_mounted_after_await,
         missing_ref_mounted_after_await: findings.missing_ref_mounted_after_await,
@@ -223,9 +205,6 @@ fn merge_file_widget_findings(file_findings: Vec<FileWidgetFindings>) -> FileWid
         merged
             .top_level_functions
             .append(&mut findings.top_level_functions);
-        merged
-            .manual_riverpod_providers
-            .append(&mut findings.manual_riverpod_providers);
         merged
             .missing_context_mounted_after_await
             .append(&mut findings.missing_context_mounted_after_await);
@@ -287,20 +266,6 @@ fn sort_widget_core_findings(findings: &mut FileWidgetFindings) {
                 right.location.line,
                 right.location.column,
                 &right.function_name,
-            ))
-    });
-    findings.manual_riverpod_providers.sort_by(|left, right| {
-        (
-            &left.path,
-            left.location.line,
-            left.location.column,
-            &left.provider_name,
-        )
-            .cmp(&(
-                &right.path,
-                right.location.line,
-                right.location.column,
-                &right.provider_name,
             ))
     });
 }
@@ -393,7 +358,6 @@ struct FileWidgetFindings {
     unused_params: Vec<UnusedWidgetParam>,
     private_widget_classes: Vec<PrivateWidgetClass>,
     top_level_functions: Vec<WidgetTopLevelFunction>,
-    manual_riverpod_providers: Vec<ManualRiverpodProvider>,
     missing_context_mounted_after_await: Vec<MissingContextMountedAfterAwait>,
     missing_ref_mounted_after_await: Vec<MissingRefMountedAfterAwait>,
     riverpod_watch_in_notifier_methods: Vec<RiverpodWatchInNotifierMethod>,
@@ -408,7 +372,6 @@ fn findings_in_source(path: &Path, root: Node<'_>, source: &str) -> FileWidgetFi
         .iter()
         .any(|class| widget_kind(*class, source).is_some());
     findings.top_level_functions = top_level_widget_functions(path, root, source, has_widget_class);
-    findings.manual_riverpod_providers = manual_riverpod_providers(path, root, source);
     let lifecycle = lifecycle_findings(path, &classes, source);
     findings.missing_context_mounted_after_await = lifecycle.missing_context_mounted_after_await;
     findings.missing_ref_mounted_after_await = lifecycle.missing_ref_mounted_after_await;

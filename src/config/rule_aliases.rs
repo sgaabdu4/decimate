@@ -148,7 +148,6 @@ fn all_known_aliases() -> Vec<&'static str> {
         FindingKind::PrivateWidgetClass,
         FindingKind::WidgetTopLevelFunctionBoundary,
         FindingKind::UnusedWidgetParam,
-        FindingKind::ManualRiverpodProvider,
         FindingKind::UnrenderedWidget,
         FindingKind::MissingContextMountedAfterAwait,
         FindingKind::MissingRefMountedAfterAwait,
@@ -264,14 +263,6 @@ fn widget_kind_aliases(kind: FindingKind) -> Option<Vec<&'static str>> {
             "unused-component-props",
             "flutter-unused-widget-param",
             "flutter-unused-widget-params",
-        ]),
-        FindingKind::ManualRiverpodProvider => Some(vec![
-            "decimate/manual-riverpod-provider",
-            "manual-riverpod-provider",
-            "manual-riverpod-providers",
-            "riverpod-manual-provider",
-            "riverpod-manual-providers",
-            "riverpod-provider-wiring",
         ]),
         FindingKind::UnrenderedWidget => Some(vec![
             "decimate/unrendered-widget",

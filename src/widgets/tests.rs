@@ -273,69 +273,6 @@ WidgetBuilder makeBuilder() => (context) => const SizedBox();
 }
 
 #[test]
-fn flags_manual_riverpod_provider_declarations() -> Result<(), Box<dyn std::error::Error>> {
-    let source = r"
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-final counterProvider = StateProvider<int>((ref) => 0);
-final userProvider = FutureProvider.autoDispose.family<String, int>((ref, id) async => '$id');
-";
-    let providers = parse_findings(source)?.manual_riverpod_providers;
-
-    assert_eq!(providers.len(), 2);
-    assert_eq!(providers[0].provider_name, "counterProvider");
-    assert_eq!(providers[0].provider_type, "StateProvider");
-    assert_eq!(providers[0].location.line, 4);
-    assert_eq!(providers[1].provider_name, "userProvider");
-    assert_eq!(providers[1].provider_type, "FutureProvider");
-    Ok(())
-}
-
-#[test]
-fn flags_prefixed_manual_riverpod_providers() -> Result<(), Box<dyn std::error::Error>> {
-    let source = r"
-import 'package:riverpod/riverpod.dart' as riverpod;
-
-final titleProvider = riverpod.Provider<String>((ref) => 'title');
-";
-    let providers = parse_findings(source)?.manual_riverpod_providers;
-
-    assert_eq!(providers.len(), 1);
-    assert_eq!(providers[0].provider_name, "titleProvider");
-    assert_eq!(providers[0].provider_type, "Provider");
-    Ok(())
-}
-
-#[test]
-fn ignores_manual_provider_shapes_without_riverpod_import_or_top_level_scope()
--> Result<(), Box<dyn std::error::Error>> {
-    let no_import = r"
-class Provider<T> {}
-final localProvider = Provider<int>();
-";
-    assert!(
-        parse_findings(no_import)?
-            .manual_riverpod_providers
-            .is_empty()
-    );
-
-    let local_scope = r"
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-void main() {
-  final localProvider = Provider<int>((ref) => 1);
-  localProvider;
-}
-";
-    assert!(
-        parse_findings(local_scope)?
-            .manual_riverpod_providers
-            .is_empty()
-    );
-    Ok(())
-}
-
-#[test]
 fn flags_widget_awaits_without_context_mounted_guard() -> Result<(), Box<dyn std::error::Error>> {
     let source = r"
 class SaveButton extends StatefulWidget {

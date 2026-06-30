@@ -7,6 +7,11 @@ use tempfile::TempDir;
 #[test]
 fn check_reports_private_widget_class() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = private_widget_fixture()?;
+    write(
+        &fixture,
+        ".decimaterc.json",
+        r#"{ "rules": { "private-widget-class": "warn" } }"#,
+    )?;
     let mut output = Vec::new();
 
     let code = run_check(&fixture, &mut output)?;

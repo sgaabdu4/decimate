@@ -7,6 +7,11 @@ use tempfile::TempDir;
 #[test]
 fn check_reports_widget_top_level_function_boundary() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = widget_helper_fixture()?;
+    write(
+        &fixture,
+        ".decimaterc.json",
+        r#"{ "rules": { "widget-top-level-function-boundary": "warn" } }"#,
+    )?;
     let mut output = Vec::new();
 
     let code = run_check(&fixture, &mut output)?;

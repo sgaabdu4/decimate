@@ -613,8 +613,6 @@ fn recompute_summary(report: &mut JsonReport) {
     );
     report.summary.unused_widget_params =
         kind_count(&report.findings, FindingKind::UnusedWidgetParam);
-    report.summary.manual_riverpod_providers =
-        kind_count(&report.findings, FindingKind::ManualRiverpodProvider);
     report.summary.unrendered_widgets = kind_count(&report.findings, FindingKind::UnrenderedWidget);
     report.summary.missing_context_mounted_after_await = kind_count(
         &report.findings,
@@ -685,7 +683,6 @@ const fn is_dependency_hygiene_kind(kind: FindingKind) -> bool {
             | FindingKind::UnusedDevDependency
             | FindingKind::TestOnlyDependency
             | FindingKind::UnusedDependencyOverride
-            | FindingKind::MisconfiguredDependencyOverride
     )
 }
 

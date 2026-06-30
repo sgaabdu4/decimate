@@ -441,7 +441,6 @@ fn apply_widget_summary(summary: &mut ReportSummary, findings: &[Finding]) {
     summary.widget_top_level_functions =
         kind_count(findings, FindingKind::WidgetTopLevelFunctionBoundary);
     summary.unused_widget_params = kind_count(findings, FindingKind::UnusedWidgetParam);
-    summary.manual_riverpod_providers = kind_count(findings, FindingKind::ManualRiverpodProvider);
     summary.unrendered_widgets = kind_count(findings, FindingKind::UnrenderedWidget);
     summary.missing_context_mounted_after_await =
         kind_count(findings, FindingKind::MissingContextMountedAfterAwait);
@@ -587,7 +586,6 @@ fn apply_scoped_counts(summary: &mut ReportSummary, findings: &[Finding]) {
     summary.widget_top_level_functions =
         kind_count(findings, FindingKind::WidgetTopLevelFunctionBoundary);
     summary.unused_widget_params = kind_count(findings, FindingKind::UnusedWidgetParam);
-    summary.manual_riverpod_providers = kind_count(findings, FindingKind::ManualRiverpodProvider);
     summary.unrendered_widgets = kind_count(findings, FindingKind::UnrenderedWidget);
     summary.missing_context_mounted_after_await =
         kind_count(findings, FindingKind::MissingContextMountedAfterAwait);
@@ -642,7 +640,6 @@ const fn is_dependency_hygiene_kind(kind: FindingKind) -> bool {
             | FindingKind::UnusedDevDependency
             | FindingKind::TestOnlyDependency
             | FindingKind::UnusedDependencyOverride
-            | FindingKind::MisconfiguredDependencyOverride
     )
 }
 
