@@ -434,6 +434,7 @@ const READ_ONLY_TOOLS: &[&str] = &[
     "audit",
     "decision_surface",
     "decimate_explain",
+    "fallow_explain",
 ];
 
 fn parse_ref(value: &Value) -> Result<Option<RefTarget>, String> {

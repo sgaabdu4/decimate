@@ -107,6 +107,7 @@ fn security_candidates_map_gate_and_ci_flags() -> Result<(), String> {
             "root": "/repo",
             "entry": ["lib/main.dart"],
             "file": ["lib/auth.dart"],
+            "paths": ["lib/trace.dart"],
             "workspace": ["app"],
             "changed_since": "HEAD~1",
             "production": true,
@@ -125,6 +126,7 @@ fn security_candidates_map_gate_and_ci_flags() -> Result<(), String> {
     assert_eq!(cli[..4], ["decimate", "security", "--format", "json"]);
     assert_pair(&cli, "--entry", "lib/main.dart");
     assert_pair(&cli, "--file", "lib/auth.dart");
+    assert_pair(&cli, "--file", "lib/trace.dart");
     assert_pair(&cli, "--workspace", "app");
     assert_pair(&cli, "--changed-since", "HEAD~1");
     assert_flag(&cli, "--production");
@@ -136,6 +138,111 @@ fn security_candidates_map_gate_and_ci_flags() -> Result<(), String> {
     assert_flag(&cli, "--fail-on-issues");
     assert_flag(&cli, "--summary");
 
+    Ok(())
+}
+
+#[test]
+fn inspect_target_maps_production_scope() -> Result<(), String> {
+    let args = arguments_json(
+        r#"{
+            "target": { "type": "file", "file": "lib/main.dart" },
+            "production": false
+        }"#,
+    )?;
+
+    let cli = cli_args_for_tool("inspect_target", &args)?;
+
+    assert_eq!(cli[..4], ["decimate", "inspect", "--format", "json"]);
+    assert_pair(&cli, "--file", "lib/main.dart");
+    assert_flag(&cli, "--no-production");
+    Ok(())
+}
+
+#[test]
+fn trace_clone_maps_selector_and_duplicate_options() -> Result<(), String> {
+    let by_file = cli_args_for_tool(
+        "trace_clone",
+        &arguments_json(
+            r#"{
+                "file": "lib/a.dart",
+                "line": 12,
+                "mode": "semantic",
+                "min_tokens": 25,
+                "min_lines": 4,
+                "min_occurrences": 3,
+                "top": 2,
+                "skip_local": true,
+                "ignore_imports": true
+            }"#,
+        )?,
+    )?;
+    let by_fingerprint = cli_args_for_tool(
+        "trace_clone",
+        &arguments_json(r#"{ "fingerprint": "dup:abc123", "no_ignore_imports": true }"#)?,
+    )?;
+
+    assert_eq!(
+        by_file[..4],
+        ["decimate", "trace-clone", "--format", "json"]
+    );
+    assert_pair(&by_file, "--fingerprint", "lib/a.dart:12");
+    assert_pair(&by_file, "--mode", "semantic");
+    assert_pair(&by_file, "--min-tokens", "25");
+    assert_pair(&by_file, "--min-lines", "4");
+    assert_pair(&by_file, "--min-occurrences", "3");
+    assert_pair(&by_file, "--top", "2");
+    assert_flag(&by_file, "--skip-local");
+    assert_flag(&by_file, "--ignore-imports");
+
+    assert_pair(&by_fingerprint, "--fingerprint", "dup:abc123");
+    assert_flag(&by_fingerprint, "--no-ignore-imports");
+    Ok(())
+}
+
+#[test]
+fn trace_clone_rejects_ambiguous_or_invalid_location() -> Result<(), String> {
+    let ambiguous = cli_args_for_tool(
+        "trace_clone",
+        &arguments_json(r#"{ "fingerprint": "dup:abc123", "file": "lib/a.dart", "line": 3 }"#)?,
+    )
+    .err()
+    .ok_or_else(|| "expected ambiguous selector rejection".to_owned())?;
+    let invalid_line = cli_args_for_tool(
+        "trace_clone",
+        &arguments_json(r#"{ "file": "lib/a.dart", "line": 0 }"#)?,
+    )
+    .err()
+    .ok_or_else(|| "expected invalid line rejection".to_owned())?;
+
+    assert_eq!(
+        ambiguous,
+        "trace_clone accepts either fingerprint or file and line"
+    );
+    assert_eq!(invalid_line, "trace_clone line must be a positive integer");
+    Ok(())
+}
+
+#[test]
+fn fallow_explain_alias_maps_to_decimate_explain() -> Result<(), String> {
+    let cli = cli_args_for_tool(
+        "fallow_explain",
+        &arguments_json(r#"{ "rule_id": "fallow/code-duplication" }"#)?,
+    )?;
+    let error = cli_args_for_tool("fallow_explain", &Map::new())
+        .err()
+        .ok_or_else(|| "expected issue_type rejection".to_owned())?;
+
+    assert_eq!(
+        cli,
+        [
+            "decimate",
+            "explain",
+            "fallow/code-duplication",
+            "--format",
+            "json"
+        ]
+    );
+    assert_eq!(error, "fallow_explain requires issue_type");
     Ok(())
 }
 

@@ -137,16 +137,28 @@ fn assert_manifest_identity(json: &Value) {
             tool["name"] == "decimate_explain" && tool["schema"] == "decimate.explain.v1"
         })
     }));
+    assert!(json["mcp_tools"]["tools"].as_array().is_some_and(|tools| {
+        tools.iter().any(|tool| {
+            tool["name"] == "fallow_explain"
+                && tool["command"] == "decimate explain --format json"
+                && tool["schema"] == "decimate.explain.v1"
+        })
+    }));
     assert_mcp_tool_key(json, "analyze", "changed_workspaces");
     assert_mcp_tool_key(json, "analyze", "private_type_leaks");
     assert_mcp_tool_key(json, "check_changed", "since");
     assert_mcp_tool_key(json, "list_boundaries", "workspace");
+    assert_mcp_tool_key(json, "inspect_target", "production");
+    assert_mcp_tool_key(json, "trace_clone", "file");
+    assert_mcp_tool_key(json, "trace_clone", "min_tokens");
     assert_mcp_tool_key(json, "check_health", "min_score");
     assert_mcp_tool_key(json, "check_runtime_coverage", "coverage");
     assert_mcp_tool_key(json, "get_hot_paths", "coverage");
     assert_mcp_tool_key(json, "impact", "root");
     assert_mcp_tool_key(json, "impact_all", "limit");
     assert_mcp_tool_key(json, "security_candidates", "gate");
+    assert_mcp_tool_key(json, "security_candidates", "paths");
+    assert_mcp_tool_key(json, "fallow_explain", "rule_id");
     assert_mcp_tool_key(json, "fix_preview", "action");
     assert_mcp_tool_key(json, "fix_apply", "yes");
     assert_mcp_tool_key(json, "audit", "gate");

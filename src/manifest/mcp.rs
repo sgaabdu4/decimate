@@ -21,6 +21,7 @@ pub(super) fn mcp_tools() -> Value {
 fn mcp_tool_list() -> Vec<Value> {
     let mut tools = Vec::new();
     tools.extend(mcp_overview_tools());
+    tools.extend(mcp_trace_tools());
     tools.extend(mcp_analysis_tools());
     tools.extend(mcp_change_tools());
     tools
@@ -90,8 +91,13 @@ fn mcp_overview_tools() -> Vec<Value> {
             "inspect_target",
             "decimate inspect --format json",
             INSPECT_SCHEMA_VERSION,
-            &["root", "config", "target", "file", "symbol"],
+            &["root", "config", "target", "file", "symbol", "production"],
         ),
+    ]
+}
+
+fn mcp_trace_tools() -> Vec<Value> {
+    vec![
         mcp_tool(
             "trace_file",
             "decimate trace-file --format json",
@@ -114,7 +120,21 @@ fn mcp_overview_tools() -> Vec<Value> {
             "trace_clone",
             "decimate trace-clone --format json",
             TRACE_SCHEMA_VERSION,
-            &["root", "config", "fingerprint"],
+            &[
+                "root",
+                "config",
+                "fingerprint",
+                "file",
+                "line",
+                "mode",
+                "min_tokens",
+                "min_lines",
+                "min_occurrences",
+                "top",
+                "skip_local",
+                "ignore_imports",
+                "no_ignore_imports",
+            ],
         ),
     ]
 }
@@ -345,6 +365,7 @@ fn security_mcp_tool() -> Value {
             "surface",
             "production",
             "gate",
+            "paths",
             "diff_file",
             "ci",
             "fail_on_issues",
@@ -390,6 +411,12 @@ fn mcp_change_tools() -> Vec<Value> {
         ),
         mcp_tool(
             "decimate_explain",
+            "decimate explain --format json",
+            EXPLAIN_SCHEMA_VERSION,
+            &["issue_type", "rule_id"],
+        ),
+        mcp_tool(
+            "fallow_explain",
             "decimate explain --format json",
             EXPLAIN_SCHEMA_VERSION,
             &["issue_type", "rule_id"],

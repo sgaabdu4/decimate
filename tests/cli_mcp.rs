@@ -50,6 +50,7 @@ fn mcp_initialize_and_tools_list_follow_json_rpc_contract() -> Result<(), Box<dy
     assert_tool_property(tool_defs, "analyze", "dart_platform")?;
     assert_tool_property(tool_defs, "check_changed", "since")?;
     assert_tool_property(tool_defs, "list_boundaries", "workspace")?;
+    assert_tool_property(tool_defs, "inspect_target", "production")?;
     assert_tool_property(tool_defs, "analyze", "policy_pack")?;
     assert_tool_property(tool_defs, "check_health", "min_score")?;
     assert_tool_property(tool_defs, "check_runtime_coverage", "coverage")?;
@@ -57,10 +58,14 @@ fn mcp_initialize_and_tools_list_follow_json_rpc_contract() -> Result<(), Box<dy
     assert_tool_property(tool_defs, "impact", "root")?;
     assert_tool_property(tool_defs, "impact_all", "limit")?;
     assert_tool_property(tool_defs, "security_candidates", "gate")?;
+    assert_tool_property(tool_defs, "security_candidates", "paths")?;
+    assert_tool_property(tool_defs, "trace_clone", "file")?;
+    assert_tool_property(tool_defs, "trace_clone", "min_tokens")?;
     assert_tool_property(tool_defs, "fix_preview", "action")?;
     assert_tool_property(tool_defs, "fix_apply", "yes")?;
     assert_tool_property(tool_defs, "audit", "gate")?;
     assert_tool_property(tool_defs, "audit", "dead_code_baseline")?;
+    assert_tool_property(tool_defs, "fallow_explain", "rule_id")?;
 
     Ok(())
 }
@@ -78,7 +83,7 @@ fn mcp_call_code_execute_composes_read_only_tools() -> Result<(), Box<dyn std::e
                     "steps": [
                         {
                             "id": "explain",
-                            "call": "decimate_explain",
+                            "call": "fallow_explain",
                             "arguments": { "issue_type": "unused-export" }
                         },
                         {
@@ -109,7 +114,7 @@ fn mcp_call_code_execute_composes_read_only_tools() -> Result<(), Box<dyn std::e
     );
     assert_eq!(
         output["result"]["structuredContent"]["calls"][0]["tool"],
-        "decimate_explain"
+        "fallow_explain"
     );
 
     Ok(())
@@ -295,6 +300,22 @@ fn mcp_call_explain_returns_structured_content() -> Result<(), Box<dyn std::erro
         output["result"]["content"][0]["text"]
             .as_str()
             .is_some_and(|text| text.contains("decimate/unused-export"))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn mcp_call_fallow_explain_returns_structured_content() -> Result<(), Box<dyn std::error::Error>> {
+    let output = response(
+        r#"{"jsonrpc":"2.0","id":14,"method":"tools/call","params":{"name":"fallow_explain","arguments":{"rule_id":"fallow/code-duplication"}}}"#,
+    )?;
+
+    assert_eq!(output["id"], 14);
+    assert_eq!(output["result"]["isError"], false);
+    assert_eq!(
+        output["result"]["structuredContent"]["id"],
+        "decimate/code-duplication"
     );
 
     Ok(())

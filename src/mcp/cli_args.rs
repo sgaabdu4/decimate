@@ -100,7 +100,7 @@ pub(super) fn cli_args_for_tool(
         "fix_apply" => fix_apply_args(args),
         "audit" => report_args("audit", args, audit_args),
         "decision_surface" => report_args("decision-surface", args, decision_surface_args),
-        "decimate_explain" => explain_args(args),
+        "decimate_explain" | "fallow_explain" => explain_args(name, args),
         _ => Err(format!("unknown tool {name}")),
     }
 }
@@ -122,11 +122,11 @@ fn allowed_args(name: &str) -> Result<Vec<&'static str>, String> {
         "check_changed" => extend_check_changed_allowed(&mut allowed),
         "project_info" => extend_project_info_allowed(&mut allowed),
         "list_boundaries" => allowed.extend(LIST_SCOPE_KEYS),
-        "inspect_target" => allowed.extend(["target", "file", "symbol"]),
+        "inspect_target" => allowed.extend(["target", "file", "symbol", "production"]),
         "trace_file" => allowed.extend(["file"]),
         "trace_export" => allowed.extend(["file", "symbol", "export_name"]),
         "trace_dependency" => allowed.extend(["dependency", "package_name"]),
-        "trace_clone" => allowed.extend(["fingerprint"]),
+        "trace_clone" => extend_trace_clone_allowed(&mut allowed),
         "find_dupes" => extend_dupes_allowed(&mut allowed),
         "check_health" => extend_health_allowed(&mut allowed),
         "check_runtime_coverage"
@@ -142,7 +142,7 @@ fn allowed_args(name: &str) -> Result<Vec<&'static str>, String> {
         "fix_apply" => extend_fix_apply_allowed(&mut allowed),
         "audit" => extend_audit_allowed(&mut allowed),
         "decision_surface" => allowed.extend(["base", "max_decisions"]),
-        "decimate_explain" => return Ok(vec!["issue_type", "rule_id"]),
+        "decimate_explain" | "fallow_explain" => return Ok(vec!["issue_type", "rule_id"]),
         _ => return Err(format!("unknown tool {name}")),
     }
     allowed.sort_unstable();
@@ -183,6 +183,11 @@ fn extend_dupes_allowed(allowed: &mut Vec<&'static str>) {
     allowed.extend(DUPLICATE_KEYS);
 }
 
+fn extend_trace_clone_allowed(allowed: &mut Vec<&'static str>) {
+    allowed.extend(["fingerprint", "file", "line"]);
+    allowed.extend(DUPLICATE_KEYS);
+}
+
 fn extend_health_allowed(allowed: &mut Vec<&'static str>) {
     allowed.extend(REPORT_SCOPE_KEYS);
     allowed.extend(BASELINE_KEYS);
@@ -207,6 +212,7 @@ fn extend_security_allowed(allowed: &mut Vec<&'static str>) {
         "top",
         "surface",
         "gate",
+        "paths",
         "diff_file",
         "ci",
         "fail_on_issues",
@@ -329,23 +335,22 @@ fn inspect_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), 
         let target = target
             .as_object()
             .ok_or_else(|| "target must be an object".to_owned())?;
-        return match target.get("type").and_then(Value::as_str) {
+        match target.get("type").and_then(Value::as_str) {
             Some("file") => {
                 reject_nested_unknown(target, &["type", "file"])?;
                 push_required_string(cli, target, "file", "--file")
             }
             Some("symbol") => push_symbol_target(cli, target),
             _ => Err("target.type must be file or symbol".to_owned()),
-        };
-    }
-    if args.contains_key("file") {
+        }?;
+    } else if args.contains_key("file") {
         push_required_string(cli, args, "file", "--file")?;
     } else if args.contains_key("symbol") {
         push_required_string(cli, args, "symbol", "--symbol")?;
     } else {
         return Err("inspect_target requires target, file, or symbol".to_owned());
     }
-    Ok(())
+    push_bool_mode(cli, args, "production", "--production", "--no-production")
 }
 
 fn trace_file_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
@@ -370,7 +375,25 @@ fn trace_dependency_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Re
 }
 
 fn trace_clone_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
-    push_required_string(cli, args, "fingerprint", "--fingerprint")
+    if args.contains_key("fingerprint") && (args.contains_key("file") || args.contains_key("line"))
+    {
+        return Err("trace_clone accepts either fingerprint or file and line".to_owned());
+    }
+    if let Some(fingerprint) = string_arg(args, "fingerprint")? {
+        cli.extend(["--fingerprint".to_owned(), fingerprint]);
+    } else {
+        let file = string_arg(args, "file")?
+            .ok_or_else(|| "trace_clone requires fingerprint or file and line".to_owned())?;
+        let line = args
+            .get("line")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| "trace_clone line must be a positive integer".to_owned())?;
+        if line == 0 {
+            return Err("trace_clone line must be a positive integer".to_owned());
+        }
+        cli.extend(["--fingerprint".to_owned(), format!("{file}:{line}")]);
+    }
+    push_duplicate_args(cli, args)
 }
 
 fn dupes_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
@@ -469,6 +492,7 @@ fn security_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(),
     push_number_flag(cli, args, "top", "--top")?;
     push_bool_flag(cli, args, "surface", "--surface")?;
     push_string_flag(cli, args, "gate", "--gate")?;
+    push_string_flags(cli, args, "paths", "--file")?;
     push_string_flag(cli, args, "diff_file", "--diff-file")?;
     for (key, flag) in [
         ("ci", "--ci"),
@@ -553,10 +577,10 @@ fn decision_surface_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Re
     Ok(())
 }
 
-fn explain_args(args: &Map<String, Value>) -> Result<Vec<String>, String> {
+fn explain_args(name: &str, args: &Map<String, Value>) -> Result<Vec<String>, String> {
     let issue_type = string_arg(args, "issue_type")?
         .or(string_arg(args, "rule_id")?)
-        .ok_or_else(|| "decimate_explain requires issue_type".to_owned())?;
+        .ok_or_else(|| format!("{name} requires issue_type"))?;
     Ok(vec![
         "decimate".to_owned(),
         "explain".to_owned(),

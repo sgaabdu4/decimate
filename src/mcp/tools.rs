@@ -170,6 +170,7 @@ fn inspect_target_tool() -> Value {
                 ("target", "target"),
                 ("file", "string"),
                 ("symbol", "string"),
+                ("production", "boolean"),
             ],
             &[],
         ),
@@ -221,8 +222,18 @@ fn trace_tools() -> Vec<Value> {
                     ("root", "string"),
                     ("config", "string"),
                     ("fingerprint", "string"),
+                    ("file", "string"),
+                    ("line", "integer"),
+                    ("mode", "string"),
+                    ("min_tokens", "integer"),
+                    ("min_lines", "integer"),
+                    ("min_occurrences", "integer"),
+                    ("top", "integer"),
+                    ("skip_local", "boolean"),
+                    ("ignore_imports", "boolean"),
+                    ("no_ignore_imports", "boolean"),
                 ],
-                &["fingerprint"],
+                &[],
             ),
         ),
     ]
@@ -380,6 +391,7 @@ fn security_tool() -> Value {
                 ("surface", "boolean"),
                 ("production", "boolean"),
                 ("gate", "string"),
+                ("paths", "array"),
                 ("diff_file", "string"),
                 ("ci", "boolean"),
                 ("fail_on_issues", "boolean"),
@@ -438,7 +450,8 @@ fn change_tools() -> Vec<Value> {
         fix_apply_tool(),
         audit_tool(),
         decision_surface_tool(),
-        explain_tool(),
+        explain_tool("decimate_explain"),
+        explain_tool("fallow_explain"),
     ]
 }
 
@@ -565,9 +578,9 @@ fn decision_surface_tool() -> Value {
     )
 }
 
-fn explain_tool() -> Value {
+fn explain_tool(name: &str) -> Value {
     tool(
-        "decimate_explain",
+        name,
         "Explain a Decimate issue type.",
         schema(&[("issue_type", "string"), ("rule_id", "string")], &[]),
     )
