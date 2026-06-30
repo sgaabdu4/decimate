@@ -8,85 +8,7 @@ use tempfile::TempDir;
 fn bloc_cubit_and_provider_references_keep_state_owners_live()
 -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
-    write(
-        &fixture,
-        "pubspec.yaml",
-        "\
-name: app
-dependencies:
-  bloc: any
-  flutter:
-    sdk: flutter
-  flutter_bloc: any
-  provider: any
-",
-    )?;
-    write(
-        &fixture,
-        "lib/main.dart",
-        "\
-import 'state.dart';
-void main() {
-  BlocBuilder<CounterBloc, CounterState>(builder: (_, state) => const SizedBox());
-  BlocProvider(create: (_) => CounterCubit());
-  MultiBlocProvider(providers: [BlocProvider(create: (_) => CounterBloc())], child: const SizedBox());
-  context.read<CounterBloc>().add(CounterStarted());
-  context.watch<CartModel>();
-  context.select((CartModel model) => model.count);
-  Provider.of<CartModel>(context);
-  Consumer<CartModel>(builder: (_, model, child) => child!);
-}
-final context = Context();
-class Context {
-  T read<T>() => throw UnimplementedError();
-  T watch<T>() => throw UnimplementedError();
-  R select<T, R>(R Function(T) selector) => throw UnimplementedError();
-}
-class BlocBuilder<B, S> {
-  const BlocBuilder({required Object Function(Object, S) builder});
-}
-class BlocProvider {
-  const BlocProvider({required Object Function(Object) create});
-}
-class MultiBlocProvider {
-  const MultiBlocProvider({required List<Object> providers, required Object child});
-}
-class Provider {
-  static T of<T>(Object context) => throw UnimplementedError();
-}
-class Consumer<T> {
-  const Consumer({required Object? Function(Object, T, Object?) builder});
-}
-class SizedBox {
-  const SizedBox();
-}
-",
-    )?;
-    write(
-        &fixture,
-        "lib/state.dart",
-        "\
-class Bloc<E, S> {}
-class Cubit<S> {}
-class ChangeNotifier {}
-
-class CounterEvent {}
-class CounterStarted extends CounterEvent {}
-class CounterState {}
-
-class CounterBloc extends Bloc<CounterEvent, CounterState> {
-  void add(CounterEvent event) {}
-}
-
-class CounterCubit extends Cubit<int> {}
-
-class CartModel extends ChangeNotifier {
-  int get count => 0;
-}
-
-class UnusedStateOwner {}
-",
-    )?;
+    write_state_management_fixture(&fixture)?;
 
     let (code, json) = run_json([
         "decimate",
@@ -233,6 +155,12 @@ fn finding_targets_symbol(finding: &Value, name: &str) -> bool {
         .is_some_and(|actions| actions.iter().any(|action| action["target_symbol"] == name))
 }
 
+fn write_state_management_fixture(fixture: &TempDir) -> Result<(), std::io::Error> {
+    write(fixture, "pubspec.yaml", STATE_MANAGEMENT_PUBSPEC)?;
+    write(fixture, "lib/main.dart", STATE_MANAGEMENT_MAIN)?;
+    write(fixture, "lib/state.dart", STATE_MANAGEMENT_STATE)
+}
+
 fn run_json<I, S>(args: I) -> Result<(i32, Value), Box<dyn std::error::Error>>
 where
     I: IntoIterator<Item = S>,
@@ -251,3 +179,120 @@ fn write(fixture: &TempDir, path: &str, source: &str) -> Result<(), std::io::Err
     }
     fs::write(path, source)
 }
+
+const STATE_MANAGEMENT_PUBSPEC: &str = "\
+name: app
+dependencies:
+  bloc: any
+  flutter:
+    sdk: flutter
+  flutter_bloc: any
+  provider: any
+";
+
+const STATE_MANAGEMENT_MAIN: &str = "\
+import 'state.dart';
+void main() {
+  BlocBuilder<CounterBloc, CounterState>(builder: (_, state) => const SizedBox());
+  BlocConsumer<CounterBloc, CounterState>(
+    listener: (_, state) {},
+    builder: (_, state) => const SizedBox(),
+  );
+  BlocListener<CounterBloc, CounterState>(listener: (_, state) {});
+  BlocSelector<CounterBloc, CounterState, int>(
+    selector: (state) => 0,
+    builder: (_, count) => const SizedBox(),
+  );
+  BlocProvider(create: (_) => CounterCubit());
+  BlocBuilder<CounterCubit, int>(builder: (_, state) => const SizedBox());
+  MultiBlocProvider(providers: [BlocProvider(create: (_) => CounterBloc())], child: const SizedBox());
+  MultiBlocListener(
+    listeners: [BlocListener<CounterBloc, CounterState>(listener: (_, state) {})],
+    child: const SizedBox(),
+  );
+  context.read<CounterBloc>().add(CounterStarted());
+  context.read<CounterCubit>().increment();
+  context.watch<CartModel>();
+  context.select((CartModel model) => model.count);
+  Provider.of<CartModel>(context);
+  ChangeNotifierProvider(create: (_) => CartModel(), child: const SizedBox());
+  Selector<CartModel, int>(
+    selector: (_, model) => model.count,
+    builder: (_, count, child) => child!,
+  );
+  Consumer<CartModel>(builder: (_, model, child) => child!);
+  Consumer2<CartModel, CounterCubit>(builder: (_, cart, cubit, child) => child!);
+}
+final context = Context();
+class Context {
+  T read<T>() => throw UnimplementedError();
+  T watch<T>() => throw UnimplementedError();
+  R select<T, R>(R Function(T) selector) => throw UnimplementedError();
+}
+class BlocBuilder<B, S> {
+  const BlocBuilder({required Object Function(Object, S) builder});
+}
+class BlocConsumer<B, S> {
+  const BlocConsumer({
+    required void Function(Object, S) listener,
+    required Object Function(Object, S) builder,
+  });
+}
+class BlocListener<B, S> {
+  const BlocListener({required void Function(Object, S) listener});
+}
+class BlocSelector<B, S, T> {
+  const BlocSelector({required T Function(S) selector, required Object Function(Object, T) builder});
+}
+class BlocProvider {
+  const BlocProvider({required Object Function(Object) create});
+}
+class MultiBlocProvider {
+  const MultiBlocProvider({required List<Object> providers, required Object child});
+}
+class MultiBlocListener {
+  const MultiBlocListener({required List<Object> listeners, required Object child});
+}
+class Provider {
+  static T of<T>(Object context) => throw UnimplementedError();
+}
+class ChangeNotifierProvider {
+  const ChangeNotifierProvider({required Object Function(Object) create, required Object child});
+}
+class Selector<T, S> {
+  const Selector({required S Function(Object, T) selector, required Object? Function(Object, S, Object?) builder});
+}
+class Consumer<T> {
+  const Consumer({required Object? Function(Object, T, Object?) builder});
+}
+class Consumer2<A, B> {
+  const Consumer2({required Object? Function(Object, A, B, Object?) builder});
+}
+class SizedBox {
+  const SizedBox();
+}
+";
+
+const STATE_MANAGEMENT_STATE: &str = "\
+class Bloc<E, S> {}
+class Cubit<S> {}
+class ChangeNotifier {}
+
+class CounterEvent {}
+class CounterStarted extends CounterEvent {}
+class CounterState {}
+
+class CounterBloc extends Bloc<CounterEvent, CounterState> {
+  void add(CounterEvent event) {}
+}
+
+class CounterCubit extends Cubit<int> {
+  void increment() {}
+}
+
+class CartModel extends ChangeNotifier {
+  int get count => 0;
+}
+
+class UnusedStateOwner {}
+";

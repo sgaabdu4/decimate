@@ -61,6 +61,8 @@ fn mcp_initialize_and_tools_list_follow_json_rpc_contract() -> Result<(), Box<dy
     assert_tool_property(tool_defs, "security_candidates", "paths")?;
     assert_tool_property(tool_defs, "trace_clone", "file")?;
     assert_tool_property(tool_defs, "trace_clone", "min_tokens")?;
+    assert_tool_property(tool_defs, "trace_clone", "threshold")?;
+    assert_tool_property(tool_defs, "find_dupes", "cross_language")?;
     assert_tool_property(tool_defs, "fix_preview", "action")?;
     assert_tool_property(tool_defs, "fix_apply", "yes")?;
     assert_tool_property(tool_defs, "audit", "gate")?;

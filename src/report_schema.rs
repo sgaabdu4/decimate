@@ -140,6 +140,9 @@ fn summary_schema() -> Value {
         "unrendered_widgets",
         "missing_context_mounted_after_await",
         "code_duplications",
+        "duplication_analyzed_lines",
+        "duplicated_lines",
+        "duplication_percentage_basis_points",
         "quality_score",
         "health_files",
         "functions",
@@ -175,6 +178,14 @@ fn summary_schema() -> Value {
         json!({ "type": "integer", "minimum": 0, "maximum": 100 }),
     );
     properties.insert(
+        "duplication_threshold_basis_points".to_owned(),
+        json!({ "type": "integer", "minimum": 0, "maximum": 10000 }),
+    );
+    properties.insert(
+        "duplication_threshold_exceeded".to_owned(),
+        json!({ "type": "boolean" }),
+    );
+    properties.insert(
         "risk_level".to_owned(),
         json!({ "type": "string", "enum": ["pass", "warn", "fail"] }),
     );
@@ -188,7 +199,12 @@ fn summary_schema() -> Value {
         "additionalProperties": false,
         "required": properties
             .keys()
-            .filter(|key| !matches!(key.as_str(), "risk_score" | "risk_level" | "attribution"))
+            .filter(|key| {
+                !matches!(
+                    key.as_str(),
+                    "risk_score" | "risk_level" | "attribution" | "duplication_threshold_basis_points"
+                )
+            })
             .cloned()
             .collect::<Vec<_>>(),
         "properties": properties

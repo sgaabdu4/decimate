@@ -1,15 +1,25 @@
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use thiserror::Error;
 
 /// Stable schema version for CI template output.
 pub const CI_TEMPLATE_SCHEMA_VERSION: &str = "decimate.ci-template.v1";
+pub const CI_RECONCILE_REVIEW_SCHEMA_VERSION: &str = "decimate.ci-reconcile-review.v1";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum CiTemplatePlatform {
+    Github,
+    Gitlab,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CiReviewProvider {
     Github,
     Gitlab,
 }
@@ -42,8 +52,62 @@ pub struct CiTemplateFile {
     pub content: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CiReconcileReviewReport {
+    pub schema_version: String,
+    pub kind: String,
+    pub tool: String,
+    pub command: String,
+    pub provider: CiReviewProvider,
+    pub dry_run: bool,
+    pub envelope: PathBuf,
+    pub repo: Option<String>,
+    pub project_id: Option<String>,
+    pub pr: Option<String>,
+    pub mr: Option<String>,
+    pub api_url: Option<String>,
+    pub summary: CiReconcileReviewSummary,
+    pub fingerprints: Vec<String>,
+    pub failed_fingerprints: Vec<String>,
+    pub unapplied_fingerprints: Vec<String>,
+    pub apply_hint: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CiReconcileReviewSummary {
+    pub envelope_fingerprints: usize,
+    pub stale_candidates: usize,
+    pub applied: usize,
+    pub unapplied: usize,
+    pub apply_errors: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CiReconcileReviewOptions {
+    pub provider: CiReviewProvider,
+    pub envelope: PathBuf,
+    pub dry_run: bool,
+    pub repo: Option<String>,
+    pub project_id: Option<String>,
+    pub pr: Option<String>,
+    pub mr: Option<String>,
+    pub api_url: Option<String>,
+}
+
 #[derive(Debug, Error)]
 pub enum CiTemplateError {
+    #[error("ci reconcile-review is dry-run only in this release; pass --dry-run")]
+    ReconcileDryRunRequired,
+    #[error("failed to read review envelope {path}: {source}")]
+    ReadEnvelope {
+        path: PathBuf,
+        source: std::io::Error,
+    },
+    #[error("failed to parse review envelope {path}: {source}")]
+    ParseEnvelope {
+        path: PathBuf,
+        source: serde_json::Error,
+    },
     #[error("refusing to overwrite existing CI template file {path}; pass --force")]
     AlreadyExists { path: PathBuf },
     #[error("failed to create directory {path}: {source}")]
@@ -95,6 +159,58 @@ pub fn vendor_ci_template(
         write_template_file(&path, file, force)?;
     }
     Ok(report)
+}
+
+/// Build a dry-run CI review reconciliation report.
+///
+/// # Errors
+///
+/// Returns [`CiTemplateError`] when the envelope cannot be read or parsed, or
+/// when provider mutation is requested.
+pub fn ci_reconcile_review_report(
+    options: CiReconcileReviewOptions,
+) -> Result<CiReconcileReviewReport, CiTemplateError> {
+    if !options.dry_run {
+        return Err(CiTemplateError::ReconcileDryRunRequired);
+    }
+    let envelope = &options.envelope;
+    let source = fs::read_to_string(envelope).map_err(|source| CiTemplateError::ReadEnvelope {
+        path: envelope.clone(),
+        source,
+    })?;
+    let value = serde_json::from_str::<Value>(&source).map_err(|source| {
+        CiTemplateError::ParseEnvelope {
+            path: envelope.clone(),
+            source,
+        }
+    })?;
+    let fingerprints = envelope_fingerprints(&value);
+    Ok(CiReconcileReviewReport {
+        schema_version: CI_RECONCILE_REVIEW_SCHEMA_VERSION.to_owned(),
+        kind: "ci-reconcile-review".to_owned(),
+        tool: "decimate".to_owned(),
+        command: "ci reconcile-review".to_owned(),
+        provider: options.provider,
+        dry_run: options.dry_run,
+        envelope: envelope.clone(),
+        repo: options.repo,
+        project_id: options.project_id,
+        pr: options.pr,
+        mr: options.mr,
+        api_url: options.api_url,
+        summary: CiReconcileReviewSummary {
+            envelope_fingerprints: fingerprints.len(),
+            stale_candidates: 0,
+            applied: 0,
+            unapplied: fingerprints.len(),
+            apply_errors: 0,
+        },
+        failed_fingerprints: Vec::new(),
+        unapplied_fingerprints: fingerprints.clone(),
+        fingerprints,
+        apply_hint: "dry-run only: provider comment mutation is not implemented by Decimate yet"
+            .to_owned(),
+    })
 }
 
 #[must_use]
@@ -186,6 +302,31 @@ fn template_file(path: &str, executable: bool, content: &str) -> CiTemplateFile 
         path: path.to_owned(),
         executable,
         content: content.to_owned(),
+    }
+}
+
+fn envelope_fingerprints(value: &Value) -> Vec<String> {
+    let mut fingerprints = BTreeSet::new();
+    collect_fingerprints(value, &mut fingerprints);
+    fingerprints.into_iter().collect()
+}
+
+fn collect_fingerprints(value: &Value, fingerprints: &mut BTreeSet<String>) {
+    match value {
+        Value::Object(object) => {
+            if let Some(fingerprint) = object.get("fingerprint").and_then(Value::as_str) {
+                fingerprints.insert(fingerprint.to_owned());
+            }
+            for value in object.values() {
+                collect_fingerprints(value, fingerprints);
+            }
+        }
+        Value::Array(values) => {
+            for value in values {
+                collect_fingerprints(value, fingerprints);
+            }
+        }
+        _ => {}
     }
 }
 

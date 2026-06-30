@@ -246,6 +246,10 @@ fn config_schema_command_emits_json_schema() -> Result<(), Box<dyn std::error::E
         "semantic"
     );
     assert_eq!(
+        json["properties"]["dupes"]["properties"]["threshold"]["maximum"],
+        100
+    );
+    assert_eq!(
         json["properties"]["ignoreDependencies"]["items"]["type"],
         "string"
     );

@@ -138,7 +138,7 @@ fn file_scope_prunes_clone_group_instances() -> Result<(), Box<dyn std::error::E
     )?;
 
     let json = serde_json::from_slice::<Value>(&output)?;
-    assert_eq!(code, 1);
+    assert_eq!(code, 0);
     assert_eq!(json["summary"]["code_duplications"], 1);
     assert_eq!(
         json["clone_groups"][0]["instances"][0]["path"],

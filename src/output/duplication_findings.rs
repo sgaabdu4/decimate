@@ -82,7 +82,7 @@ fn code_duplication_finding(root: &Path, clone: &crate::CodeClone) -> Finding {
         rule_id: "decimate/code-duplication".to_owned(),
         fingerprint: Some(clone.fingerprint.clone()),
         kind: FindingKind::CodeDuplication,
-        severity: Severity::Error,
+        severity: Severity::Warning,
         message: format!(
             "{} duplicated Dart lines appear in {} places",
             clone.line_count,

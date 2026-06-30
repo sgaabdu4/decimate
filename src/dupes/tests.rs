@@ -23,6 +23,9 @@ fn detects_exact_duplicate_dart_blocks() -> Result<(), Box<dyn std::error::Error
     assert_eq!(clone.instances[0].path, fixture.path().join("lib/a.dart"));
     assert_eq!(clone.instances[0].start_line, 1);
     assert_eq!(clone.instances[1].path, fixture.path().join("lib/b.dart"));
+    assert_eq!(report.stats.analyzed_lines, 10);
+    assert_eq!(report.stats.duplicated_lines, 10);
+    assert_eq!(report.stats.duplication_percentage_basis_points, 10000);
 
     Ok(())
 }
@@ -103,6 +106,7 @@ fn options(mode: DuplicateMode, min_lines: usize, min_tokens: usize) -> Duplicat
         skip_local: false,
         ignore_imports: true,
         top: None,
+        threshold: None,
     }
 }
 

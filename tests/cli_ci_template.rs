@@ -117,6 +117,78 @@ fn gitlab_vendor_writes_scoped_files_and_refuses_overwrite()
 }
 
 #[test]
+fn ci_reconcile_review_dry_run_extracts_fingerprints() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    let envelope = fixture.path().join("review.json");
+    fs::write(
+        &envelope,
+        serde_json::json!({
+            "schema_version": "decimate.review-github.v1",
+            "findings": [
+                { "fingerprint": "decimate:a" },
+                { "fingerprint": "decimate:b" },
+                { "fingerprint": "decimate:a" }
+            ]
+        })
+        .to_string(),
+    )?;
+    let mut output = Vec::new();
+
+    let code = run_from(
+        [
+            "decimate",
+            "ci",
+            "reconcile-review",
+            "--provider",
+            "github",
+            "--repo",
+            "owner/repo",
+            "--pr",
+            "12",
+            "--envelope",
+            envelope.to_str().unwrap_or("review.json"),
+            "--dry-run",
+        ],
+        &mut output,
+    )?;
+
+    let json = serde_json::from_slice::<Value>(&output)?;
+    assert_eq!(code, 0);
+    assert_eq!(json["schema_version"], "decimate.ci-reconcile-review.v1");
+    assert_eq!(json["kind"], "ci-reconcile-review");
+    assert_eq!(json["provider"], "github");
+    assert_eq!(json["summary"]["envelope_fingerprints"], 2);
+    assert_eq!(json["fingerprints"][0], "decimate:a");
+    assert_eq!(json["fingerprints"][1], "decimate:b");
+
+    Ok(())
+}
+
+#[test]
+fn ci_reconcile_review_requires_dry_run() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    let envelope = fixture.path().join("review.json");
+    fs::write(&envelope, r#"{"findings":[]}"#)?;
+
+    let error = match run_from(
+        [
+            "decimate",
+            "ci",
+            "reconcile-review",
+            "--envelope",
+            envelope.to_str().unwrap_or("review.json"),
+        ],
+        &mut Vec::new(),
+    ) {
+        Ok(code) => panic!("reconcile-review should require dry-run, got {code}"),
+        Err(error) => error,
+    };
+
+    assert!(error.to_string().contains("dry-run only"));
+    Ok(())
+}
+
+#[test]
 fn manifest_lists_ci_template_command() -> Result<(), Box<dyn std::error::Error>> {
     let mut output = Vec::new();
 
@@ -124,10 +196,19 @@ fn manifest_lists_ci_template_command() -> Result<(), Box<dyn std::error::Error>
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
+    assert_eq!(
+        json["schemas"]["ci_reconcile_review"],
+        "decimate.ci-reconcile-review.v1"
+    );
     assert_eq!(json["schemas"]["ci_template"], "decimate.ci-template.v1");
     assert!(json["commands"].as_array().is_some_and(|commands| {
         commands.iter().any(|command| {
             command["name"] == "ci-template" && command["schema"] == "decimate.ci-template.v1"
+        })
+    }));
+    assert!(json["commands"].as_array().is_some_and(|commands| {
+        commands.iter().any(|command| {
+            command["name"] == "ci" && command["schema"] == "decimate.ci-reconcile-review.v1"
         })
     }));
 

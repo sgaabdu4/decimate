@@ -2,7 +2,7 @@ use std::io::{self, BufRead, Write};
 
 use serde_json::{Map, Value, json};
 
-use crate::cli::run_from;
+use crate::cli::{CliError, run_from};
 
 mod cli_args;
 #[cfg(test)]
@@ -96,7 +96,7 @@ fn call_tool(id: &Value, message: &Value) -> Value {
     };
     let Some(arguments) = params.get("arguments") else {
         return match cli_args_for_tool(name, &Map::new()) {
-            Ok(args) => response_result(id, &tool_result(run_cli_json(args))),
+            Ok(args) => response_result(id, &tool_result(run_tool_json(name, args))),
             Err(message) => response_error(id, -32602, message),
         };
     };
@@ -107,9 +107,19 @@ fn call_tool(id: &Value, message: &Value) -> Value {
         return response_result(id, &tool_result(execute_code(arguments)));
     }
     match cli_args_for_tool(name, arguments) {
-        Ok(args) => response_result(id, &tool_result(run_cli_json(args))),
+        Ok(args) => response_result(id, &tool_result(run_tool_json(name, args))),
         Err(message) => response_error(id, -32602, message),
     }
+}
+
+fn run_tool_json(name: &str, args: Vec<String>) -> CliToolOutput {
+    let mut output = run_cli_json(args);
+    if let Some(structured) = runtime_slice_content(name, output.structured.as_ref()) {
+        output.text =
+            serde_json::to_string_pretty(&structured).unwrap_or_else(|_| structured.to_string());
+        output.structured = Some(structured);
+    }
+    output
 }
 
 fn run_cli_json(args: Vec<String>) -> CliToolOutput {
@@ -117,12 +127,140 @@ fn run_cli_json(args: Vec<String>) -> CliToolOutput {
     let code = match run_from(args, &mut output) {
         Ok(code) => code,
         Err(error) => {
-            return CliToolOutput::text(2, error.to_string(), true);
+            return CliToolOutput::json(error_exit_code(&error), cli_error_json(&error), true);
         }
     };
     let text = String::from_utf8_lossy(&output).into_owned();
     let structured = serde_json::from_str::<Value>(&text).ok();
     CliToolOutput::new(code, text, structured, code == 2)
+}
+
+fn error_exit_code(error: &CliError) -> i32 {
+    match error {
+        CliError::Clap(error) => error.exit_code(),
+        _ => 2,
+    }
+}
+
+fn cli_error_json(error: &CliError) -> Value {
+    json!({
+        "error": true,
+        "message": error.to_string(),
+        "exit_code": error_exit_code(error)
+    })
+}
+
+fn runtime_slice_content(name: &str, structured: Option<&Value>) -> Option<Value> {
+    let runtime = structured?.get("runtime_coverage")?;
+    let mut slice = runtime_slice_base(name, structured?, runtime)?;
+    match name {
+        "get_hot_paths" => {
+            slice.insert(
+                "hot_paths".to_owned(),
+                runtime
+                    .get("hot_paths")
+                    .cloned()
+                    .unwrap_or_else(|| json!([])),
+            );
+        }
+        "get_blast_radius" => {
+            slice.insert(
+                "blast_radius".to_owned(),
+                runtime
+                    .get("blast_radius")
+                    .cloned()
+                    .unwrap_or_else(|| json!([])),
+            );
+        }
+        "get_importance" => {
+            slice.insert(
+                "importance".to_owned(),
+                runtime
+                    .get("importance")
+                    .cloned()
+                    .unwrap_or_else(|| json!([])),
+            );
+        }
+        "get_cleanup_candidates" => {
+            slice.insert(
+                "findings".to_owned(),
+                cleanup_findings(runtime.get("findings")),
+            );
+            slice.insert(
+                "coverage_intelligence".to_owned(),
+                cleanup_intelligence(runtime.get("coverage_intelligence")),
+            );
+            slice.insert(
+                "actionable".to_owned(),
+                runtime
+                    .get("actionable")
+                    .cloned()
+                    .unwrap_or_else(|| json!({})),
+            );
+        }
+        _ => return None,
+    }
+    Some(Value::Object(slice))
+}
+
+fn runtime_slice_base(
+    name: &str,
+    structured: &Value,
+    runtime: &Value,
+) -> Option<Map<String, Value>> {
+    let kind = match name {
+        "get_hot_paths" => "runtime-hot-paths",
+        "get_blast_radius" => "runtime-blast-radius",
+        "get_importance" => "runtime-importance",
+        "get_cleanup_candidates" => "runtime-cleanup-candidates",
+        _ => return None,
+    };
+    let mut slice = Map::new();
+    for key in ["schema_version", "tool", "command"] {
+        if let Some(value) = structured.get(key) {
+            slice.insert(key.to_owned(), value.clone());
+        }
+    }
+    slice.insert("kind".to_owned(), Value::String(kind.to_owned()));
+    for key in ["summary", "provenance", "watermark", "warnings"] {
+        if let Some(value) = runtime.get(key) {
+            slice.insert(key.to_owned(), value.clone());
+        }
+    }
+    Some(slice)
+}
+
+fn cleanup_findings(findings: Option<&Value>) -> Value {
+    let values = findings
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|finding| {
+            finding["safe_to_delete"].as_bool().unwrap_or_default()
+                || matches!(
+                    finding["kind"].as_str(),
+                    Some("low-traffic" | "coverage-unavailable")
+                )
+        })
+        .cloned()
+        .collect::<Vec<_>>();
+    Value::Array(values)
+}
+
+fn cleanup_intelligence(intelligence: Option<&Value>) -> Value {
+    let values = intelligence
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|row| {
+            matches!(
+                row["kind"].as_str(),
+                Some("low-traffic" | "coverage-unavailable")
+            )
+        })
+        .cloned()
+        .collect::<Vec<_>>();
+    Value::Array(values)
 }
 
 fn tool_result(output: CliToolOutput) -> Value {
@@ -155,10 +293,6 @@ impl CliToolOutput {
             structured,
             is_error,
         }
-    }
-
-    fn text(exit_code: i32, text: String, is_error: bool) -> Self {
-        Self::new(exit_code, text, None, is_error)
     }
 
     fn json(exit_code: i32, structured: Value, is_error: bool) -> Self {

@@ -1,6 +1,8 @@
 use clap::{Arg, ArgAction, ArgMatches, Command, parser::ValueSource, value_parser};
 
-use crate::{DuplicateMode, DuplicateOptions};
+use crate::{DuplicateMode, DuplicateOptions, DuplicationThreshold};
+
+use super::CliError;
 
 pub(super) fn dupes_command(command: Command) -> Command {
     command
@@ -44,9 +46,22 @@ pub(super) fn dupes_command(command: Command) -> Command {
                 .value_parser(value_parser!(usize)),
         )
         .arg(
+            Arg::new("threshold")
+                .long("threshold")
+                .value_name("PERCENT")
+                .help("Fail when duplicated Dart lines exceed this percentage")
+                .value_parser(parse_threshold),
+        )
+        .arg(
             Arg::new("skip-local")
                 .long("skip-local")
                 .help("Only report cross-directory duplicates")
+                .action(ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new("cross-language")
+                .long("cross-language")
+                .help("Unsupported for Dart-only analysis")
                 .action(ArgAction::SetTrue),
         )
         .arg(
@@ -79,7 +94,10 @@ pub(super) fn trace_clone_command(command: Command) -> Command {
 pub(super) fn duplicate_options_with_defaults(
     matches: &ArgMatches,
     mut options: DuplicateOptions,
-) -> DuplicateOptions {
+) -> Result<DuplicateOptions, CliError> {
+    if is_command_line(matches, "cross-language") && matches.get_flag("cross-language") {
+        return Err(CliError::UnsupportedCrossLanguageDupes);
+    }
     if is_command_line(matches, "mode") {
         if let Some(mode) = matches.get_one::<String>("mode") {
             options.mode = DuplicateMode::parse(mode).unwrap_or(DuplicateMode::Mild);
@@ -103,6 +121,11 @@ pub(super) fn duplicate_options_with_defaults(
     if is_command_line(matches, "top") {
         options.top = matches.get_one::<usize>("top").copied();
     }
+    if is_command_line(matches, "threshold") {
+        options.threshold = matches
+            .get_one::<DuplicationThreshold>("threshold")
+            .copied();
+    }
     if is_command_line(matches, "skip-local") {
         options.skip_local = matches.get_flag("skip-local");
     }
@@ -112,9 +135,16 @@ pub(super) fn duplicate_options_with_defaults(
     if is_command_line(matches, "no-ignore-imports") {
         options.ignore_imports = !matches.get_flag("no-ignore-imports");
     }
-    options
+    Ok(options)
 }
 
 fn is_command_line(matches: &ArgMatches, id: &str) -> bool {
     matches.value_source(id) == Some(ValueSource::CommandLine)
+}
+
+fn parse_threshold(value: &str) -> Result<DuplicationThreshold, String> {
+    value
+        .parse::<f64>()
+        .map_err(|_| "threshold must be a percentage from 0 to 100".to_owned())
+        .and_then(DuplicationThreshold::from_percent)
 }

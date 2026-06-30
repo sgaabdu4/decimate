@@ -46,6 +46,8 @@ const DUPLICATE_KEYS: &[&str] = &[
     "min_lines",
     "min_occurrences",
     "top",
+    "threshold",
+    "cross_language",
     "skip_local",
     "ignore_imports",
     "no_ignore_imports",
@@ -408,6 +410,10 @@ fn push_duplicate_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Resu
     push_number_flag(cli, args, "min_lines", "--min-lines")?;
     push_number_flag(cli, args, "min_occurrences", "--min-occurrences")?;
     push_number_flag(cli, args, "top", "--top")?;
+    push_float_flag(cli, args, "threshold", "--threshold")?;
+    if bool_arg(args, "cross_language")?.unwrap_or_default() {
+        return Err("cross_language is not supported for Dart-only analysis".to_owned());
+    }
     for (key, flag) in [
         ("skip_local", "--skip-local"),
         ("ignore_imports", "--ignore-imports"),

@@ -151,6 +151,8 @@ fn assert_manifest_identity(json: &Value) {
     assert_mcp_tool_key(json, "inspect_target", "production");
     assert_mcp_tool_key(json, "trace_clone", "file");
     assert_mcp_tool_key(json, "trace_clone", "min_tokens");
+    assert_mcp_tool_key(json, "trace_clone", "threshold");
+    assert_mcp_tool_key(json, "find_dupes", "cross_language");
     assert_mcp_tool_key(json, "check_health", "min_score");
     assert_mcp_tool_key(json, "check_runtime_coverage", "coverage");
     assert_mcp_tool_key(json, "get_hot_paths", "coverage");
@@ -285,7 +287,7 @@ fn schema_command_lists_actual_cli_flags() -> Result<(), Box<dyn std::error::Err
     assert_manifest_flags(
         &json,
         "dupes",
-        &["--min-occurrences", "--no-ignore-imports"],
+        &["--min-occurrences", "--threshold", "--cross-language"],
     );
     assert_manifest_flags(&json, "health", &["--max-crap", "--min-score", "--top"]);
     assert_manifest_flags(
@@ -306,8 +308,22 @@ fn schema_command_lists_actual_cli_flags() -> Result<(), Box<dyn std::error::Err
         "fix",
         &["--config", "--workspace", "--changed-workspaces"],
     );
+    assert_manifest_flags(&json, "migrate", &["--dry-run"]);
+    assert_manifest_flags(&json, "telemetry", &["status", "enable", "disable"]);
+    assert_manifest_flags(&json, "license", &["status", "activate"]);
     assert_manifest_flags(&json, "init", &["--format", "--agents", "--force"]);
     assert_manifest_flags(&json, "hooks", &["install", "--target", "--branch"]);
+    assert_manifest_flags(
+        &json,
+        "setup-hooks",
+        &["--agent", "--dry-run", "--uninstall"],
+    );
+    assert_manifest_flags(&json, "watch", &["--no-clear", "--once", "--interval-ms"]);
+    assert_manifest_flags(
+        &json,
+        "ci",
+        &["reconcile-review", "--provider", "--envelope", "--dry-run"],
+    );
     assert_manifest_omits_flags(&json, "list", &["--section"]);
 
     Ok(())

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 description = "Rust-native codebase intelligence for Dart and Flutter module graphs."
-license = "MIT OR Apache-2.0"
+license = "MIT"
 publish = false
 
 [dependencies]

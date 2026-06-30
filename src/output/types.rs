@@ -223,6 +223,17 @@ pub struct ReportSummary {
     pub missing_context_mounted_after_await: usize,
     /// Duplicated Dart code clone groups.
     pub code_duplications: usize,
+    /// Dart source lines included in duplicate analysis.
+    pub duplication_analyzed_lines: usize,
+    /// Unique Dart lines covered by duplicate clone groups.
+    pub duplicated_lines: usize,
+    /// Duplicated line percentage in percentage basis points.
+    pub duplication_percentage_basis_points: u32,
+    /// Duplicate threshold percentage in percentage basis points.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duplication_threshold_basis_points: Option<u32>,
+    /// Whether duplicated lines exceeded the configured threshold.
+    pub duplication_threshold_exceeded: bool,
     /// Aggregate 0-100 project health score; higher is healthier.
     pub quality_score: usize,
     /// Dart source files included in health analysis.

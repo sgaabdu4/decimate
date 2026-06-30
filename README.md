@@ -1,257 +1,273 @@
 # Decimate
 
-Rust-native codebase intelligence for Dart and Flutter module graphs.
+![Decimate banner](assets/decimate-banner.png)
+
+Find dead Dart code, circular dependencies, duplicated code, complex functions,
+dependency problems, risky Flutter wiring, and PR risk fast.
 
 ![Rust 1.85+](https://img.shields.io/badge/rust-1.85%2B-b7410e)
-![Dart and Flutter](https://img.shields.io/badge/Dart%20%2B%20Flutter-module%20graph-0175c2)
-![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-2f855a)
+![Dart and Flutter](https://img.shields.io/badge/Dart%20%2B%20Flutter-codebase%20intelligence-111111)
+![License](https://img.shields.io/badge/license-MIT-2f855a)
 
-Decimate is a fast, deterministic analyzer for Dart and Flutter codebases. It is
-inspired by Fallow's agent-first approach to codebase intelligence, adapted to
-Dart's library, `part`, `export`, `package:`, and Pub workspace semantics.
+Decimate is a Rust-native codebase intelligence tool for Dart and Flutter. It
+looks at your repo as a graph:
 
-It is not a linter, formatter, type checker, or runtime debugger. Decimate
-treats a project as a graph:
+- Dart files are nodes.
+- `import`, `export`, `part`, `part of`, and `library augment` are edges.
+- The report tells you what is unused, risky, duplicated, tangled, or hard to
+  maintain.
 
-- files are nodes
-- `import`, `export`, `part`, and `library augment` directives are edges
-- declarations, members, feature flags, security candidates, duplication, and
-  health metrics become structured evidence for humans and agents
+It is not a formatter. It is not a replacement for `dart analyze`. It is not a
+Flutter style guide. It does not enforce opinions like "all providers must use
+Riverpod code generation."
 
-The goal is simple: make cleanup, architectural review, and AI-assisted code
-maintenance cheap enough to run constantly.
+It answers practical questions:
 
-## Why Teams Using AI Need Decimate
+- What code can probably be deleted?
+- What files depend on each other in a circle?
+- What functions are too complex?
+- What code was copied around?
+- What dependency is unused or missing from `pubspec.yaml`?
+- What changed code is risky before a PR lands?
+- What should an AI coding agent inspect before making a fix?
 
-AI makes Dart and Flutter code easier to generate, but it also makes stale files,
-duplicate implementations, dependency drift, and architecture shortcuts easier to
-miss. Decimate gives reviewers and agents deterministic evidence: what changed,
-what depends on it, what is unused, what forms a cycle, where duplication exists,
-which files are risky hotspots, and which cleanup actions are safe enough to
-review.
+## Start Here
 
-The aim is Fallow-style codebase intelligence for Dart and Flutter, not a
-Flutter house-style rulebook.
+Inside any Dart or Flutter project:
 
-## What Decimate Reports
+```bash
+decimate check . --format json --summary | jq .summary
+```
 
-Decimate follows Fallow's product shape, adapted to Dart and Flutter:
+If you do not want JSON:
 
-- **Quality score**: maintainability, complexity, duplication, dependency
-  hygiene, architecture, ownership, coverage gaps, hotspots, and refactoring
-  targets.
-- **PR risk**: changed-code analysis through `decimate audit`, `review`, and
-  `decision-surface`, with risk score, risk level, and introduced versus
-  pre-existing finding attribution.
-- **Hotspots**: functions and files ranked by complexity, size, coupling,
-  ownership, coverage, and optional runtime importance.
-- **Duplication**: exact and semantic Dart clone families with stable
-  `dup:<id>` fingerprints and traceable instances.
-- **Architecture**: circular dependencies, re-export cycles, boundary
-  violations, boundary coverage gaps, forbidden calls, policy packs, Dart
-  `part` / `part of` issues, `library augment` edges, and GoRouter route
-  collisions.
-- **Dependency hygiene**: unused, unlisted, misplaced, test-only,
-  override-related, unresolved, duplicate-export, and cross-package
-  `lib/src` dependency issues across Pub packages and workspaces.
-- **Cleanup opportunities**: unreachable files, unused exports, unused types,
-  unused enum constants, unused private class-like members, unused widget
-  constructor params, unrendered widget classes, stale suppressions, and
-  conservative review-safe fix actions.
-- **Runtime intelligence**: optional LCOV, V8, and Istanbul coverage ingestion
-  for hot paths, cold code, runtime-weighted health, cleanup confidence, and
-  runtime-backed review context.
-- **Agent-ready context**: structured JSON, schemas, an MCP server, trace
-  commands, inspect bundles, safe-fix previews, and machine-actionable
-  `actions`.
+```bash
+decimate check .
+```
 
-Decimate is deliberately not a Flutter style guide. Opinionated framework
-preferences, such as requiring Riverpod code generation, are outside the core
-scope.
+If the report says `"verdict": "fail"`, Decimate worked. It means it found
+error-level issues. It does not mean the tool crashed.
 
-Every JSON finding includes file paths, line numbers, severity, `safe_to_delete`,
-and machine-actionable `actions`.
+Exit codes:
 
-## Quick Start
+- `0`: no error-level findings
+- `1`: Decimate found issues
+- `2`: command, config, or runtime error
+- `8`: security gate found new review-required candidates
 
-### Install From GitHub
+## Install
 
-This works today and does not require cloning the repo:
+From GitHub:
 
 ```bash
 cargo install --git https://github.com/sgaabdu4/decimate
 ```
 
-`cargo install` puts the binaries in `~/.cargo/bin`. If your shell says
-`Unknown command: decimate`, add that directory to your `PATH`.
+Cargo installs `decimate` and `decimate-mcp` into `~/.cargo/bin`.
 
 Fish:
 
 ```bash
 fish_add_path ~/.cargo/bin
-decimate check . --format json
 ```
 
 Bash or Zsh:
 
 ```bash
 export PATH="$HOME/.cargo/bin:$PATH"
-decimate check . --format json
 ```
 
-That install step does not run an analysis by itself. After it prints
-`Installed package ...`, run `decimate check . --format json` inside the Dart or
-Flutter repo you want to analyze.
-
-### Build From Source
+From a local checkout:
 
 ```bash
 git clone https://github.com/sgaabdu4/decimate.git
 cd decimate
-cargo build --release
-./target/release/decimate check . --format json
+cargo install --path . --force
 ```
 
-Install from a local checkout:
+Then run it in your app:
 
 ```bash
-cargo install --path .
+cd /path/to/flutter_or_dart_repo
 decimate check . --format json
 ```
 
-### Run Through npx
+## npx
 
-The npm registry package is planned as `@sgaabdu4/decimate`. Until it is
-published, this command will fail with `npm error 404 Not Found`:
+The npm package name is `@sgaabdu4/decimate`.
+
+After the package is published:
 
 ```bash
 npx @sgaabdu4/decimate check . --format json
-npx @sgaabdu4/decimate check --root . --format json
-npx --package @sgaabdu4/decimate decimate check . --format json
-npx --package @sgaabdu4/decimate decimate-mcp
 ```
 
-Before the npm publish, use the GitHub package form instead:
+Before publication, npm will return `404 Not Found`. Use Cargo or:
 
 ```bash
 npx --yes --package github:sgaabdu4/decimate decimate check . --format json
 ```
 
-The npm package exposes the executables as `decimate` and `decimate-mcp`. The
-unscoped npm package name `decimate` is already owned by an unrelated GeoJSON
-package, so `npx decimate` cannot safely target this project unless that package
-name is transferred. Public npm installs use `@sgaabdu4/decimate` or
-`npx --package @sgaabdu4/decimate decimate ...`.
+## What Decimate Looks For
 
-Root-aware commands accept both the existing positional `ROOT` form
-(`decimate check .`) and the Fallow-style `--root ROOT` form
-(`decimate check --root .`).
+### 1. Dead Code
 
-Exit code `0` means no error-severity findings. Exit code `1` means findings
-were produced. Exit code `2` means command/config/runtime failure. Security gate
-mode can exit `8` for new review-required security candidates.
+Dead code is code that is not reachable from your entry points.
 
-When `--format json` is present and Decimate cannot produce the requested report,
-stdout is still machine-readable:
+Decimate finds:
 
-```json
-{ "error": true, "message": "coverage analyze requires --runtime-coverage PATH", "exit_code": 2 }
-```
+- dead Dart files
+- unused public exports
+- unused type aliases
+- unused enum values
+- unused private class members
+- unrendered Flutter widgets
+- missing entry points
+- stale `decimate-ignore` / `fallow-ignore` comments
 
-## Common Workflows
-
-Initialize Decimate defaults in a Dart or Flutter repo:
-
-```bash
-decimate init . --agents
-```
-
-`decimate init` writes `.decimaterc` and, with `--agents`, an `AGENTS.md`
-guide for downstream coding agents. It refuses to overwrite existing files
-unless `--force` is passed.
-
-Install a managed Git pre-commit hook:
-
-```bash
-decimate hooks status . --format json
-decimate hooks install . --target git --branch origin/main --format json
-decimate hooks uninstall . --target git --format json
-```
-
-Hook install refuses to overwrite non-Decimate hooks unless `--force` is passed,
-and uninstall only removes hooks containing Decimate's ownership marker.
-
-Find dead code:
+Useful commands:
 
 ```bash
 decimate dead-code . --entry lib/main.dart --format json
-decimate dead-code . --unused-exports --format json
-decimate check . --unused-files --unused-deps --format json
+decimate check . --unused-files --unused-exports --unused-deps --format json
 ```
 
-Issue filters follow Fallow naming where Decimate has real Dart data:
-`--unused-files`, `--unused-exports`, `--unused-types`, `--unused-deps`,
-`--unlisted-deps`, `--duplicate-exports`, `--private-type-leaks`,
-`--private-src-imports`, `--unused-enum-members`, `--unused-class-members`,
-`--unresolved-imports`, `--stale-suppressions`,
-`--unused-dependency-overrides`, and `--misconfigured-dependency-overrides`.
-The check command also supports graph and architecture selectors:
-`--circular-deps`, `--re-export-cycles`, `--boundary-violations`, and
-`--policy-violations`.
+### 2. Complex Code
 
-Find cycles:
+Cyclomatic complexity means "how many paths can this function take?"
+
+Cognitive complexity means "how hard is this function to understand?"
+
+CRAP score combines complexity with test coverage. A complex function with poor
+coverage gets a worse score.
+
+Decimate finds:
+
+- high cyclomatic complexity
+- high cognitive complexity
+- high combined complexity
+- high CRAP score
+- coverage gaps
+- low health score files
+- hotspots
+- refactoring targets
+
+Useful commands:
 
 ```bash
-decimate cycles . --format json
+decimate health . --format json
+decimate health . --complexity-breakdown --top 10 --format json
+decimate health . --file-scores --hotspots --targets --format json
 ```
 
-Find duplicate Dart code:
+### 3. Duplicated Code
+
+Duplication means the same Dart code appears in more than one place.
+
+Decimate finds exact and semantic clone groups. Each clone group gets a stable
+fingerprint like `dup:abc12345`, so agents can trace it before touching code.
+
+Useful commands:
 
 ```bash
 decimate dupes . --format json
-decimate dupes . --mode semantic --format json
-decimate dupes . --ignore-imports --format json
+decimate dupes . --mode semantic --min-lines 5 --format json
+decimate dupes . --threshold 5 --format json
+decimate trace-clone . --fingerprint dup:abc12345 --format json
 ```
 
-Review changed code against `origin/main`:
+### 4. Circular Dependencies
+
+A circular dependency means file A depends on file B, and B eventually depends
+back on A. Cycles make code harder to move, test, and delete.
+
+Decimate finds:
+
+- circular dependencies
+- re-export cycles
+- import/export/part/augment targets that do not resolve
+- invalid `part` / `part of` relationships
+
+Useful commands:
 
 ```bash
-decimate audit . --base origin/main --format json
-decimate audit . --base origin/main --gate new-only --format json
+decimate cycles . --format json
+decimate check . --circular-deps --re-export-cycles --format json
 ```
 
-Surface architecture decisions without failing CI:
+### 5. Architecture Drift
+
+Architecture drift means code crosses boundaries it should not cross.
+
+Example: `lib/domain/` depending on `lib/ui/`.
+
+Decimate finds:
+
+- boundary violations
+- files outside configured boundary zones
+- forbidden direct calls across boundaries
+- policy-pack violations for banned imports, exports, and calls
+
+Useful command:
 
 ```bash
-decimate review . --base origin/main --format json
-decimate decision-surface . --base origin/main --format json
+decimate check . \
+  --boundary lib/domain:lib/ui \
+  --boundary-coverage \
+  --format json
 ```
 
-Prioritize refactors:
+### 6. Dependency Hygiene
+
+Dependency hygiene means your imports and `pubspec.yaml` agree.
+
+Decimate finds:
+
+- unused runtime dependencies
+- unused dev dependencies
+- runtime dependencies used only by tests
+- imports missing from `pubspec.yaml`
+- unused dependency overrides
+- invalid dependency overrides
+- imports into another package's private `lib/src`
+- duplicate public API exports
+
+Useful commands:
 
 ```bash
-decimate health . --file-scores --hotspots --targets --ownership --format json
+decimate trace-dependency . --dependency collection --format json
+decimate check . --unused-deps --unlisted-deps --private-src-imports --format json
 ```
 
-Add LCOV or runtime coverage context:
+### 7. Flutter-Specific Graph Issues
 
-```bash
-decimate coverage setup . --non-interactive --format json
-decimate coverage setup . --yes --format json
-decimate health . --coverage coverage/lcov.info --coverage-gaps --max-crap 30 --format json
-decimate coverage analyze . --runtime-coverage coverage-final.json --format json
-decimate coverage upload-inventory . --dry-run --repo owner/repo --format json
-decimate coverage upload-source-maps . --dir dist --git-sha <sha> --repo owner/repo --dry-run --format json
-```
+Decimate does not care which state-management style you use. It uses Flutter
+and Dart patterns only to avoid false positives and to find graph problems.
 
-Inventory feature flags:
+Decimate finds:
 
-```bash
-decimate flags . --format json
-decimate flags . --top 20 --format json
-```
+- GoRouter route path/name collisions
+- private Flutter widget classes
+- top-level widget helper functions
+- unused widget constructor parameters
+- widget classes that are never constructed
+- missing `context.mounted` guards after awaited widget work
 
-Surface security candidates for verification:
+### 8. Security Candidates
+
+These are review prompts, not proof of an exploit.
+
+Decimate finds candidates for:
+
+- hardcoded secrets
+- insecure HTTP transport
+- TLS validation bypasses
+- risky WebView settings
+- process execution
+- raw SQL
+- plain local storage of secret-like material
+
+Useful commands:
 
 ```bash
 decimate security . --surface --format json
@@ -259,38 +275,87 @@ decimate security . --ci --sarif-file decimate-security.sarif
 git diff --cached --unified=0 | decimate security . --gate new --diff-stdin --format json
 ```
 
-Trace before deleting:
+### 9. PR Risk
+
+Use this before merging changed code.
+
+Decimate reports:
+
+- risk score
+- pass / warn / fail risk level
+- findings introduced by the PR
+- findings that already existed
+- risky changed files
+
+Useful commands:
 
 ```bash
-decimate trace-file . --file lib/src/old.dart --format json
-decimate trace --root . lib/src/old.dart:OldThing --format json
-decimate trace-symbol . --symbol lib/src/old.dart:OldThing --format json
-decimate trace-dependency . --dependency collection --format json
-decimate trace-clone . --fingerprint dup:abc12345 --format json
+decimate audit . --base origin/main --format json
+decimate audit . --base origin/main --gate new-only --format json
 ```
 
-Preview and apply safe fixes:
+### 10. Runtime Intelligence
+
+Static analysis says what is connected. Runtime coverage says what actually ran.
+
+Decimate can read LCOV, V8, and Istanbul coverage data.
+
+Useful commands:
 
 ```bash
-decimate fix . --format json
-decimate fix . --apply --confirm --format json
+decimate health . --coverage coverage/lcov.info --coverage-gaps --max-crap 30 --format json
+decimate coverage analyze . --runtime-coverage coverage-final.json --format json
 ```
 
-Safe fixes are intentionally conservative. Decimate can currently apply:
+## How To Read The Summary
 
-- dead Dart file deletion when graph evidence marks the file safe
-- stale suppression removal
-- simple one-line unused Pub dependency removal
-- simple one-line unused top-level Dart declaration removal
+Example:
 
-Multi-line declarations, public API barrels, members, security candidates, and
-complex Pub dependency forms stay review-only.
+```json
+{
+  "files": 466,
+  "edges": 1231,
+  "quality_score": 93,
+  "cycles": 2,
+  "code_duplications": 26,
+  "complex_functions": 13,
+  "dead_files": 11,
+  "findings": 125
+}
+```
 
-## Agent JSON Contract
+Plain English:
 
-Use `--format json` for machine-readable output.
+- `files`: Dart files Decimate parsed
+- `edges`: imports, exports, parts, and augments it resolved
+- `quality_score`: project health from `0` to `100`
+- `cycles`: circular dependency groups
+- `code_duplications`: duplicated code groups
+- `complex_functions`: functions over the complexity limits
+- `dead_files`: files Decimate thinks are unreachable
+- `findings`: total issues in the report
 
-The main report envelope is `decimate.report.v1`:
+## JSON For Agents
+
+Use JSON when another tool or AI agent will read the result:
+
+```bash
+decimate check . --format json
+```
+
+Every finding includes:
+
+- `rule_id`
+- `kind`
+- `severity`
+- `path`
+- `line`
+- `column`
+- `safe_to_delete`
+- related `files`
+- suggested `actions`
+
+Example shape:
 
 ```json
 {
@@ -299,76 +364,78 @@ The main report envelope is `decimate.report.v1`:
   "tool": "decimate",
   "command": "check",
   "verdict": "fail",
-  "summary": { "files": 42, "findings": 3, "quality_score": 88 },
+  "summary": {
+    "files": 466,
+    "edges": 1231,
+    "quality_score": 93,
+    "findings": 125
+  },
   "findings": [],
   "next_steps": []
 }
 ```
 
-`decimate audit --format json` adds audit-only summary fields:
-`risk_score` (`0-100`), `risk_level` (`pass`, `warn`, or `fail`), and
-`attribution.introduced` / `attribution.pre_existing` counts. `--gate all` is
-the default; `--gate new-only` keeps related pre-existing findings visible but
-only fails the process for introduced error findings.
-
-Discover the full command and issue manifest:
-
-```bash
-decimate schema --format json
-decimate report-schema --format json
-decimate config-schema --format json
-decimate rule-pack-schema --format json
-```
-
-`decimate-mcp` starts an MCP stdio server. It implements
-`initialize`, `ping`, `tools/list`, and `tools/call` for the same agent wrappers
-listed under `mcp_tools` in `decimate schema`: `code_execute`, `analyze`,
-`project_info`, `check_changed`, `list_boundaries`, `inspect_target`, `trace_file`,
-`trace_export`, `trace_dependency`, `trace_clone`, `find_dupes`,
-`check_health`, `check_runtime_coverage`, `get_hot_paths`, `get_blast_radius`,
-`get_importance`, `get_cleanup_candidates`, `security_candidates`,
-`feature_flags`, `impact`, `impact_all`, `fix_preview`, `fix_apply`, `audit`,
-`decision_surface`, and `decimate_explain`. `fix_apply` is mutating and
-requires explicit `yes: true`; all other MCP tools are read-only.
-
-`code_execute` is a bounded read-only composition tool. It accepts `code` or
-`program` as a JSON program, not arbitrary JavaScript:
+If a JSON command fails before a report can be built, stdout still stays
+machine-readable:
 
 ```json
-{
-  "code": {
-    "steps": [
-      {
-        "id": "explain",
-        "call": "decimate_explain",
-        "arguments": { "issue_type": "unused-export" }
-      },
-      {
-        "id": "id",
-        "select": { "from": "explain", "pointer": "/structuredContent/id" }
-      }
-    ],
-    "return": { "from": "id" }
-  }
-}
+{ "error": true, "message": "coverage analyze requires --runtime-coverage PATH", "exit_code": 2 }
 ```
 
-Important schemas:
+## Fixes
 
-- `decimate.report.v1`: analysis reports
-- `decimate.trace.v1`: trace reports
-- `decimate.inspect.v1`: file/symbol evidence bundles
-- `decimate.fix.v1`: safe-fix preview/apply reports
-- `decimate.init.v1`: project initialization reports
-- `decimate.hooks.v1`: hook status/install/uninstall reports
-- `decimate.decision-surface.v1`: changed-code review questions
-- `decimate.coverage.v1`: runtime coverage setup, analysis, and dry-run upload packets
-- `decimate.ci-template.v1`: CI template output
-- `decimate.impact.v1`: local impact reports
+Preview safe fixes:
 
-## Configuration
+```bash
+decimate fix . --format json
+```
 
-Decimate discovers config from:
+Apply confirmed safe fixes:
+
+```bash
+decimate fix . --apply --confirm --format json
+```
+
+Safe fixes are intentionally conservative. Decimate can currently apply:
+
+- simple dead-file deletion
+- stale suppression removal
+- one-line unused Pub dependency removal
+- one-line unused top-level Dart declaration removal
+
+Everything else stays review-only.
+
+## Watch Mode
+
+Rerun checks while you work:
+
+```bash
+decimate watch . --no-clear
+```
+
+Run once and exit, useful for scripts:
+
+```bash
+decimate watch . --once --format json
+```
+
+## MCP
+
+Start the MCP server:
+
+```bash
+decimate-mcp
+```
+
+Agents can use it to inspect a project, trace files, trace symbols, inspect
+duplicates, review PR risk, read runtime coverage slices, preview fixes, and
+ask what is safest to do next.
+
+`fix_apply` is the only mutating MCP tool and requires explicit `yes: true`.
+
+## Config
+
+Decimate reads config from:
 
 1. `.decimaterc`
 2. `.decimaterc.json`
@@ -395,27 +462,15 @@ targets = true
 [dupes]
 mode = "semantic"
 min_tokens = 80
+threshold = 5
 
 [boundaries]
 presets = ["layered"]
 rules = ["lib/domain:lib/ui"]
 
-[boundaries.coverage]
-requireAllFiles = true
-allowUnmatched = ["lib/generated/**"]
-
 [security]
 surface = true
 categories = ["hardcoded-secret", "insecure-transport", "tls-bypass"]
-
-ignore_patterns = [
-  "**/*.g.dart",
-  "**/*.freezed.dart",
-  "**/*.gen.dart",
-  "**/*.gr.dart",
-  "**/*.mocks.dart"
-]
-ignore_dependencies = ["build_runner"]
 
 [rules]
 unused-files = "error"
@@ -423,26 +478,67 @@ unused-exports = "warn"
 security-candidate = "warn"
 ```
 
-Boundary presets expand to path rules for common Fallow-style architecture
-shapes: `layered`, `hexagonal`, `feature-sliced`, and `bulletproof`.
-`coverage.requireAllFiles` reports Dart library files outside every configured
-zone, while `coverage.allowUnmatched` keeps generated or intentionally external
-paths out of that coverage check.
+## Full Issue List
 
-Architecture boundaries can also be passed directly on the CLI:
+Run this for the live list:
 
 ```bash
-decimate check . \
-  --boundary lib/domain:lib/ui \
-  --boundary-coverage \
-  --boundary-call 'lib/domain:FirebaseRemoteConfig.*' \
-  --format json
+decimate schema --format json | jq .issue_types
 ```
 
-Policy packs are pure JSON/JSONC data. They can ban import/export URI patterns
-or direct call patterns without executing project code.
+Current issue types:
+
+```text
+dead-file
+unused-export
+unused-type
+private-type-leak
+unused-enum-member
+unused-class-member
+duplicate-export
+route-collision
+private-widget-class
+widget-top-level-function-boundary
+unused-widget-param
+unrendered-widget
+missing-context-mounted-after-await
+missing-entry-point
+circular-dependency
+re-export-cycle
+boundary-violation
+boundary-coverage
+boundary-call-violation
+policy-violation
+unresolved-dependency
+part-of-violation
+unused-dependency
+unused-dev-dependency
+test-only-dependency
+unused-dependency-override
+misconfigured-dependency-override
+unlisted-dependency
+private-src-import
+code-duplication
+high-cyclomatic-complexity
+high-cognitive-complexity
+high-complexity
+coverage-gap
+high-crap-score
+health-hotspot
+refactoring-target
+feature-flag
+security-candidate
+stale-suppression
+missing-suppression-reason
+```
 
 ## CI
+
+Typical GitHub Actions command:
+
+```bash
+decimate audit . --base origin/main --format json --fail-on-regression
+```
 
 Generate CI templates:
 
@@ -451,105 +547,43 @@ decimate ci-template github --format yaml
 decimate ci-template gitlab --format yaml
 ```
 
-Typical GitHub Actions command:
+Preview review-thread reconciliation without changing GitHub or GitLab:
 
 ```bash
-decimate audit . --base origin/main --format json --fail-on-regression
+decimate ci reconcile-review \
+  --provider github \
+  --repo owner/repo \
+  --pr 123 \
+  --envelope review-github.json \
+  --dry-run \
+  --format json
 ```
 
-For security code scanning:
+## Scope
+
+Decimate implements local Fallow-style codebase intelligence for Dart and
+Flutter.
+
+Fallow features that are JS-specific or require hosted backends return clear
+unsupported JSON instead of pretending to work:
 
 ```bash
-decimate security . --ci --sarif-file decimate-security.sarif
+decimate migrate --dry-run --format json
+decimate telemetry status --format json
+decimate license status --format json
 ```
-
-## Fallow Parity Status
-
-Decimate mirrors Fallow's core static intelligence workflow for Dart and
-Flutter:
-
-- bare `decimate` defaults to the full combined static check
-- agent-first JSON reports, actions, schemas, and next steps
-- `decimate init --agents` onboarding for config and agent guidance
-- `decimate hooks install --target git` pre-commit audit hook management
-- dead code, unused exports/types/members, and dependency hygiene
-- cycles, re-export cycles, boundary presets, policy packs, and suppressions
-- duplication detection with traceable fingerprints
-- health, complexity, CRAP, coverage gaps, hotspots, ownership, and targets
-- Flutter typed and raw GoRouter route-collision checks
-- unused Flutter widget constructor parameter checks
-- unrendered Flutter widget class checks
-- feature flag inventory
-- local security candidates with SARIF, surface inventory, and changed-code gates
-- changed-code audit and advisory decision-surface review
-- safe fix previews and confirmed apply flows
-- local impact reporting
-- local runtime coverage setup, ingestion, inventory dry-runs, and source-map
-  upload dry-runs
-
-Decimate also adds Dart-specific graph intelligence that Fallow does not need:
-
-- `part` and `part of` relationship validation
-- `library augment` dependency edges and companion reachability
-- conditional import/export branch scanning, with `--dart-platform vm|web` for
-  target-specific graph edges
-- Dart library privacy rules
-- Pub `.dart_tool/package_config.json`, path dependency, and workspace
-  resolution
-- `pubspec.yaml`, `pubspec_overrides.yaml`, `dev_dependencies`,
-  `dependency_overrides`, and `pubspec.lock` hygiene
-- cross-package `package:other/src/...` private implementation import hygiene
-
-Known gaps before claiming full product parity with Fallow:
-
-- `code_execute` is Rust-native JSON composition, not Fallow's JavaScript
-  sandbox
-- no embedded Node/NAPI-style bindings, because Decimate is not a JS tool
-- no hosted/cloud continuous runtime monitoring
-- no `watch`, `migrate`, telemetry, license, editor, or viz commands yet
-- hook parity is Git-only; no managed agent hook target yet
-- architecture boundaries support rules, presets, coverage, and forbidden calls,
-  but not Fallow's named zones, auto-discovery/logical groups, or allow-list
-  rule matrix yet
-- coverage upload commands are intentionally offline dry-runs; real hosted
-  source-map/inventory uploads and `coverage analyze --cloud` are not enabled
-  yet
-- broader Flutter-framework graph intelligence is still partial: Bloc/Cubit,
-  Riverpod dependency reachability, and richer route/state-management usage
-  evidence are not complete
-- feature flags are inventory-focused and do not yet model owner, expiry, stale
-  rollout state, or runtime stale-flag evidence as richly as Fallow
-- security candidates are Dart/Flutter-focused and configurable by category, but
-  Decimate does not yet expose Fallow's broader request-receiver/catalog model
-- symbol auto-fix is intentionally limited to one-line top-level declarations
-
-## Security Model
-
-`decimate security` surfaces deterministic local candidates for review. It does
-not prove exploitability and it is not a replacement for CodeQL, Semgrep, Snyk,
-OSV, or dependency CVE scanning.
-
-Security output is designed for downstream verification:
-
-- source evidence is redacted
-- candidates include category, sink, confidence, path, line, and fingerprint
-- `--surface` adds attack-surface prompts
-- SARIF output works with code scanning
-- `--gate new` and `--gate newly-reachable` reduce pre-commit/CI noise
 
 ## Development
 
-Use the local Rust toolchain or any Rust 1.85+ installation.
-
 ```bash
-cargo fmt -- --check
+cargo fmt --check
 cargo clippy --all-targets -- -D warnings
-cargo test
-cargo build --release
+cargo test --all-targets
+npm run pack:check
 ```
 
 This repository forbids `unsafe_code`.
 
 ## License
 
-Licensed under either MIT or Apache-2.0.
+Licensed under the MIT License. See [LICENSE](LICENSE).

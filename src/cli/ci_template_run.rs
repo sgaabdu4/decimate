@@ -4,7 +4,8 @@ use std::path::PathBuf;
 use clap::{Arg, ArgAction, ArgMatches, Command, value_parser};
 
 use crate::ci_template::{
-    CiTemplatePlatform, ci_template_report, render_ci_template, vendor_ci_template,
+    CiReconcileReviewOptions, CiReviewProvider, CiTemplatePlatform, ci_reconcile_review_report,
+    ci_template_report, render_ci_template, vendor_ci_template,
 };
 
 use super::CliError;
@@ -49,6 +50,69 @@ pub(super) fn ci_template_command() -> Command {
         )
 }
 
+pub(super) fn ci_command() -> Command {
+    Command::new("ci")
+        .about("Run CI integration utilities")
+        .subcommand_required(true)
+        .arg_required_else_help(true)
+        .subcommand(
+            Command::new("reconcile-review")
+                .about("Dry-run stale review reconciliation from a typed review envelope")
+                .arg(
+                    Arg::new("provider")
+                        .long("provider")
+                        .value_name("PROVIDER")
+                        .help("Review provider")
+                        .default_value("github")
+                        .value_parser(["github", "gitlab"]),
+                )
+                .arg(
+                    Arg::new("repo")
+                        .long("repo")
+                        .value_name("OWNER/REPO")
+                        .help("GitHub repository slug"),
+                )
+                .arg(
+                    Arg::new("project-id")
+                        .long("project-id")
+                        .value_name("ID")
+                        .help("GitLab project id"),
+                )
+                .arg(Arg::new("pr").long("pr").value_name("NUMBER"))
+                .arg(Arg::new("mr").long("mr").value_name("IID"))
+                .arg(Arg::new("api-url").long("api-url").value_name("URL"))
+                .arg(
+                    Arg::new("envelope")
+                        .long("envelope")
+                        .value_name("PATH")
+                        .help("Path to review-github or review-gitlab envelope JSON")
+                        .required(true)
+                        .value_parser(value_parser!(PathBuf)),
+                )
+                .arg(
+                    Arg::new("dry-run")
+                        .long("dry-run")
+                        .help("Validate reconciliation without provider mutation")
+                        .action(ArgAction::SetTrue),
+                )
+                .arg(
+                    Arg::new("format")
+                        .long("format")
+                        .value_name("FORMAT")
+                        .help("Output format")
+                        .default_value("json")
+                        .value_parser(["json"]),
+                ),
+        )
+}
+
+pub(super) fn run_ci<W: Write>(subcommand: &ArgMatches, writer: W) -> Result<i32, CliError> {
+    match subcommand.subcommand() {
+        Some(("reconcile-review", command)) => run_ci_reconcile_review(command, writer),
+        _ => unreachable!("clap requires a ci subcommand"),
+    }
+}
+
 pub(super) fn run_ci_template<W: Write>(
     subcommand: &ArgMatches,
     mut writer: W,
@@ -69,6 +133,28 @@ pub(super) fn run_ci_template<W: Write>(
         CiTemplateOutputFormat::Json => serde_json::to_writer_pretty(&mut writer, &report)?,
         CiTemplateOutputFormat::Yaml => writer.write_all(render_ci_template(&report).as_bytes())?,
     }
+    writeln!(writer)?;
+    Ok(0)
+}
+
+fn run_ci_reconcile_review<W: Write>(
+    subcommand: &ArgMatches,
+    mut writer: W,
+) -> Result<i32, CliError> {
+    let Some(envelope) = subcommand.get_one::<PathBuf>("envelope").cloned() else {
+        return Err(CliError::MissingCiReviewEnvelope);
+    };
+    let report = ci_reconcile_review_report(CiReconcileReviewOptions {
+        provider: review_provider(subcommand),
+        envelope,
+        dry_run: subcommand.get_flag("dry-run"),
+        repo: subcommand.get_one::<String>("repo").cloned(),
+        project_id: subcommand.get_one::<String>("project-id").cloned(),
+        pr: subcommand.get_one::<String>("pr").cloned(),
+        mr: subcommand.get_one::<String>("mr").cloned(),
+        api_url: subcommand.get_one::<String>("api-url").cloned(),
+    })?;
+    serde_json::to_writer_pretty(&mut writer, &report)?;
     writeln!(writer)?;
     Ok(0)
 }
@@ -96,5 +182,15 @@ fn platform(subcommand: &ArgMatches) -> CiTemplatePlatform {
     {
         "gitlab" => CiTemplatePlatform::Gitlab,
         _ => CiTemplatePlatform::Github,
+    }
+}
+
+fn review_provider(subcommand: &ArgMatches) -> CiReviewProvider {
+    match subcommand
+        .get_one::<String>("provider")
+        .map_or("github", String::as_str)
+    {
+        "gitlab" => CiReviewProvider::Gitlab,
+        _ => CiReviewProvider::Github,
     }
 }

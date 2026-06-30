@@ -8,7 +8,7 @@ use thiserror::Error;
 use crate::graph::normalize_path;
 use crate::{
     BoundaryCallRule, BoundaryPreset, BoundaryRule, DuplicateMode, DuplicateOptions,
-    FeatureFlagOptions, HealthOptions, SecurityCategory, SecurityOptions,
+    DuplicationThreshold, FeatureFlagOptions, HealthOptions, SecurityCategory, SecurityOptions,
 };
 
 mod boundary_config;
@@ -106,6 +106,9 @@ pub struct DuplicateConfig {
     /// Limit output to the N largest clone groups.
     #[serde(default)]
     pub top: Option<usize>,
+    /// Fail when duplicated Dart lines exceed this percentage.
+    #[serde(default)]
+    pub threshold: Option<DuplicationThreshold>,
     /// Only report cross-directory duplicates.
     #[serde(default, alias = "skipLocal")]
     pub skip_local: Option<bool>,
@@ -312,6 +315,9 @@ impl DuplicateConfig {
         }
         if self.top.is_some() {
             options.top = self.top;
+        }
+        if self.threshold.is_some() {
+            options.threshold = self.threshold;
         }
         if let Some(skip_local) = self.skip_local {
             options.skip_local = skip_local;
@@ -564,6 +570,7 @@ fn dupes_schema() -> Value {
             "min_occurrences": positive_integer_schema(),
             "minOccurrences": positive_integer_schema(),
             "top": positive_integer_schema(),
+            "threshold": percentage_schema(),
             "skip_local": { "type": "boolean" },
             "skipLocal": { "type": "boolean" },
             "ignore_imports": { "type": "boolean" },
@@ -621,4 +628,8 @@ fn rules_schema() -> Value {
 
 fn positive_integer_schema() -> Value {
     json!({ "type": "integer", "minimum": 1 })
+}
+
+fn percentage_schema() -> Value {
+    json!({ "type": "number", "minimum": 0, "maximum": 100 })
 }

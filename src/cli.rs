@@ -1,32 +1,28 @@
 use std::ffi::OsString;
 use std::fs::File;
-use std::io::{self, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use clap::{Arg, ArgAction, ArgMatches, Command, parser::ValueSource};
-use thiserror::Error;
 
-use crate::WorkspaceScopeError;
 use crate::baseline::{
-    BaselineError, RegressionTolerance, apply_baseline_to_report, baseline_from_report,
+    RegressionTolerance, apply_baseline_to_report, baseline_from_report,
     compare_regression_baseline, load_baseline, load_regression_baseline,
     regression_baseline_from_report, save_baseline as write_baseline,
     save_regression_baseline as write_regression_baseline,
 };
-use crate::changed_scope::ChangedScopeError;
 use crate::config::{
     ConfigError, DecimateConfig, IgnoreDependencyOverrideRule, RuleConfig, apply_rules_to_report,
     load_decimate_config,
 };
 use crate::output::{
-    ReportCommand, build_json_report, filter_report_findings, render_human_report,
+    ReportCommand, Verdict, build_json_report, filter_report_findings, render_human_report,
     render_sarif_report,
 };
-use crate::scan::{ScanError, ScanOptions, scan_project_with_options};
+use crate::scan::{ScanOptions, scan_project_with_options};
 use crate::{
-    BoundaryCallRule, BoundaryRule, DependencyHygieneError, DuplicateCodeError, DuplicateOptions,
-    FeatureFlagError, FeatureFlagOptions, HealthError, HealthOptions, PolicyError, SecurityError,
-    SecurityOptions, WidgetAnalysisError,
+    BoundaryCallRule, BoundaryRule, DuplicateOptions, FeatureFlagOptions, HealthOptions,
+    SecurityOptions,
 };
 
 mod analyze;
@@ -42,6 +38,7 @@ mod decision_surface_run;
 mod default_command;
 mod dupes_args;
 mod entry_points;
+mod error;
 mod error_output;
 mod explain_run;
 mod fix_run;
@@ -66,13 +63,15 @@ mod security_summary_run;
 mod summary_args;
 mod trace_args;
 mod trace_run;
+mod unsupported_run;
+mod watch_run;
 use crate::security_gate::{SecurityDiffSource, SecurityGateMode};
 use analyze::analyze_project;
 use analyzer_options::{
     duplicate_options_for, feature_flag_options_for, health_options_for, security_options_for,
 };
 use boundary_args::boundary_command;
-use ci_template_run::{ci_template_command, run_ci_template};
+use ci_template_run::{ci_command, ci_template_command, run_ci, run_ci_template};
 use command_name::report_command_from_name;
 use common_args::{
     audit_baseline_arg, baseline_command, report_command, root_path, scan_command,
@@ -84,12 +83,13 @@ use decision_surface_run::{
     decision_surface_command, max_decisions_arg, review_command, run_decision_surface,
 };
 use dupes_args::{dupes_command, trace_clone_command};
+pub use error::CliError;
 pub use error_output::run_from_env;
 use explain_run::{explain_command, run_explain};
 use fix_run::{fix_command, run_fix};
 use flags_args::flags_command;
 use health_args::{health_command, health_command_without_top};
-use hooks_run::{hooks_command, run_hooks};
+use hooks_run::{hooks_command, run_hooks, run_setup_hooks, setup_hooks_command};
 use impact_run::{impact_command, run_impact};
 use init_run::{init_command, run_init};
 use inspect_args::inspect_command;
@@ -116,129 +116,10 @@ use trace_args::{
     trace_command, trace_dependency_command, trace_file_command, trace_symbol_command,
 };
 use trace_run::run_trace_request;
-
-/// CLI execution errors.
-#[derive(Debug, Error)]
-pub enum CliError {
-    /// Argument parsing failed.
-    #[error(transparent)]
-    Clap(#[from] clap::Error),
-    /// Project scanning failed.
-    #[error(transparent)]
-    Scan(#[from] ScanError),
-    /// Dependency hygiene analysis failed.
-    #[error(transparent)]
-    DependencyHygiene(#[from] DependencyHygieneError),
-    /// Duplicate-code analysis failed.
-    #[error(transparent)]
-    DuplicateCode(#[from] DuplicateCodeError),
-    /// Health analysis failed.
-    #[error(transparent)]
-    Health(#[from] HealthError),
-    /// Feature flag analysis failed.
-    #[error(transparent)]
-    FeatureFlags(#[from] FeatureFlagError),
-    /// Security candidate analysis failed.
-    #[error(transparent)]
-    Security(#[from] SecurityError),
-    /// Flutter widget parameter analysis failed.
-    #[error(transparent)]
-    Widgets(#[from] WidgetAnalysisError),
-    /// Security top truncation cannot safely run before changed-line scoping.
-    #[error(
-        "security --top cannot be combined with --gate, --diff-file, --diff-stdin, or --changed-since"
-    )]
-    UnsupportedSecurityTopScope,
-    /// Security review gate could not be applied.
-    #[error(transparent)]
-    SecurityGate(#[from] crate::security_gate::SecurityGateError),
-    /// Changed-file scope could not be computed.
-    #[error(transparent)]
-    ChangedScope(#[from] ChangedScopeError),
-    /// Workspace scope could not be computed.
-    #[error(transparent)]
-    WorkspaceScope(#[from] WorkspaceScopeError),
-    /// Decimate config could not be loaded.
-    #[error(transparent)]
-    Config(#[from] ConfigError),
-    /// Decimate rule config could not be applied.
-    #[error(transparent)]
-    Rule(#[from] crate::config::RuleError),
-    /// Finding baseline could not be loaded or saved.
-    #[error(transparent)]
-    Baseline(#[from] BaselineError),
-    /// Regression tolerance syntax was invalid.
-    #[error("invalid regression tolerance {value:?}; expected COUNT or PERCENT like 2 or 10%")]
-    Tolerance {
-        /// Raw tolerance value.
-        value: String,
-    },
-    /// JSON rendering failed.
-    #[error(transparent)]
-    Json(#[from] serde_json::Error),
-    /// Output writing failed.
-    #[error(transparent)]
-    Io(#[from] io::Error),
-    /// Boundary rule syntax was invalid.
-    #[error("invalid boundary rule {value:?}; expected FROM:DISALLOW")]
-    BoundaryRule {
-        /// Raw boundary argument.
-        value: String,
-    },
-    /// Boundary call rule syntax was invalid.
-    #[error("invalid boundary call rule {value:?}; expected FROM:PATTERN")]
-    BoundaryCallRule {
-        /// Raw boundary call argument.
-        value: String,
-    },
-    /// Policy pack loading or analysis failed.
-    #[error(transparent)]
-    Policy(#[from] PolicyError),
-    /// Trace-file target was missing after argument parsing.
-    #[error("trace-file requires --file PATH")]
-    MissingTraceFile,
-    /// Trace-dependency package was missing after argument parsing.
-    #[error("trace-dependency requires --dependency PACKAGE")]
-    MissingTraceDependency,
-    /// Inspect target was missing after argument parsing.
-    #[error("inspect requires --file PATH or --symbol FILE:SYMBOL")]
-    MissingInspectTarget,
-    /// Symbol trace syntax was invalid.
-    #[error("invalid trace symbol {value:?}; expected FILE:SYMBOL or --file FILE --symbol SYMBOL")]
-    TraceSymbol {
-        /// Raw symbol trace argument.
-        value: String,
-    },
-    /// Dead-code analysis did not have any entry points.
-    #[error("no entry points provided and no default Dart entry points found under {root}")]
-    MissingEntryPoints {
-        /// Project root.
-        root: PathBuf,
-    },
-    #[error("coverage analyze requires --runtime-coverage PATH")]
-    MissingRuntimeCoverage,
-    #[error("cloud runtime coverage is not supported yet; provide --runtime-coverage PATH")]
-    UnsupportedCoverageCloud,
-    #[error("{command} is offline-only in this release; pass --dry-run")]
-    CoverageUploadDryRunRequired { command: &'static str },
-    #[error("coverage upload-source-maps directory does not exist: {path}")]
-    CoverageUploadDir { path: PathBuf },
-    #[error("invalid coverage upload git SHA {value:?}; expected 7 to 40 hex characters")]
-    CoverageUploadGitSha { value: String },
-    #[error("invalid coverage upload repo {value:?}; expected OWNER/REPO")]
-    CoverageUploadRepo { value: String },
-    #[error(transparent)]
-    CiTemplate(#[from] crate::CiTemplateError),
-    /// Project initialization failed.
-    #[error(transparent)]
-    Init(#[from] crate::InitError),
-    /// Hook management failed.
-    #[error(transparent)]
-    Hooks(#[from] crate::HooksError),
-    /// SARIF output is not available for this command.
-    #[error("--format sarif is not supported by decimate {command}")]
-    UnsupportedSarifFormat { command: &'static str },
-}
+use unsupported_run::{
+    license_command, migrate_command, run_license, run_migrate, run_telemetry, telemetry_command,
+};
+use watch_run::{run_watch, watch_command};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct CommandRequest {
@@ -326,10 +207,16 @@ where
         Some(("workspaces", subcommand)) => return run_workspaces(subcommand, writer),
         Some(("explain", subcommand)) => return run_explain(subcommand, writer),
         Some(("fix", subcommand)) => return run_fix(subcommand, writer),
+        Some(("migrate", subcommand)) => return run_migrate(subcommand, writer),
+        Some(("telemetry", subcommand)) => return run_telemetry(subcommand, writer),
+        Some(("license", subcommand)) => return run_license(subcommand, writer),
         Some(("impact", subcommand)) => return run_impact(subcommand, writer),
+        Some(("ci", subcommand)) => return run_ci(subcommand, writer),
         Some(("ci-template", subcommand)) => return run_ci_template(subcommand, writer),
         Some(("init", subcommand)) => return run_init(subcommand, writer),
         Some(("hooks", subcommand)) => return run_hooks(subcommand, writer),
+        Some(("setup-hooks", subcommand)) => return run_setup_hooks(subcommand, writer),
+        Some(("watch", subcommand)) => return run_watch(subcommand, writer),
         Some(("decision-surface", subcommand)) => {
             return run_decision_surface(subcommand, writer, "decision-surface");
         }
@@ -391,6 +278,7 @@ fn run_request<W: Write>(request: &CommandRequest, mut writer: W) -> Result<i32,
     }
     security_summary_run::apply_security_summary(request, &mut report);
     audit_run::apply_risk(&project.root, &audit_context, &mut report);
+    apply_duplication_threshold_gate(&mut report);
     let code = security_summary_run::exit_code(request, &report, regressed);
 
     match request.format {
@@ -408,103 +296,122 @@ fn run_request<W: Write>(request: &CommandRequest, mut writer: W) -> Result<i32,
     Ok(code)
 }
 
+fn apply_duplication_threshold_gate(report: &mut crate::output::JsonReport) {
+    if report.summary.duplication_threshold_exceeded {
+        report.verdict = Verdict::Fail;
+    }
+}
+
 fn command() -> Command {
-    schema_subcommands(
-        Command::new("decimate")
-            .about("Rust-native Dart and Flutter module-graph intelligence")
-            .subcommand_required(false)
-            .arg_required_else_help(false)
-            .subcommand(check_issue_filter_command(symbol_options_command(
-                dupes_command(health_command_without_top(boundary_command(
-                    baseline_command(Command::new("check").about("Run all enabled graph checks")),
-                ))),
-            )))
-            .subcommand(symbol_options_command(dupes_command(
-                health_command_without_top(boundary_command(report_command(
-                    Command::new("audit")
-                        .about("Run changed-code graph checks")
-                        .arg(
-                            Arg::new("brief")
-                                .long("brief")
-                                .help("Emit a Fallow-style advisory review brief and always exit 0")
-                                .action(ArgAction::SetTrue),
-                        )
-                        .arg(
-                            Arg::new("base")
-                                .long("base")
-                                .value_name("REF")
-                                .help("Git ref used to scope changed files")
-                                .required(true),
-                        )
-                        .arg(audit_run::gate_arg())
-                        .arg(audit_baseline_arg(
-                            "dead-code-baseline",
-                            "Dead-code baseline file",
-                        ))
-                        .arg(audit_baseline_arg(
-                            "health-baseline",
-                            "Health baseline file",
-                        ))
-                        .arg(audit_baseline_arg(
-                            "dupes-baseline",
-                            "Duplicate-code baseline file",
-                        ))
-                        .arg(max_decisions_arg()),
-                ))),
-            )))
-            .subcommand(dead_code_issue_filter_command(symbol_options_command(
-                baseline_command(
-                    Command::new("dead-code")
-                        .about("Find Dart files unreachable from entry points"),
-                ),
-            )))
-            .subcommand(baseline_command(
-                Command::new("cycles").about("Find circular file dependencies"),
-            ))
-            .subcommand(dupes_command(baseline_command(
-                Command::new("dupes").about("Find duplicated Dart code blocks"),
-            )))
-            .subcommand(health_command(baseline_command(
-                Command::new("health").about("Find complex Dart functions and methods"),
-            )))
-            .subcommand(flags_command(baseline_command(
-                Command::new("flags").about("Find Dart and Flutter feature flag patterns"),
-            )))
-            .subcommand(security_command(baseline_command(
-                Command::new("security")
-                    .about("Find unverified Dart and Flutter security candidates"),
-            )))
-            .subcommand(trace_file_command(scan_command(
-                Command::new("trace-file").about("Trace one Dart file"),
-            )))
-            .subcommand(trace_command(
-                Command::new("trace").about("Trace one top-level Dart symbol"),
-            ))
-            .subcommand(trace_symbol_command(scan_command(
-                Command::new("trace-symbol").about("Trace one top-level Dart symbol"),
-            )))
-            .subcommand(trace_dependency_command(scan_command(
-                Command::new("trace-dependency").about("Trace one pub dependency"),
-            )))
-            .subcommand(trace_clone_command(dupes_command(scan_command(
-                Command::new("trace-clone").about("Trace one duplicate code group"),
-            ))))
-            .subcommand(inspect_command(scan_command(
-                Command::new("inspect").about("Compose one evidence bundle for a file or symbol"),
-            )))
-            .subcommand(list_command())
-            .subcommand(workspaces_command())
-            .subcommand(explain_command())
-            .subcommand(fix_command())
-            .subcommand(init_command())
-            .subcommand(hooks_command())
-            .subcommand(impact_command())
-            .subcommand(ci_template_command())
-            .subcommand(review_command())
-            .subcommand(decision_surface_command())
-            .subcommand(coverage_command())
-            .subcommand(config_command()),
-    )
+    let command = Command::new("decimate")
+        .about("Rust-native Dart and Flutter module-graph intelligence")
+        .subcommand_required(false)
+        .arg_required_else_help(false);
+    schema_subcommands(support_subcommands(report_subcommands(command)))
+}
+
+fn report_subcommands(command: Command) -> Command {
+    command
+        .subcommand(check_issue_filter_command(symbol_options_command(
+            dupes_command(health_command_without_top(boundary_command(
+                baseline_command(Command::new("check").about("Run all enabled graph checks")),
+            ))),
+        )))
+        .subcommand(symbol_options_command(dupes_command(
+            health_command_without_top(boundary_command(report_command(audit_command()))),
+        )))
+        .subcommand(dead_code_issue_filter_command(symbol_options_command(
+            baseline_command(
+                Command::new("dead-code").about("Find Dart files unreachable from entry points"),
+            ),
+        )))
+        .subcommand(baseline_command(
+            Command::new("cycles").about("Find circular file dependencies"),
+        ))
+        .subcommand(dupes_command(baseline_command(
+            Command::new("dupes").about("Find duplicated Dart code blocks"),
+        )))
+        .subcommand(health_command(baseline_command(
+            Command::new("health").about("Find complex Dart functions and methods"),
+        )))
+        .subcommand(flags_command(baseline_command(
+            Command::new("flags").about("Find Dart and Flutter feature flag patterns"),
+        )))
+        .subcommand(security_command(baseline_command(
+            Command::new("security").about("Find unverified Dart and Flutter security candidates"),
+        )))
+        .subcommand(trace_file_command(scan_command(
+            Command::new("trace-file").about("Trace one Dart file"),
+        )))
+        .subcommand(trace_command(
+            Command::new("trace").about("Trace one top-level Dart symbol"),
+        ))
+        .subcommand(trace_symbol_command(scan_command(
+            Command::new("trace-symbol").about("Trace one top-level Dart symbol"),
+        )))
+        .subcommand(trace_dependency_command(scan_command(
+            Command::new("trace-dependency").about("Trace one pub dependency"),
+        )))
+        .subcommand(trace_clone_command(dupes_command(scan_command(
+            Command::new("trace-clone").about("Trace one duplicate code group"),
+        ))))
+        .subcommand(inspect_command(scan_command(
+            Command::new("inspect").about("Compose one evidence bundle for a file or symbol"),
+        )))
+}
+
+fn audit_command() -> Command {
+    Command::new("audit")
+        .about("Run changed-code graph checks")
+        .arg(
+            Arg::new("brief")
+                .long("brief")
+                .help("Emit a Fallow-style advisory review brief and always exit 0")
+                .action(ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new("base")
+                .long("base")
+                .value_name("REF")
+                .help("Git ref used to scope changed files")
+                .required(true),
+        )
+        .arg(audit_run::gate_arg())
+        .arg(audit_baseline_arg(
+            "dead-code-baseline",
+            "Dead-code baseline file",
+        ))
+        .arg(audit_baseline_arg(
+            "health-baseline",
+            "Health baseline file",
+        ))
+        .arg(audit_baseline_arg(
+            "dupes-baseline",
+            "Duplicate-code baseline file",
+        ))
+        .arg(max_decisions_arg())
+}
+
+fn support_subcommands(command: Command) -> Command {
+    command
+        .subcommand(list_command())
+        .subcommand(workspaces_command())
+        .subcommand(explain_command())
+        .subcommand(fix_command())
+        .subcommand(migrate_command())
+        .subcommand(telemetry_command())
+        .subcommand(license_command())
+        .subcommand(init_command())
+        .subcommand(hooks_command())
+        .subcommand(setup_hooks_command())
+        .subcommand(watch_command())
+        .subcommand(impact_command())
+        .subcommand(ci_command())
+        .subcommand(ci_template_command())
+        .subcommand(review_command())
+        .subcommand(decision_surface_command())
+        .subcommand(coverage_command())
+        .subcommand(config_command())
 }
 
 fn schema_subcommands(command: Command) -> Command {
@@ -564,7 +471,7 @@ fn request_from_matches(matches: &ArgMatches) -> Result<CommandRequest, CliError
     let regression_baseline = regression_baseline_path(command, subcommand);
     let save_regression_baseline = save_regression_baseline_path(command, subcommand);
     let trace = trace_request_args(command, subcommand)?;
-    let duplicate_options = duplicate_options_for(command, subcommand, &config);
+    let duplicate_options = duplicate_options_for(command, subcommand, &config)?;
     let health_options = health_options_for(command, subcommand, &config);
     let feature_flag_options = feature_flag_options_for(command, subcommand, &config);
     let security_options = security_options_for(command, subcommand, &config);

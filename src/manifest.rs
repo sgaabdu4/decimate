@@ -1,6 +1,6 @@
 use serde_json::{Value, json};
 
-use crate::ci_template::CI_TEMPLATE_SCHEMA_VERSION;
+use crate::ci_template::{CI_RECONCILE_REVIEW_SCHEMA_VERSION, CI_TEMPLATE_SCHEMA_VERSION};
 use crate::config::CONFIG_SCHEMA_VERSION;
 use crate::coverage::COVERAGE_ANALYSIS_SCHEMA_VERSION;
 use crate::decision_surface::DECISION_SURFACE_SCHEMA_VERSION;
@@ -13,6 +13,7 @@ use crate::inspect::INSPECT_SCHEMA_VERSION;
 use crate::output::{SCHEMA_VERSION, TRACE_SCHEMA_VERSION};
 use crate::policy::RULE_PACK_SCHEMA_VERSION;
 use crate::project_list::PROJECT_LIST_SCHEMA_VERSION;
+use crate::unsupported::UNSUPPORTED_SCHEMA_VERSION;
 
 mod mcp;
 use mcp::mcp_tools;
@@ -59,10 +60,12 @@ pub fn decimate_schema() -> Value {
             "impact": IMPACT_SCHEMA_VERSION,
             "init": INIT_SCHEMA_VERSION,
             "hooks": HOOKS_SCHEMA_VERSION,
+            "ci_reconcile_review": CI_RECONCILE_REVIEW_SCHEMA_VERSION,
             "ci_template": CI_TEMPLATE_SCHEMA_VERSION,
             "config": CONFIG_SCHEMA_VERSION,
             "coverage": COVERAGE_ANALYSIS_SCHEMA_VERSION,
             "decision_surface": DECISION_SURFACE_SCHEMA_VERSION,
+            "unsupported": UNSUPPORTED_SCHEMA_VERSION,
             "rule_pack": RULE_PACK_SCHEMA_VERSION
         },
         "commands": commands(),
@@ -123,14 +126,14 @@ fn analysis_commands() -> Value {
             "kind": "combined",
             "description": "Run all enabled graph, symbol, dependency, duplicate, health, flag, and security checks.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks", "--unused-files", "--unused-exports", "--unused-types", "--unused-deps", "--unlisted-deps", "--private-src-imports", "--duplicate-exports", "--circular-deps", "--re-export-cycles", "--boundary-violations", "--unused-enum-members", "--unused-class-members", "--unresolved-imports", "--stale-suppressions", "--unused-dependency-overrides", "--misconfigured-dependency-overrides"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--threshold", "--cross-language", "--skip-local", "--ignore-imports", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks", "--unused-files", "--unused-exports", "--unused-types", "--unused-deps", "--unlisted-deps", "--private-src-imports", "--duplicate-exports", "--circular-deps", "--re-export-cycles", "--boundary-violations", "--unused-enum-members", "--unused-class-members", "--unresolved-imports", "--stale-suppressions", "--unused-dependency-overrides", "--misconfigured-dependency-overrides"]
         },
         {
             "name": "audit",
             "kind": "audit",
             "description": "Run changed-code graph checks scoped from a Git base ref.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--root", "--brief", "--base", "--gate", "--dead-code-baseline", "--health-baseline", "--dupes-baseline", "--max-decisions", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks"]
+            "flags": ["--root", "--brief", "--base", "--gate", "--dead-code-baseline", "--health-baseline", "--dupes-baseline", "--max-decisions", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--threshold", "--cross-language", "--skip-local", "--ignore-imports", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks"]
         },
         {
             "name": "review",
@@ -165,7 +168,7 @@ fn analysis_commands() -> Value {
             "kind": "dupes",
             "description": "Find duplicated Dart code blocks.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--threshold", "--cross-language", "--skip-local", "--ignore-imports", "--no-ignore-imports"]
         },
         {
             "name": "health",
@@ -273,98 +276,158 @@ fn evidence_commands() -> Value {
             "kind": "trace-clone",
             "description": "Trace one duplicate-code group by fingerprint or file line.",
             "schema": TRACE_SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports", "--fingerprint"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--threshold", "--cross-language", "--skip-local", "--ignore-imports", "--no-ignore-imports", "--fingerprint"]
         }
     ])
 }
 
 fn support_commands() -> Value {
-    json!([
-        {
+    let mut commands = Vec::new();
+    commands.extend(project_support_commands());
+    commands.extend(local_support_commands());
+    commands.extend(integration_support_commands());
+    Value::Array(commands)
+}
+
+fn project_support_commands() -> Vec<Value> {
+    vec![
+        json!({
             "name": "list",
             "kind": "list",
             "description": "List Decimate project structure and active Dart/Flutter adapters.",
             "schema": PROJECT_LIST_SCHEMA_VERSION,
             "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--files", "--entry-points", "--workspaces", "--plugins", "--boundaries", "--file", "--workspace", "--changed-workspaces"]
-        },
-        {
+        }),
+        json!({
             "name": "workspaces",
             "kind": "list",
             "description": "List discovered local pub packages.",
             "schema": PROJECT_LIST_SCHEMA_VERSION,
             "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces"]
-        },
-        {
+        }),
+        json!({
             "name": "explain",
             "kind": "explain",
             "description": "Explain one Decimate issue type without running analysis.",
             "schema": EXPLAIN_SCHEMA_VERSION,
             "flags": ["--format"]
-        },
-        {
+        }),
+        json!({
             "name": "fix",
             "kind": "fix",
             "description": "Plan or apply safe auto-fixes.",
             "schema": FIX_SCHEMA_VERSION,
             "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--action", "--dry-run", "--apply", "--yes", "--confirm"]
-        },
-        {
+        }),
+    ]
+}
+
+fn local_support_commands() -> Vec<Value> {
+    vec![
+        json!({
+            "name": "migrate",
+            "kind": "unsupported",
+            "description": "Report Dart support status for Fallow migration helpers.",
+            "schema": UNSUPPORTED_SCHEMA_VERSION,
+            "flags": ["--format", "--dry-run"]
+        }),
+        json!({
+            "name": "telemetry",
+            "kind": "unsupported",
+            "description": "Report Decimate telemetry support status.",
+            "schema": UNSUPPORTED_SCHEMA_VERSION,
+            "flags": ["status", "enable", "disable", "--format"]
+        }),
+        json!({
+            "name": "license",
+            "kind": "unsupported",
+            "description": "Report Decimate license support status.",
+            "schema": UNSUPPORTED_SCHEMA_VERSION,
+            "flags": ["status", "activate", "--format"]
+        }),
+        json!({
             "name": "init",
             "kind": "init",
             "description": "Create Decimate config and optional AGENTS.md guidance.",
             "schema": INIT_SCHEMA_VERSION,
             "flags": ["--root", "--format", "--agents", "--force"]
-        },
-        {
+        }),
+        json!({
             "name": "hooks",
             "kind": "hooks",
-            "description": "Inspect, install, or remove Decimate-managed Git hooks.",
+            "description": "Inspect, install, or remove Decimate-managed Git and agent hooks.",
             "schema": HOOKS_SCHEMA_VERSION,
             "flags": ["status", "install", "uninstall", "--root", "--format", "--target", "--branch", "--force"]
-        },
-        {
+        }),
+        json!({
+            "name": "setup-hooks",
+            "kind": "hooks",
+            "description": "Install or remove Decimate-managed repo-local agent hooks.",
+            "schema": HOOKS_SCHEMA_VERSION,
+            "flags": ["--root", "--format", "--agent", "--branch", "--dry-run", "--force", "--uninstall"]
+        }),
+        json!({
+            "name": "watch",
+            "kind": "watch",
+            "description": "Watch Dart project files and rerun Decimate check.",
+            "schema": SCHEMA_VERSION,
+            "flags": ["--root", "--format", "--no-clear", "--once", "--interval-ms"]
+        }),
+        json!({
+            "name": "ci",
+            "kind": "ci",
+            "description": "Run CI integration utilities.",
+            "schema": CI_RECONCILE_REVIEW_SCHEMA_VERSION,
+            "flags": ["reconcile-review", "--provider", "--repo", "--project-id", "--pr", "--mr", "--api-url", "--envelope", "--dry-run", "--format"]
+        }),
+    ]
+}
+
+fn integration_support_commands() -> Vec<Value> {
+    vec![
+        json!({
             "name": "ci-template",
             "kind": "ci-template",
             "description": "Print or vendor GitHub Actions and GitLab CI templates.",
             "schema": CI_TEMPLATE_SCHEMA_VERSION,
             "flags": ["--format", "--vendor", "--root", "--force"]
-        },
-        {
+        }),
+        json!({
             "name": "config",
             "kind": "config",
             "description": "Print the resolved Decimate configuration.",
             "schema": CONFIG_SCHEMA_VERSION,
             "flags": ["--root", "--format", "--config", "--path"]
-        },
-        {
+        }),
+        json!({
             "name": "schema",
             "kind": "schema",
             "description": "Print this machine-readable CLI and issue manifest.",
             "schema": MANIFEST_SCHEMA_VERSION,
             "flags": ["--format"]
-        },
-        {
+        }),
+        json!({
             "name": "config-schema",
             "kind": "config-schema",
             "description": "Print the configuration JSON schema.",
             "schema": CONFIG_SCHEMA_VERSION,
             "flags": ["--format"]
-        },
-        {
+        }),
+        json!({
             "name": "report-schema",
             "kind": "report-schema",
             "description": "Print the analysis report JSON schema.",
             "schema": SCHEMA_VERSION,
             "flags": ["--format"]
-        },
-        {
+        }),
+        json!({
             "name": "rule-pack-schema",
             "kind": "rule-pack-schema",
             "description": "Print the policy rule-pack JSON schema.",
             "schema": RULE_PACK_SCHEMA_VERSION,
             "flags": ["--format"]
-        }
-    ])
+        }),
+    ]
 }
 
 fn issue_types() -> Value {

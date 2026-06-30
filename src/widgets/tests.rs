@@ -318,6 +318,7 @@ class SaveButton extends StatelessWidget {
       Navigator.of(context).pop();
     }
     await doWork();
+    Navigator.of(context).pop();
   }
 }
 ";
@@ -326,6 +327,26 @@ class SaveButton extends StatelessWidget {
     assert_eq!(findings.len(), 1);
     assert_eq!(findings[0].owner, "SaveButton.save");
     assert_eq!(findings[0].location.line, 9);
+    Ok(())
+}
+
+#[test]
+fn does_not_flag_widget_awaits_without_lifecycle_use() -> Result<(), Box<dyn std::error::Error>> {
+    let source = r"
+class SaveButton extends StatefulWidget {
+  State<SaveButton> createState() => _SaveButtonState();
+}
+
+class _SaveButtonState extends State<SaveButton> {
+  Future<void> refresh() async {
+    await doWork();
+    await logTap();
+  }
+}
+";
+    let findings = parse_findings(source)?.missing_context_mounted_after_await;
+
+    assert!(findings.is_empty(), "{findings:?}");
     Ok(())
 }
 

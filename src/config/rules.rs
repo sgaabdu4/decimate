@@ -310,6 +310,7 @@ impl<'a> RuleMatcher<'a> {
 const fn default_rule_level(kind: FindingKind) -> RuleLevel {
     match kind {
         FindingKind::UnusedDependencyOverride
+        | FindingKind::CodeDuplication
         | FindingKind::UnusedWidgetParam
         | FindingKind::UnrenderedWidget => RuleLevel::Warn,
         FindingKind::PrivateWidgetClass

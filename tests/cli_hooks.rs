@@ -131,6 +131,142 @@ fn hooks_uninstall_removes_only_managed_hook() -> Result<(), Box<dyn std::error:
     Ok(())
 }
 
+#[test]
+fn hooks_install_agent_manages_claude_gate_and_agents_block()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    let mut output = Vec::new();
+
+    let code = run_from(
+        [
+            "decimate",
+            "hooks",
+            "install",
+            fixture.path().to_str().unwrap_or("."),
+            "--target",
+            "agent",
+            "--branch",
+            "origin/dev",
+            "--format",
+            "json",
+        ],
+        &mut output,
+    )?;
+
+    let json = serde_json::from_slice::<Value>(&output)?;
+    let script = fixture.path().join(".claude/hooks/decimate-gate.sh");
+    let settings = fixture.path().join(".claude/settings.json");
+    let agents = fixture.path().join("AGENTS.md");
+    assert_eq!(code, 0);
+    assert_eq!(json["target"], "agent");
+    assert_eq!(json["files"].as_array().map_or(0, Vec::len), 3);
+    assert!(fs::read_to_string(script)?.contains("decimate-managed-hook"));
+    assert!(fs::read_to_string(settings)?.contains("decimate-gate.sh"));
+    assert!(fs::read_to_string(agents)?.contains("origin/dev"));
+
+    Ok(())
+}
+
+#[test]
+fn hooks_uninstall_agent_removes_managed_agent_surfaces() -> Result<(), Box<dyn std::error::Error>>
+{
+    let fixture = tempfile::tempdir()?;
+    run_from(
+        [
+            "decimate",
+            "hooks",
+            "install",
+            fixture.path().to_str().unwrap_or("."),
+            "--target",
+            "agent",
+        ],
+        &mut Vec::new(),
+    )?;
+    let mut output = Vec::new();
+
+    let code = run_from(
+        [
+            "decimate",
+            "hooks",
+            "uninstall",
+            fixture.path().to_str().unwrap_or("."),
+            "--target",
+            "agent",
+            "--format",
+            "json",
+        ],
+        &mut output,
+    )?;
+
+    let json = serde_json::from_slice::<Value>(&output)?;
+    let script = fixture.path().join(".claude/hooks/decimate-gate.sh");
+    let settings = fs::read_to_string(fixture.path().join(".claude/settings.json"))?;
+    let agents = fs::read_to_string(fixture.path().join("AGENTS.md"))?;
+    assert_eq!(code, 0);
+    assert!(!script.exists());
+    assert!(!settings.contains("decimate-gate.sh"));
+    assert!(!agents.contains("decimate-managed-hook:start"));
+    assert_eq!(json["files"][0]["action"], "removed");
+
+    Ok(())
+}
+
+#[test]
+fn setup_hooks_alias_installs_agent_hook() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    let mut output = Vec::new();
+
+    let code = run_from(
+        [
+            "decimate",
+            "setup-hooks",
+            fixture.path().to_str().unwrap_or("."),
+            "--agent",
+            "--format",
+            "json",
+        ],
+        &mut output,
+    )?;
+
+    let json = serde_json::from_slice::<Value>(&output)?;
+    assert_eq!(code, 0);
+    assert_eq!(json["target"], "agent");
+    assert!(
+        fixture
+            .path()
+            .join(".claude/hooks/decimate-gate.sh")
+            .exists()
+    );
+
+    Ok(())
+}
+
+#[test]
+fn setup_hooks_dry_run_is_read_only() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    let code = run_from(
+        [
+            "decimate",
+            "setup-hooks",
+            fixture.path().to_str().unwrap_or("."),
+            "--dry-run",
+            "--format",
+            "json",
+        ],
+        &mut Vec::new(),
+    )?;
+
+    assert_eq!(code, 0);
+    assert!(
+        !fixture
+            .path()
+            .join(".claude/hooks/decimate-gate.sh")
+            .exists()
+    );
+
+    Ok(())
+}
+
 fn git_fixture() -> Result<TempDir, std::io::Error> {
     let fixture = tempfile::tempdir()?;
     fs::create_dir_all(fixture.path().join(".git/hooks"))?;

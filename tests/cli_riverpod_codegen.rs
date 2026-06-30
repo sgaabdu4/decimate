@@ -82,6 +82,84 @@ final counterProvider = Object();
     Ok(())
 }
 
+#[test]
+fn riverpod_family_and_acronym_provider_refs_keep_source_owners_live()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(
+        &fixture,
+        "pubspec.yaml",
+        "\
+name: app
+dependencies:
+  flutter_riverpod: any
+  riverpod_annotation: any
+dev_dependencies:
+  riverpod_generator: any
+",
+    )?;
+    write(
+        &fixture,
+        "lib/main.dart",
+        "\
+import 'providers.dart';
+void main() {
+  ref.watch(userProvider('42'));
+  ref.watch(urlCacheProvider);
+}
+final ref = Ref();
+class Ref {
+  void watch(Object provider) {}
+}
+",
+    )?;
+    write(
+        &fixture,
+        "lib/providers.dart",
+        "\
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+part 'providers.g.dart';
+
+@riverpod
+String user(Ref ref, String id) => id;
+
+@Riverpod(keepAlive: true)
+class URLCache extends _$URLCache {
+  String build() => 'cached';
+}
+
+class Ref {}
+class _$URLCache {}
+class UnusedRepository {}
+",
+    )?;
+    write(
+        &fixture,
+        "lib/providers.g.dart",
+        "\
+part of 'providers.dart';
+Object userProvider(String id) => Object();
+final urlCacheProvider = Object();
+",
+    )?;
+
+    let (code, json) = run_json([
+        "decimate",
+        "check",
+        fixture.path().to_str().unwrap_or("."),
+        "--format",
+        "json",
+        "--include-entry-exports",
+    ])?;
+
+    assert_eq!(code, 1);
+    assert_unused_export_absent(&json, "user");
+    assert_unused_export_absent(&json, "URLCache");
+    assert_unused_export_present(&json, "UnusedRepository");
+
+    Ok(())
+}
+
 fn assert_unused_export_absent(json: &Value, name: &str) {
     assert!(
         !unused_exports(json).any(|finding| finding_targets_symbol(finding, name)),

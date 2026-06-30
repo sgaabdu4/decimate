@@ -4,6 +4,7 @@ use crate::config::DecimateConfig;
 use crate::output::ReportCommand;
 use crate::{DuplicateOptions, FeatureFlagOptions, HealthOptions, SecurityOptions};
 
+use super::CliError;
 use super::dupes_args::duplicate_options_with_defaults;
 use super::flags_args::feature_flag_options_with_defaults;
 use super::health_args::health_options_with_defaults;
@@ -13,7 +14,7 @@ pub(super) fn duplicate_options_for(
     command: ReportCommand,
     subcommand: &ArgMatches,
     config: &DecimateConfig,
-) -> DuplicateOptions {
+) -> Result<DuplicateOptions, CliError> {
     if matches!(
         command,
         ReportCommand::Check
@@ -23,9 +24,9 @@ pub(super) fn duplicate_options_for(
     ) {
         duplicate_options_with_defaults(subcommand, config.duplicate_options())
     } else if command == ReportCommand::Inspect {
-        config.duplicate_options()
+        Ok(config.duplicate_options())
     } else {
-        DuplicateOptions::default()
+        Ok(DuplicateOptions::default())
     }
 }
 

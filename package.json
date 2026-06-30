@@ -2,7 +2,7 @@
   "name": "@sgaabdu4/decimate",
   "version": "0.1.0",
   "description": "Rust-native codebase intelligence for Dart and Flutter module graphs.",
-  "license": "MIT OR Apache-2.0",
+  "license": "MIT",
   "bin": {
     "decimate": "npm/bin/decimate.js",
     "decimate-mcp": "npm/bin/decimate-mcp.js"
@@ -11,8 +11,8 @@
     "Cargo.toml",
     "Cargo.lock",
     "README.md",
-    "LICENSE-MIT",
-    "LICENSE-APACHE",
+    "assets",
+    "LICENSE",
     "src",
     "npm",
     "!npm/bin-cache"

@@ -457,10 +457,18 @@ fn apply_quality_summary(
     scope: Option<&BTreeSet<String>>,
 ) {
     let health = health_summary_counts(project, results, scope);
-    summary.code_duplications = results
-        .duplicates
-        .as_ref()
-        .map_or(0, |report| report.clone_groups.len());
+    if let Some(report) = &results.duplicates {
+        summary.code_duplications = report.clone_groups.len();
+        summary.duplication_analyzed_lines = report.stats.analyzed_lines;
+        summary.duplicated_lines = report.stats.duplicated_lines;
+        summary.duplication_percentage_basis_points =
+            report.stats.duplication_percentage_basis_points;
+        summary.duplication_threshold_basis_points = report
+            .options
+            .threshold
+            .map(crate::DuplicationThreshold::basis_points);
+        summary.duplication_threshold_exceeded = report.stats.threshold_exceeded;
+    }
     summary.quality_score = health.quality_score;
     summary.health_files = health.files;
     summary.functions = health.functions;

@@ -76,7 +76,6 @@ enum GuardMode {
 
 #[derive(Clone, Copy)]
 enum GuardRequirement {
-    Always,
     LifecycleUse,
 }
 
@@ -86,7 +85,7 @@ fn unguarded_awaits<'tree>(body: Node<'tree>, source: &str, receiver: &str) -> V
         body,
         source,
         receiver,
-        GuardRequirement::Always,
+        GuardRequirement::LifecycleUse,
         &mut findings,
     );
     findings
@@ -174,7 +173,6 @@ fn collect_unguarded_awaits_in_block<'tree>(
             .is_some_and(|next| is_valid_post_await_guard(next, source, receiver, mode))
             || (index + 1 == statements.len() && trailing_guard);
         let required = match requirement {
-            GuardRequirement::Always => true,
             GuardRequirement::LifecycleUse => {
                 requires_post_await_guard(statement, &statements[index + 1..], source, receiver)
             }

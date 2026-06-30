@@ -2,6 +2,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use serde::de::{Error as DeError, Visitor};
+use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -58,6 +60,9 @@ pub struct DuplicateOptions {
     pub ignore_imports: bool,
     /// Limit output to the N largest clone groups.
     pub top: Option<usize>,
+    /// Fail when duplicated lines exceed this percentage.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub threshold: Option<DuplicationThreshold>,
 }
 
 impl Default for DuplicateOptions {
@@ -70,8 +75,122 @@ impl Default for DuplicateOptions {
             skip_local: false,
             ignore_imports: true,
             top: None,
+            threshold: None,
         }
     }
+}
+
+/// Duplicate percentage threshold represented as percentage basis points.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DuplicationThreshold(u32);
+
+impl DuplicationThreshold {
+    /// Build a threshold from a human percentage in the inclusive range `0..=100`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the value is not finite or is outside `0..=100`.
+    pub fn from_percent(value: f64) -> Result<Self, String> {
+        if !value.is_finite() || !(0.0..=100.0).contains(&value) {
+            return Err("threshold must be a percentage from 0 to 100".to_owned());
+        }
+        let scaled = (value * 100.0).round();
+        let basis_points = scaled
+            .to_string()
+            .parse::<u32>()
+            .map_err(|_| "threshold must be a percentage from 0 to 100".to_owned())?;
+        Ok(Self(basis_points))
+    }
+
+    fn from_percent_u64(value: u64) -> Result<Self, String> {
+        let percent = u32::try_from(value)
+            .ok()
+            .filter(|value| *value <= 100)
+            .ok_or_else(|| "threshold must be a percentage from 0 to 100".to_owned())?;
+        Ok(Self(percent * 100))
+    }
+
+    fn from_percent_i64(value: i64) -> Result<Self, String> {
+        let value = u64::try_from(value)
+            .map_err(|_| "threshold must be a percentage from 0 to 100".to_owned())?;
+        Self::from_percent_u64(value)
+    }
+
+    /// Return the underlying percentage basis points.
+    #[must_use]
+    pub const fn basis_points(self) -> u32 {
+        self.0
+    }
+
+    fn as_percent(self) -> f64 {
+        f64::from(self.0) / 100.0
+    }
+
+    fn is_exceeded_by(self, percentage_basis_points: u32) -> bool {
+        percentage_basis_points > self.0
+    }
+}
+
+impl Serialize for DuplicationThreshold {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_f64(self.as_percent())
+    }
+}
+
+impl<'de> Deserialize<'de> for DuplicationThreshold {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct ThresholdVisitor;
+
+        impl Visitor<'_> for ThresholdVisitor {
+            type Value = DuplicationThreshold;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("a percentage from 0 to 100")
+            }
+
+            fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+            where
+                E: DeError,
+            {
+                DuplicationThreshold::from_percent_u64(value).map_err(E::custom)
+            }
+
+            fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+            where
+                E: DeError,
+            {
+                DuplicationThreshold::from_percent_i64(value).map_err(E::custom)
+            }
+
+            fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
+            where
+                E: DeError,
+            {
+                DuplicationThreshold::from_percent(value).map_err(E::custom)
+            }
+        }
+
+        deserializer.deserialize_any(ThresholdVisitor)
+    }
+}
+
+/// Aggregate duplicate-code statistics.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DuplicateStats {
+    /// Dart source lines included in duplicate analysis.
+    pub analyzed_lines: usize,
+    /// Unique source lines covered by at least one reported clone instance.
+    pub duplicated_lines: usize,
+    /// Duplicated line percentage in percentage basis points.
+    pub duplication_percentage_basis_points: u32,
+    /// Whether the configured duplicate threshold was exceeded.
+    pub threshold_exceeded: bool,
 }
 
 /// Code duplication report.
@@ -79,6 +198,8 @@ impl Default for DuplicateOptions {
 pub struct DuplicateCodeReport {
     /// Options used to compute the report.
     pub options: DuplicateOptions,
+    /// Aggregate duplicate-code statistics.
+    pub stats: DuplicateStats,
     /// Reported clone groups.
     pub clone_groups: Vec<CodeClone>,
 }
@@ -190,6 +311,7 @@ pub fn detect_duplicates(
     options: &DuplicateOptions,
 ) -> Result<DuplicateCodeReport, DuplicateCodeError> {
     let mut by_fingerprint = BTreeMap::<String, Vec<(CloneOccurrence, usize)>>::new();
+    let mut analyzed_lines = 0usize;
 
     for file in &project.files {
         let path = normalize_against(&project.root, &file.path);
@@ -200,6 +322,7 @@ pub fn detect_duplicates(
             path: path.clone(),
             source,
         })?;
+        analyzed_lines += source.lines().count();
         let lines = normalized_lines(&source, options);
         if lines.len() < options.min_lines {
             continue;
@@ -259,12 +382,14 @@ pub fn detect_duplicates(
             ))
     });
     clone_groups = collapse_overlapping_groups(clone_groups);
+    let stats = duplicate_stats(analyzed_lines, &clone_groups, options.threshold);
     if let Some(top) = options.top {
         clone_groups.truncate(top);
     }
 
     Ok(DuplicateCodeReport {
         options: options.clone(),
+        stats,
         clone_groups,
     })
 }
@@ -347,6 +472,37 @@ fn ranges_overlap(
     right_end: usize,
 ) -> bool {
     left_start <= right_end && right_start <= left_end
+}
+
+fn duplicate_stats(
+    analyzed_lines: usize,
+    clone_groups: &[CodeClone],
+    threshold: Option<DuplicationThreshold>,
+) -> DuplicateStats {
+    let mut duplicated = BTreeSet::<(PathBuf, usize)>::new();
+    for group in clone_groups {
+        for instance in &group.instances {
+            for line in instance.start_line..=instance.end_line {
+                duplicated.insert((instance.path.clone(), line));
+            }
+        }
+    }
+    let duplicated_lines = duplicated.len();
+    let duplication_percentage_basis_points = if analyzed_lines == 0 {
+        0
+    } else {
+        let raw = ((duplicated_lines as u128) * 10_000) / (analyzed_lines as u128);
+        u32::try_from(raw).unwrap_or(u32::MAX)
+    };
+    let threshold_exceeded = threshold
+        .is_some_and(|threshold| threshold.is_exceeded_by(duplication_percentage_basis_points));
+
+    DuplicateStats {
+        analyzed_lines,
+        duplicated_lines,
+        duplication_percentage_basis_points,
+        threshold_exceeded,
+    }
 }
 
 fn clone_group_from_occurrences(

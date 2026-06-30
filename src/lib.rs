@@ -43,6 +43,7 @@ pub mod security;
 pub(crate) mod security_gate;
 pub mod symbols;
 pub mod trace;
+pub mod unsupported;
 pub mod widgets;
 pub mod workspace_scope;
 
@@ -87,8 +88,8 @@ pub use dependencies::{
 };
 pub use dupes::{
     CloneTraceReport, CodeClone, CodeCloneInstance, DuplicateCodeError, DuplicateCodeReport,
-    DuplicateMode, DuplicateOptions, TraceCloneGroup, TraceCloneInstance, detect_duplicates,
-    render_clone_trace, trace_clone,
+    DuplicateMode, DuplicateOptions, DuplicateStats, DuplicationThreshold, TraceCloneGroup,
+    TraceCloneInstance, detect_duplicates, render_clone_trace, trace_clone,
 };
 pub use explain::{
     EXPLAIN_SCHEMA_VERSION, ExplainError, ExplainReport, explain_issue, render_explain_report,

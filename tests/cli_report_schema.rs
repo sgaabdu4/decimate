@@ -68,6 +68,20 @@ fn report_schema_types_inventory_arrays() -> Result<(), Box<dyn std::error::Erro
             kind,
         );
     }
+    assert_summary_schema(&json);
+    assert_array_contains(
+        &json["$defs"]["audit_attribution"]["required"],
+        "introduced",
+    );
+    assert_array_contains(
+        &json["$defs"]["audit_attribution_counts"]["required"],
+        "error_findings",
+    );
+
+    Ok(())
+}
+
+fn assert_summary_schema(json: &Value) {
     for field in [
         "quality_score",
         "risk_score",
@@ -79,6 +93,11 @@ fn report_schema_types_inventory_arrays() -> Result<(), Box<dyn std::error::Erro
         "unused_widget_params",
         "unrendered_widgets",
         "missing_context_mounted_after_await",
+        "duplication_analyzed_lines",
+        "duplicated_lines",
+        "duplication_percentage_basis_points",
+        "duplication_threshold_basis_points",
+        "duplication_threshold_exceeded",
     ] {
         assert_array_contains(&json["$defs"]["summary"]["properties"], field);
     }
@@ -96,16 +115,6 @@ fn report_schema_types_inventory_arrays() -> Result<(), Box<dyn std::error::Erro
         json["$defs"]["summary"]["properties"]["risk_level"]["enum"],
         serde_json::json!(["pass", "warn", "fail"])
     );
-    assert_array_contains(
-        &json["$defs"]["audit_attribution"]["required"],
-        "introduced",
-    );
-    assert_array_contains(
-        &json["$defs"]["audit_attribution_counts"]["required"],
-        "error_findings",
-    );
-
-    Ok(())
 }
 
 fn report_schema_json() -> Result<Value, Box<dyn std::error::Error>> {

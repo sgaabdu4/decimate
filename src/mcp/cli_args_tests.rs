@@ -30,6 +30,7 @@ fn analyze_maps_read_only_parity_flags() -> Result<(), String> {
             "min_lines": 4,
             "min_occurrences": 3,
             "top": 5,
+            "threshold": 7.5,
             "skip_local": true,
             "no_ignore_imports": true,
             "max_cyclomatic": 9,
@@ -77,6 +78,7 @@ fn analyze_maps_read_only_parity_flags() -> Result<(), String> {
     assert_pair(&cli, "--min-lines", "4");
     assert_pair(&cli, "--min-occurrences", "3");
     assert_pair(&cli, "--top", "5");
+    assert_pair(&cli, "--threshold", "7.5");
     assert_flag(&cli, "--skip-local");
     assert_flag(&cli, "--no-ignore-imports");
     assert_pair(&cli, "--max-cyclomatic", "9");
@@ -171,6 +173,7 @@ fn trace_clone_maps_selector_and_duplicate_options() -> Result<(), String> {
                 "min_lines": 4,
                 "min_occurrences": 3,
                 "top": 2,
+                "threshold": 6,
                 "skip_local": true,
                 "ignore_imports": true
             }"#,
@@ -191,11 +194,29 @@ fn trace_clone_maps_selector_and_duplicate_options() -> Result<(), String> {
     assert_pair(&by_file, "--min-lines", "4");
     assert_pair(&by_file, "--min-occurrences", "3");
     assert_pair(&by_file, "--top", "2");
+    assert_pair(&by_file, "--threshold", "6");
     assert_flag(&by_file, "--skip-local");
     assert_flag(&by_file, "--ignore-imports");
 
     assert_pair(&by_fingerprint, "--fingerprint", "dup:abc123");
     assert_flag(&by_fingerprint, "--no-ignore-imports");
+    Ok(())
+}
+
+#[test]
+fn duplicate_tools_reject_cross_language() -> Result<(), String> {
+    let error = match cli_args_for_tool(
+        "find_dupes",
+        &arguments_json(r#"{ "cross_language": true }"#)?,
+    ) {
+        Ok(cli) => return Err(format!("cross_language should be rejected, got {cli:?}")),
+        Err(error) => error,
+    };
+
+    assert_eq!(
+        error,
+        "cross_language is not supported for Dart-only analysis"
+    );
     Ok(())
 }
 
