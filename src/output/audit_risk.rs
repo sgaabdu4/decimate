@@ -1,6 +1,8 @@
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
+use crate::finding_identity::finding_identity;
+
 use super::format::display_path;
 use super::types::{
     AuditAttribution, AuditAttributionCounts, AuditRiskLevel, Finding, JsonReport, ReportCommand,
@@ -8,7 +10,12 @@ use super::types::{
 };
 
 /// Refresh Fallow-style changed-code risk fields for an audit report.
-pub fn apply_audit_risk(root: &Path, changed_files: &[PathBuf], report: &mut JsonReport) {
+pub fn apply_audit_risk(
+    root: &Path,
+    changed_files: &[PathBuf],
+    base_finding_identities: &BTreeSet<String>,
+    report: &mut JsonReport,
+) {
     if report.command != ReportCommand::Audit {
         return;
     }
@@ -17,7 +24,7 @@ pub fn apply_audit_risk(root: &Path, changed_files: &[PathBuf], report: &mut Jso
         .iter()
         .map(|path| display_path(root, path))
         .collect::<BTreeSet<_>>();
-    let attribution = audit_attribution(&report.findings, &changed);
+    let attribution = audit_attribution(&report.findings, &changed, base_finding_identities);
     let risk_score = risk_score(&attribution);
     let risk_level = risk_level(&attribution);
 
@@ -26,12 +33,18 @@ pub fn apply_audit_risk(root: &Path, changed_files: &[PathBuf], report: &mut Jso
     report.summary.attribution = Some(attribution);
 }
 
-fn audit_attribution(findings: &[Finding], changed: &BTreeSet<String>) -> AuditAttribution {
+fn audit_attribution(
+    findings: &[Finding],
+    changed: &BTreeSet<String>,
+    base_finding_identities: &BTreeSet<String>,
+) -> AuditAttribution {
     let mut introduced = AttributionBucket::default();
     let mut pre_existing = AttributionBucket::default();
 
     for finding in findings {
-        if touches_changed_file(finding, changed) {
+        if base_finding_identities.contains(&finding_identity(finding)) {
+            pre_existing.add(finding);
+        } else if touches_changed_file(finding, changed) {
             introduced.add(finding);
         } else {
             pre_existing.add(finding);

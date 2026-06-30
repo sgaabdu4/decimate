@@ -19,8 +19,8 @@ use crate::config::{
     load_decimate_config,
 };
 use crate::output::{
-    ReportCommand, apply_audit_risk, build_json_report, filter_report_findings,
-    render_human_report, render_sarif_report,
+    ReportCommand, build_json_report, filter_report_findings, render_human_report,
+    render_sarif_report,
 };
 use crate::scan::{ScanError, ScanOptions, scan_project_with_options};
 use crate::{
@@ -360,7 +360,7 @@ fn run_request<W: Write>(request: &CommandRequest, mut writer: W) -> Result<i32,
     }
 
     let mut results = analyze_project(&project, request)?;
-    let audit_changed_files = audit_run::apply_scope(&project, request, &mut results)?;
+    let audit_context = audit_run::prepare_context(&project, request, &mut results)?;
     scope_args::apply_report_scope(&project, &mut results, request)?;
     let mut report = build_json_report(&project, &results);
     apply_rules_to_report(&mut report, &request.rules)?;
@@ -390,7 +390,7 @@ fn run_request<W: Write>(request: &CommandRequest, mut writer: W) -> Result<i32,
         writeln!(file)?;
     }
     security_summary_run::apply_security_summary(request, &mut report);
-    apply_audit_risk(&project.root, &audit_changed_files, &mut report);
+    audit_run::apply_risk(&project.root, &audit_context, &mut report);
     let code = security_summary_run::exit_code(request, &report, regressed);
 
     match request.format {

@@ -20,6 +20,7 @@ pub mod dupes;
 pub mod explain;
 pub mod extract;
 pub mod feature_flags;
+pub(crate) mod finding_identity;
 pub mod fix;
 pub(crate) mod generated;
 pub mod graph;
