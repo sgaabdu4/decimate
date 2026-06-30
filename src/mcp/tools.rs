@@ -157,8 +157,35 @@ fn analysis_tools() -> Vec<Value> {
     vec![
         dupes_tool(),
         health_tool(),
+        runtime_tool(
+            "check_runtime_coverage",
+            "Merge local V8 or Istanbul runtime coverage into Decimate runtime intelligence.",
+            "coverage",
+        ),
+        runtime_tool(
+            "get_hot_paths",
+            "Return runtime coverage context for hot-path review.",
+            "coverage",
+        ),
+        runtime_tool(
+            "get_blast_radius",
+            "Return runtime coverage context for blast-radius review.",
+            "coverage",
+        ),
+        runtime_tool(
+            "get_importance",
+            "Return runtime coverage context for production-importance review.",
+            "coverage",
+        ),
+        runtime_tool(
+            "get_cleanup_candidates",
+            "Return runtime coverage context for low-traffic and unavailable-code cleanup review.",
+            "coverage",
+        ),
         security_tool(),
         feature_flags_tool(),
+        impact_tool(),
+        impact_all_tool(),
     ]
 }
 
@@ -234,6 +261,26 @@ fn health_tool() -> Value {
     )
 }
 
+fn runtime_tool(name: &str, description: &str, required: &str) -> Value {
+    tool(
+        name,
+        description,
+        schema(
+            &[
+                ("root", "string"),
+                ("config", "string"),
+                ("coverage", "string"),
+                ("min_invocations_hot", "integer"),
+                ("min_observation_volume", "integer"),
+                ("low_traffic_threshold", "number"),
+                ("top", "integer"),
+                ("repo", "string"),
+            ],
+            &[required],
+        ),
+    )
+}
+
 fn security_tool() -> Value {
     tool(
         "security_candidates",
@@ -262,6 +309,22 @@ fn security_tool() -> Value {
             ],
             &[],
         ),
+    )
+}
+
+fn impact_tool() -> Value {
+    tool(
+        "impact",
+        "Read the local Decimate value report without running analysis.",
+        schema(&[("root", "string")], &[]),
+    )
+}
+
+fn impact_all_tool() -> Value {
+    tool(
+        "impact_all",
+        "Roll up every tracked Decimate project on this machine.",
+        schema(&[("sort", "string"), ("limit", "integer")], &[]),
     )
 }
 

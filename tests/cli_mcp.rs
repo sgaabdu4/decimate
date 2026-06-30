@@ -42,6 +42,10 @@ fn mcp_initialize_and_tools_list_follow_json_rpc_contract() -> Result<(), Box<dy
     assert_tool_property(tool_defs, "analyze", "private_type_leaks")?;
     assert_tool_property(tool_defs, "analyze", "policy_pack")?;
     assert_tool_property(tool_defs, "check_health", "min_score")?;
+    assert_tool_property(tool_defs, "check_runtime_coverage", "coverage")?;
+    assert_tool_property(tool_defs, "get_blast_radius", "coverage")?;
+    assert_tool_property(tool_defs, "impact", "root")?;
+    assert_tool_property(tool_defs, "impact_all", "limit")?;
     assert_tool_property(tool_defs, "security_candidates", "gate")?;
     assert_tool_property(tool_defs, "audit", "dead_code_baseline")?;
 
@@ -143,6 +147,80 @@ fn mcp_call_analyze_runs_read_only_decimate_report() -> Result<(), Box<dyn std::
         output["result"]["structuredContent"]["summary"]["dead_files"],
         1
     );
+
+    Ok(())
+}
+
+#[test]
+fn mcp_call_runtime_coverage_uses_coverage_analyze() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(&fixture, "lib/main.dart", "void main() { print('hot'); }\n")?;
+    write(
+        &fixture,
+        "coverage/coverage-final.json",
+        &serde_json::json!({
+            "main.dart": {
+                "path": fixture.path().join("lib/main.dart"),
+                "statementMap": { "0": { "start": { "line": 1 }, "end": { "line": 1 } } },
+                "s": { "0": 20 },
+                "fnMap": { "0": { "name": "main", "decl": { "start": { "line": 1 } } } },
+                "f": { "0": 20 }
+            }
+        })
+        .to_string(),
+    )?;
+    let message = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "tools/call",
+        "params": {
+            "name": "check_runtime_coverage",
+            "arguments": {
+                "root": fixture.path(),
+                "coverage": "coverage/coverage-final.json",
+                "min_invocations_hot": 10
+            }
+        }
+    });
+
+    let output = response(&serde_json::to_string(&message)?)?;
+
+    assert_eq!(output["result"]["isError"], false);
+    assert_eq!(
+        output["result"]["structuredContent"]["kind"],
+        "runtime-coverage"
+    );
+    assert_eq!(
+        output["result"]["structuredContent"]["runtime_coverage"]["hot_paths"][0]["path"],
+        "lib/main.dart"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn mcp_call_impact_returns_read_only_report() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    let message = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "tools/call",
+        "params": {
+            "name": "impact",
+            "arguments": { "root": fixture.path() }
+        }
+    });
+
+    let output = response(&serde_json::to_string(&message)?)?;
+
+    assert_eq!(output["result"]["isError"], false);
+    assert_eq!(
+        output["result"]["structuredContent"]["schema_version"],
+        "decimate.impact.v1"
+    );
+    assert_eq!(output["result"]["structuredContent"]["kind"], "impact");
+    assert_eq!(output["result"]["structuredContent"]["enabled"], false);
 
     Ok(())
 }

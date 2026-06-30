@@ -56,16 +56,19 @@ pub fn detect_route_collisions(project: &ScannedProject) -> RouteCollisionReport
         }
         for route in &file.routes {
             let declaration = collision_declaration(&file.path, route);
+            let scope = route_collision_scope(&file.path, route);
             if let Some(path) = &route.path {
+                let key = scoped_collision_key(scope.as_deref(), &route_path_key(path));
                 path_groups
-                    .entry(route_path_key(path))
+                    .entry(key)
                     .or_insert_with(|| CollisionGroup::new(path.clone()))
                     .declarations
                     .push(declaration.clone());
             }
             if let Some(name) = &route.name {
+                let key = scoped_collision_key(scope.as_deref(), name);
                 name_groups
-                    .entry(name.clone())
+                    .entry(key)
                     .or_insert_with(|| CollisionGroup::new(name.clone()))
                     .declarations
                     .push(declaration);
@@ -131,6 +134,17 @@ fn collision_declaration(path: &Path, route: &DartRouteDeclaration) -> RouteColl
         path: path.to_path_buf(),
         route_class: route.route_class.clone(),
         location: route.location,
+    }
+}
+
+fn route_collision_scope(path: &Path, route: &DartRouteDeclaration) -> Option<String> {
+    (route.route_class == "GoRoute").then(|| path.to_string_lossy().into_owned())
+}
+
+fn scoped_collision_key(scope: Option<&str>, value: &str) -> String {
+    match scope {
+        Some(scope) => format!("{scope}\0{value}"),
+        None => value.to_owned(),
     }
 }
 
@@ -250,6 +264,45 @@ class OrderRoute extends GoRouteData {}
         let report = detect_route_collisions(&project);
 
         assert!(report.collisions.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn does_not_collide_raw_routes_from_independent_files() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let project = test_project(&[
+            (
+                "example/lib/app_a.dart",
+                "final router = GoRouter(routes: [GoRoute(path: '/', builder: (_, _) => const SizedBox())]);",
+            ),
+            (
+                "example/lib/app_b.dart",
+                "final router = GoRouter(routes: [GoRoute(path: '/', builder: (_, _) => const SizedBox())]);",
+            ),
+        ])?;
+
+        let report = detect_route_collisions(&project);
+
+        assert!(report.collisions.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn still_collides_raw_routes_inside_one_route_file() -> Result<(), Box<dyn std::error::Error>> {
+        let project = test_project(&[(
+            "lib/router.dart",
+            "
+final router = GoRouter(routes: [
+  GoRoute(path: '/', builder: (_, _) => const SizedBox()),
+  GoRoute(path: '/', builder: (_, _) => const SizedBox()),
+]);
+",
+        )])?;
+
+        let report = detect_route_collisions(&project);
+
+        assert_eq!(report.collisions.len(), 1);
+        assert_eq!(report.collisions[0].kind, RouteCollisionKind::Path);
         Ok(())
     }
 

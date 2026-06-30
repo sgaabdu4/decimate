@@ -1,9 +1,10 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, VecDeque};
 use std::path::{Path, PathBuf};
 
+use petgraph::Direction;
 use petgraph::algo::tarjan_scc;
 use petgraph::graph::{DiGraph, NodeIndex};
-use petgraph::visit::{Bfs, EdgeRef};
+use petgraph::visit::EdgeRef;
 use serde::{Deserialize, Serialize};
 
 use crate::graph::normalize_against;
@@ -240,9 +241,19 @@ pub fn check_architecture_boundaries(
 }
 
 fn traverse_reachable(graph: &ModuleGraph, start: NodeIndex, reachable: &mut BTreeSet<NodeIndex>) {
-    let mut bfs = Bfs::new(graph.graph(), start);
-    while let Some(node) = bfs.next(graph.graph()) {
-        reachable.insert(node);
+    let mut queue = VecDeque::from([start]);
+    while let Some(node) = queue.pop_front() {
+        if !reachable.insert(node) {
+            continue;
+        }
+        for edge in graph.graph().edges(node) {
+            queue.push_back(edge.target());
+        }
+        for edge in graph.graph().edges_directed(node, Direction::Incoming) {
+            if edge.weight().kind == DependencyKind::Augment {
+                queue.push_back(edge.source());
+            }
+        }
     }
 }
 

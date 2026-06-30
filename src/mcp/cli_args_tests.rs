@@ -138,6 +138,64 @@ fn security_candidates_map_gate_and_ci_flags() -> Result<(), String> {
 }
 
 #[test]
+fn runtime_coverage_tools_map_fallow_coverage_param() -> Result<(), String> {
+    let args = arguments_json(
+        r#"{
+            "root": "/repo",
+            "config": "decimate.json",
+            "coverage": "coverage/coverage-final.json",
+            "min_invocations_hot": 25,
+            "min_observation_volume": 100,
+            "low_traffic_threshold": 0.05,
+            "top": 7,
+            "repo": "owner/repo"
+        }"#,
+    )?;
+
+    let cli = cli_args_for_tool("get_hot_paths", &args)?;
+
+    assert_eq!(
+        cli[..5],
+        ["decimate", "coverage", "analyze", "--format", "json"]
+    );
+    assert_pair(&cli, "--root", "/repo");
+    assert_pair(&cli, "--config", "decimate.json");
+    assert_pair(&cli, "--runtime-coverage", "coverage/coverage-final.json");
+    assert_pair(&cli, "--min-invocations-hot", "25");
+    assert_pair(&cli, "--min-observation-volume", "100");
+    assert_pair(&cli, "--low-traffic-threshold", "0.05");
+    assert_pair(&cli, "--top", "7");
+    assert_pair(&cli, "--repo", "owner/repo");
+
+    Ok(())
+}
+
+#[test]
+fn impact_tools_map_read_only_reports() -> Result<(), String> {
+    let impact = cli_args_for_tool("impact", &arguments_json(r#"{ "root": "/repo" }"#)?)?;
+    let impact_all = cli_args_for_tool(
+        "impact_all",
+        &arguments_json(r#"{ "sort": "surfaced", "limit": 5 }"#)?,
+    )?;
+
+    assert_eq!(
+        impact,
+        [
+            "decimate", "impact", "--format", "json", "--quiet", "--root", "/repo"
+        ]
+    );
+    assert_eq!(
+        impact_all,
+        [
+            "decimate", "impact", "--format", "json", "--quiet", "--all", "--sort", "surfaced",
+            "--limit", "5"
+        ]
+    );
+
+    Ok(())
+}
+
+#[test]
 fn audit_maps_baselines_and_analysis_knobs() -> Result<(), String> {
     let args = arguments_json(
         r#"{

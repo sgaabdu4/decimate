@@ -103,6 +103,49 @@ fn trace_file_reports_library_augment_edges() -> Result<(), Box<dyn std::error::
     Ok(())
 }
 
+#[test]
+fn base_library_reachability_keeps_augment_file_live() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(
+        &fixture,
+        "lib/main.dart",
+        "import 'base.dart';\nvoid main() { Base(); }\n",
+    )?;
+    write(&fixture, "lib/base.dart", "class Base {}\n")?;
+    write(
+        &fixture,
+        "lib/base_augment.dart",
+        "library augment 'base.dart';\naugment class Base { void extra() {} }\n",
+    )?;
+
+    let mut output = Vec::new();
+    let code = run_from(
+        [
+            "decimate",
+            "check",
+            fixture.path().to_str().unwrap_or_default(),
+            "--format",
+            "json",
+            "--entry",
+            "lib/main.dart",
+            "--unused-files",
+        ],
+        &mut output,
+    )?;
+
+    let json = serde_json::from_slice::<Value>(&output)?;
+    assert_eq!(code, 0);
+    assert_eq!(json["summary"]["dead_files"], 0);
+    assert!(!json["findings"].as_array().is_some_and(|findings| {
+        findings
+            .iter()
+            .any(|finding| finding["path"] == "lib/base_augment.dart")
+    }));
+
+    Ok(())
+}
+
 fn write(fixture: &TempDir, path: &str, source: &str) -> Result<(), std::io::Error> {
     let path = fixture.path().join(path);
     if let Some(parent) = path.parent() {

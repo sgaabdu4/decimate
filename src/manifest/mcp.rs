@@ -1,0 +1,420 @@
+use serde_json::{Value, json};
+
+use crate::coverage::COVERAGE_ANALYSIS_SCHEMA_VERSION;
+use crate::decision_surface::DECISION_SURFACE_SCHEMA_VERSION;
+use crate::explain::EXPLAIN_SCHEMA_VERSION;
+use crate::impact::IMPACT_SCHEMA_VERSION;
+use crate::inspect::INSPECT_SCHEMA_VERSION;
+use crate::output::{SCHEMA_VERSION, TRACE_SCHEMA_VERSION};
+use crate::project_list::PROJECT_LIST_SCHEMA_VERSION;
+
+pub(super) fn mcp_tools() -> Value {
+    json!({
+        "server": "decimate-mcp",
+        "note": "Read-only agent tool contracts backed by existing Decimate CLI commands. Mutating fixes are intentionally not advertised.",
+        "tools": mcp_tool_list()
+    })
+}
+
+fn mcp_tool_list() -> Vec<Value> {
+    let mut tools = Vec::new();
+    tools.extend(mcp_overview_tools());
+    tools.extend(mcp_analysis_tools());
+    tools.extend(mcp_change_tools());
+    tools
+}
+
+fn mcp_overview_tools() -> Vec<Value> {
+    vec![
+        analyze_mcp_tool(),
+        mcp_tool(
+            "project_info",
+            "decimate list --format json",
+            PROJECT_LIST_SCHEMA_VERSION,
+            &[
+                "root",
+                "config",
+                "files",
+                "entry_points",
+                "plugins",
+                "boundaries",
+                "workspaces",
+                "entry",
+                "file",
+                "workspace",
+                "changed_workspaces",
+                "production",
+            ],
+        ),
+        mcp_tool(
+            "inspect_target",
+            "decimate inspect --format json",
+            INSPECT_SCHEMA_VERSION,
+            &["root", "config", "target", "file", "symbol"],
+        ),
+        mcp_tool(
+            "trace_file",
+            "decimate trace-file --format json",
+            TRACE_SCHEMA_VERSION,
+            &["root", "config", "file"],
+        ),
+        mcp_tool(
+            "trace_export",
+            "decimate trace-symbol --format json",
+            TRACE_SCHEMA_VERSION,
+            &["root", "config", "file", "symbol", "export_name"],
+        ),
+        mcp_tool(
+            "trace_dependency",
+            "decimate trace-dependency --format json",
+            TRACE_SCHEMA_VERSION,
+            &["root", "config", "dependency", "package_name"],
+        ),
+        mcp_tool(
+            "trace_clone",
+            "decimate trace-clone --format json",
+            TRACE_SCHEMA_VERSION,
+            &["root", "config", "fingerprint"],
+        ),
+    ]
+}
+
+fn analyze_mcp_tool() -> Value {
+    mcp_tool(
+        "analyze",
+        "decimate check --format json",
+        SCHEMA_VERSION,
+        &[
+            "root",
+            "config",
+            "issue_types",
+            "entry",
+            "file",
+            "workspace",
+            "changed_workspaces",
+            "changed_since",
+            "baseline",
+            "regression_baseline",
+            "fail_on_regression",
+            "tolerance",
+            "include_entry_exports",
+            "private_type_leaks",
+            "boundary",
+            "boundary_coverage",
+            "boundary_call",
+            "policy_pack",
+            "policy_violations",
+            "mode",
+            "min_tokens",
+            "min_lines",
+            "min_occurrences",
+            "top",
+            "skip_local",
+            "ignore_imports",
+            "no_ignore_imports",
+            "max_cyclomatic",
+            "max_cognitive",
+            "max_crap",
+            "coverage",
+            "runtime_coverage",
+            "min_invocations_hot",
+            "min_observation_volume",
+            "low_traffic_threshold",
+            "coverage_gaps",
+            "file_scores",
+            "hotspots",
+            "targets",
+            "ownership",
+            "complexity_breakdown",
+            "min_score",
+            "production",
+        ],
+    )
+}
+
+fn mcp_analysis_tools() -> Vec<Value> {
+    let mut tools = vec![dupes_mcp_tool(), health_mcp_tool()];
+    tools.extend(runtime_mcp_tools());
+    tools.extend([
+        security_mcp_tool(),
+        feature_flags_mcp_tool(),
+        mcp_tool(
+            "impact",
+            "decimate impact --format json --quiet",
+            IMPACT_SCHEMA_VERSION,
+            &["root"],
+        ),
+        mcp_tool(
+            "impact_all",
+            "decimate impact --format json --quiet --all",
+            IMPACT_SCHEMA_VERSION,
+            &["sort", "limit"],
+        ),
+    ]);
+    tools
+}
+
+fn dupes_mcp_tool() -> Value {
+    mcp_tool(
+        "find_dupes",
+        "decimate dupes --format json",
+        SCHEMA_VERSION,
+        &[
+            "root",
+            "config",
+            "entry",
+            "file",
+            "workspace",
+            "changed_workspaces",
+            "changed_since",
+            "baseline",
+            "regression_baseline",
+            "fail_on_regression",
+            "tolerance",
+            "production",
+            "mode",
+            "min_tokens",
+            "min_lines",
+            "min_occurrences",
+            "top",
+            "skip_local",
+            "ignore_imports",
+            "no_ignore_imports",
+        ],
+    )
+}
+
+fn health_mcp_tool() -> Value {
+    mcp_tool(
+        "check_health",
+        "decimate health --format json",
+        SCHEMA_VERSION,
+        &[
+            "root",
+            "config",
+            "entry",
+            "file",
+            "workspace",
+            "changed_workspaces",
+            "changed_since",
+            "baseline",
+            "regression_baseline",
+            "fail_on_regression",
+            "tolerance",
+            "production",
+            "max_cyclomatic",
+            "max_cognitive",
+            "max_crap",
+            "coverage",
+            "runtime_coverage",
+            "min_invocations_hot",
+            "min_observation_volume",
+            "low_traffic_threshold",
+            "coverage_gaps",
+            "file_scores",
+            "hotspots",
+            "targets",
+            "ownership",
+            "complexity_breakdown",
+            "min_score",
+            "top",
+        ],
+    )
+}
+
+fn runtime_mcp_tools() -> Vec<Value> {
+    vec![
+        runtime_mcp_tool(
+            "check_runtime_coverage",
+            &[
+                "root",
+                "config",
+                "coverage",
+                "min_invocations_hot",
+                "min_observation_volume",
+                "low_traffic_threshold",
+                "top",
+                "repo",
+            ],
+        ),
+        runtime_mcp_tool(
+            "get_hot_paths",
+            &["root", "config", "coverage", "min_invocations_hot", "top"],
+        ),
+        runtime_mcp_tool(
+            "get_blast_radius",
+            &[
+                "root",
+                "config",
+                "coverage",
+                "min_invocations_hot",
+                "min_observation_volume",
+                "low_traffic_threshold",
+                "top",
+            ],
+        ),
+        runtime_mcp_tool(
+            "get_importance",
+            &[
+                "root",
+                "config",
+                "coverage",
+                "min_invocations_hot",
+                "min_observation_volume",
+                "low_traffic_threshold",
+                "top",
+            ],
+        ),
+        runtime_mcp_tool(
+            "get_cleanup_candidates",
+            &[
+                "root",
+                "config",
+                "coverage",
+                "min_invocations_hot",
+                "min_observation_volume",
+                "low_traffic_threshold",
+                "top",
+            ],
+        ),
+    ]
+}
+
+fn security_mcp_tool() -> Value {
+    mcp_tool(
+        "security_candidates",
+        "decimate security --format json",
+        SCHEMA_VERSION,
+        &[
+            "root",
+            "config",
+            "entry",
+            "file",
+            "workspace",
+            "changed_workspaces",
+            "changed_since",
+            "baseline",
+            "regression_baseline",
+            "fail_on_regression",
+            "tolerance",
+            "top",
+            "surface",
+            "production",
+            "gate",
+            "diff_file",
+            "ci",
+            "fail_on_issues",
+            "summary",
+        ],
+    )
+}
+
+fn feature_flags_mcp_tool() -> Value {
+    mcp_tool(
+        "feature_flags",
+        "decimate flags --format json",
+        SCHEMA_VERSION,
+        &[
+            "root",
+            "config",
+            "entry",
+            "file",
+            "workspace",
+            "changed_workspaces",
+            "changed_since",
+            "baseline",
+            "regression_baseline",
+            "fail_on_regression",
+            "tolerance",
+            "production",
+            "top",
+        ],
+    )
+}
+
+fn mcp_change_tools() -> Vec<Value> {
+    vec![
+        mcp_tool(
+            "audit",
+            "decimate audit --format json",
+            SCHEMA_VERSION,
+            &[
+                "root",
+                "config",
+                "base",
+                "entry",
+                "file",
+                "workspace",
+                "changed_workspaces",
+                "changed_since",
+                "include_entry_exports",
+                "private_type_leaks",
+                "boundary",
+                "boundary_coverage",
+                "boundary_call",
+                "policy_pack",
+                "policy_violations",
+                "mode",
+                "min_tokens",
+                "min_lines",
+                "min_occurrences",
+                "top",
+                "skip_local",
+                "ignore_imports",
+                "no_ignore_imports",
+                "max_cyclomatic",
+                "max_cognitive",
+                "max_crap",
+                "coverage",
+                "runtime_coverage",
+                "min_invocations_hot",
+                "min_observation_volume",
+                "low_traffic_threshold",
+                "coverage_gaps",
+                "file_scores",
+                "hotspots",
+                "targets",
+                "ownership",
+                "complexity_breakdown",
+                "min_score",
+                "dead_code_baseline",
+                "health_baseline",
+                "dupes_baseline",
+                "production",
+                "brief",
+                "max_decisions",
+            ],
+        ),
+        mcp_tool(
+            "decision_surface",
+            "decimate decision-surface --format json",
+            DECISION_SURFACE_SCHEMA_VERSION,
+            &["root", "config", "base", "max_decisions"],
+        ),
+        mcp_tool(
+            "decimate_explain",
+            "decimate explain --format json",
+            EXPLAIN_SCHEMA_VERSION,
+            &["issue_type", "rule_id"],
+        ),
+    ]
+}
+
+fn runtime_mcp_tool(name: &str, key_params: &[&str]) -> Value {
+    mcp_tool(
+        name,
+        "decimate coverage analyze --format json",
+        COVERAGE_ANALYSIS_SCHEMA_VERSION,
+        key_params,
+    )
+}
+
+fn mcp_tool(name: &str, command: &str, schema: &str, key_params: &[&str]) -> Value {
+    json!({
+        "name": name,
+        "read_only": true,
+        "command": command,
+        "schema": schema,
+        "key_params": key_params
+    })
+}

@@ -188,10 +188,11 @@ Parity areas:
 - Security candidates: deterministic local review candidates for Dart/Flutter
   sinks and hardcoded secrets, never verified vulnerability claims.
 - Runtime coverage: local Dart/Flutter coverage ingestion for hot paths,
-  cleanup confidence, and coverage gaps; cloud/runtime agent capture remains
-  future work.
+  cleanup confidence, coverage gaps, and read-only MCP runtime slices;
+  cloud/runtime agent capture remains future work.
 - Integrations: schema output, CI templates, a read-only MCP stdio server,
-  editor-ready JSON contracts, and impact reporting.
+  editor-ready JSON contracts, impact reporting, and read-only MCP impact
+  reports.
 
 Current implemented parity:
 
@@ -206,8 +207,8 @@ Current implemented parity:
 - unresolved local dependency findings
 - `decimate/part-of-violation` findings for resolved `part` files whose
   `part of` directive is missing, orphaned, or points at a different library
-- Dart `part` files, `library augment` directives, and conditional
-  import/export branches in the module graph
+- Dart `part` files, `library augment` directives with base-to-augment
+  reachability, and conditional import/export branches in the module graph
 - Pub `.dart_tool/package_config.json` resolution for local package graph edges
 - import/export visibility metadata for `show`, `hide`, prefixes, and deferred imports
 - import/export visibility metadata preserved on graph dependency edges

@@ -132,6 +132,10 @@ fn assert_manifest_identity(json: &Value) {
     assert_mcp_tool_key(json, "analyze", "changed_workspaces");
     assert_mcp_tool_key(json, "analyze", "private_type_leaks");
     assert_mcp_tool_key(json, "check_health", "min_score");
+    assert_mcp_tool_key(json, "check_runtime_coverage", "coverage");
+    assert_mcp_tool_key(json, "get_hot_paths", "coverage");
+    assert_mcp_tool_key(json, "impact", "root");
+    assert_mcp_tool_key(json, "impact_all", "limit");
     assert_mcp_tool_key(json, "security_candidates", "gate");
     assert_mcp_tool_key(json, "audit", "dead_code_baseline");
 }

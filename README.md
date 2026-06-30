@@ -272,8 +272,10 @@ decimate rule-pack-schema --format json
 `initialize`, `ping`, `tools/list`, and `tools/call` for the same agent wrappers
 listed under `mcp_tools` in `decimate schema`: `analyze`, `project_info`,
 `inspect_target`, `trace_file`, `trace_export`, `trace_dependency`,
-`trace_clone`, `find_dupes`, `check_health`, `security_candidates`,
-`feature_flags`, `audit`, `decision_surface`, and `decimate_explain`.
+`trace_clone`, `find_dupes`, `check_health`, `check_runtime_coverage`,
+`get_hot_paths`, `get_blast_radius`, `get_importance`,
+`get_cleanup_candidates`, `security_candidates`, `feature_flags`, `impact`,
+`impact_all`, `audit`, `decision_surface`, and `decimate_explain`.
 
 Important schemas:
 
@@ -286,6 +288,7 @@ Important schemas:
 - `decimate.decision-surface.v1`: changed-code review questions
 - `decimate.coverage.v1`: runtime coverage setup, analysis, and dry-run upload packets
 - `decimate.ci-template.v1`: CI template output
+- `decimate.impact.v1`: local impact reports
 
 ## Configuration
 
@@ -394,7 +397,7 @@ Flutter:
 Decimate also adds Dart-specific graph intelligence that Fallow does not need:
 
 - `part` and `part of` relationship validation
-- `library augment` dependency edges
+- `library augment` dependency edges and companion reachability
 - conditional import/export branch scanning
 - Dart library privacy rules
 - Pub `.dart_tool/package_config.json`, path dependency, and workspace

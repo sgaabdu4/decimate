@@ -14,6 +14,9 @@ use crate::output::{SCHEMA_VERSION, TRACE_SCHEMA_VERSION};
 use crate::policy::RULE_PACK_SCHEMA_VERSION;
 use crate::project_list::PROJECT_LIST_SCHEMA_VERSION;
 
+mod mcp;
+use mcp::mcp_tools;
+
 /// Stable schema version for the agent capability manifest.
 pub const MANIFEST_SCHEMA_VERSION: &str = "decimate.schema.v1";
 
@@ -95,104 +98,6 @@ fn environment_variables() -> Value {
             "description": "Overrides the base ref used by Decimate-managed Git pre-commit hooks."
         }
     ])
-}
-
-fn mcp_tools() -> Value {
-    json!({
-        "server": "decimate-mcp",
-        "note": "Read-only agent tool contracts backed by existing Decimate CLI commands. Mutating fixes are intentionally not advertised.",
-        "tools": [
-            mcp_tool("analyze", "decimate check --format json", SCHEMA_VERSION, [
-                "root", "config", "issue_types", "entry", "file", "workspace",
-                "changed_workspaces", "changed_since", "baseline", "regression_baseline",
-                "fail_on_regression", "tolerance", "include_entry_exports",
-                "private_type_leaks", "boundary", "boundary_coverage", "boundary_call",
-                "policy_pack", "policy_violations", "mode", "min_tokens", "min_lines",
-                "min_occurrences", "top", "skip_local", "ignore_imports", "no_ignore_imports",
-                "max_cyclomatic", "max_cognitive", "max_crap", "coverage", "runtime_coverage",
-                "min_invocations_hot", "min_observation_volume", "low_traffic_threshold",
-                "coverage_gaps", "file_scores", "hotspots", "targets", "ownership",
-                "complexity_breakdown", "min_score", "production"
-            ]),
-            mcp_tool("project_info", "decimate list --format json", PROJECT_LIST_SCHEMA_VERSION, [
-                "root", "config", "files", "entry_points", "plugins", "boundaries",
-                "workspaces", "entry", "file", "workspace", "changed_workspaces", "production"
-            ]),
-            mcp_tool("inspect_target", "decimate inspect --format json", INSPECT_SCHEMA_VERSION, [
-                "root", "config", "target", "file", "symbol"
-            ]),
-            mcp_tool("trace_file", "decimate trace-file --format json", TRACE_SCHEMA_VERSION, [
-                "root", "config", "file"
-            ]),
-            mcp_tool("trace_export", "decimate trace-symbol --format json", TRACE_SCHEMA_VERSION, [
-                "root", "config", "file", "symbol", "export_name"
-            ]),
-            mcp_tool("trace_dependency", "decimate trace-dependency --format json", TRACE_SCHEMA_VERSION, [
-                "root", "config", "dependency", "package_name"
-            ]),
-            mcp_tool("trace_clone", "decimate trace-clone --format json", TRACE_SCHEMA_VERSION, [
-                "root", "config", "fingerprint"
-            ]),
-            mcp_tool("find_dupes", "decimate dupes --format json", SCHEMA_VERSION, [
-                "root", "config", "entry", "file", "workspace", "changed_workspaces",
-                "changed_since", "baseline", "regression_baseline", "fail_on_regression",
-                "tolerance", "production", "mode", "min_tokens", "min_lines",
-                "min_occurrences", "top", "skip_local", "ignore_imports", "no_ignore_imports"
-            ]),
-            mcp_tool("check_health", "decimate health --format json", SCHEMA_VERSION, [
-                "root", "config", "entry", "file", "workspace", "changed_workspaces",
-                "changed_since", "baseline", "regression_baseline", "fail_on_regression",
-                "tolerance", "production", "max_cyclomatic", "max_cognitive", "max_crap",
-                "coverage", "runtime_coverage", "min_invocations_hot", "min_observation_volume",
-                "low_traffic_threshold", "coverage_gaps", "file_scores", "hotspots",
-                "targets", "ownership", "complexity_breakdown", "min_score", "top"
-            ]),
-            mcp_tool("security_candidates", "decimate security --format json", SCHEMA_VERSION, [
-                "root", "config", "entry", "file", "workspace", "changed_workspaces",
-                "changed_since", "baseline", "regression_baseline", "fail_on_regression",
-                "tolerance", "top", "surface", "production", "gate", "diff_file",
-                "ci", "fail_on_issues", "summary"
-            ]),
-            mcp_tool("feature_flags", "decimate flags --format json", SCHEMA_VERSION, [
-                "root", "config", "entry", "file", "workspace", "changed_workspaces",
-                "changed_since", "baseline", "regression_baseline", "fail_on_regression",
-                "tolerance", "production", "top"
-            ]),
-            mcp_tool("audit", "decimate audit --format json", SCHEMA_VERSION, [
-                "root", "config", "base", "entry", "file", "workspace", "changed_workspaces",
-                "changed_since", "include_entry_exports", "private_type_leaks", "boundary",
-                "boundary_coverage", "boundary_call", "policy_pack", "policy_violations",
-                "mode", "min_tokens", "min_lines", "min_occurrences", "top", "skip_local",
-                "ignore_imports", "no_ignore_imports", "max_cyclomatic", "max_cognitive",
-                "max_crap", "coverage", "runtime_coverage", "min_invocations_hot",
-                "min_observation_volume", "low_traffic_threshold", "coverage_gaps",
-                "file_scores", "hotspots", "targets", "ownership", "complexity_breakdown",
-                "min_score", "dead_code_baseline", "health_baseline", "dupes_baseline",
-                "production", "brief", "max_decisions"
-            ]),
-            mcp_tool("decision_surface", "decimate decision-surface --format json", DECISION_SURFACE_SCHEMA_VERSION, [
-                "root", "config", "base", "max_decisions"
-            ]),
-            mcp_tool("decimate_explain", "decimate explain --format json", EXPLAIN_SCHEMA_VERSION, [
-                "issue_type", "rule_id"
-            ])
-        ]
-    })
-}
-
-fn mcp_tool<const N: usize>(
-    name: &str,
-    command: &str,
-    schema: &str,
-    key_params: [&str; N],
-) -> Value {
-    json!({
-        "name": name,
-        "read_only": true,
-        "command": command,
-        "schema": schema,
-        "key_params": key_params.to_vec()
-    })
 }
 
 fn commands() -> Value {

@@ -74,8 +74,15 @@ pub(super) fn cli_args_for_tool(
         "trace_clone" => report_args("trace-clone", args, trace_clone_args),
         "find_dupes" => report_args("dupes", args, dupes_args),
         "check_health" => report_args("health", args, health_args),
+        "check_runtime_coverage"
+        | "get_hot_paths"
+        | "get_blast_radius"
+        | "get_importance"
+        | "get_cleanup_candidates" => coverage_analyze_args(args),
         "security_candidates" => report_args("security", args, security_args),
         "feature_flags" => report_args("flags", args, flags_args),
+        "impact" => impact_args(args),
+        "impact_all" => impact_all_args(args),
         "audit" => report_args("audit", args, audit_args),
         "decision_surface" => report_args("decision-surface", args, decision_surface_args),
         "decimate_explain" => explain_args(args),
@@ -130,6 +137,18 @@ fn allowed_args(name: &str) -> Result<Vec<&'static str>, String> {
             allowed.extend(BASELINE_KEYS);
             allowed.extend(HEALTH_KEYS);
         }
+        "check_runtime_coverage"
+        | "get_hot_paths"
+        | "get_blast_radius"
+        | "get_importance"
+        | "get_cleanup_candidates" => allowed.extend([
+            "coverage",
+            "min_invocations_hot",
+            "min_observation_volume",
+            "low_traffic_threshold",
+            "top",
+            "repo",
+        ]),
         "security_candidates" => {
             allowed.extend(REPORT_SCOPE_KEYS);
             allowed.extend(BASELINE_KEYS);
@@ -148,6 +167,8 @@ fn allowed_args(name: &str) -> Result<Vec<&'static str>, String> {
             allowed.extend(BASELINE_KEYS);
             allowed.extend(["top"]);
         }
+        "impact" => return Ok(vec!["root"]),
+        "impact_all" => return Ok(vec!["sort", "limit"]),
         "audit" => {
             allowed.extend(REPORT_SCOPE_KEYS);
             allowed.extend(SYMBOL_KEYS);
@@ -180,16 +201,18 @@ fn report_args<F>(
 where
     F: FnOnce(&mut Vec<String>, &Map<String, Value>) -> Result<(), String>,
 {
-    let mut cli = vec![
-        "decimate".to_owned(),
-        command.to_owned(),
-        "--format".to_owned(),
-        "json".to_owned(),
-    ];
+    let mut cli = json_command_args(&[command]);
     push_string_flag(&mut cli, args, "root", "--root")?;
     push_string_flag(&mut cli, args, "config", "--config")?;
     append(&mut cli, args)?;
     Ok(cli)
+}
+
+fn json_command_args(command: &[&str]) -> Vec<String> {
+    let mut cli = vec!["decimate".to_owned()];
+    cli.extend(command.iter().map(|part| (*part).to_owned()));
+    cli.extend(["--format".to_owned(), "json".to_owned()]);
+    cli
 }
 
 fn analyze_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
@@ -302,6 +325,34 @@ fn health_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), S
     push_health_args(cli, args)
 }
 
+fn coverage_analyze_args(args: &Map<String, Value>) -> Result<Vec<String>, String> {
+    let mut cli = json_command_args(&["coverage", "analyze"]);
+    push_string_flag(&mut cli, args, "root", "--root")?;
+    push_string_flag(&mut cli, args, "config", "--config")?;
+    push_required_string(&mut cli, args, "coverage", "--runtime-coverage")?;
+    push_number_flag(
+        &mut cli,
+        args,
+        "min_invocations_hot",
+        "--min-invocations-hot",
+    )?;
+    push_number_flag(
+        &mut cli,
+        args,
+        "min_observation_volume",
+        "--min-observation-volume",
+    )?;
+    push_float_flag(
+        &mut cli,
+        args,
+        "low_traffic_threshold",
+        "--low-traffic-threshold",
+    )?;
+    push_number_flag(&mut cli, args, "top", "--top")?;
+    push_string_flag(&mut cli, args, "repo", "--repo")?;
+    Ok(cli)
+}
+
 fn push_health_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
     push_number_flag(cli, args, "max_cyclomatic", "--max-cyclomatic")?;
     push_number_flag(cli, args, "max_cognitive", "--max-cognitive")?;
@@ -358,6 +409,21 @@ fn flags_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), St
     push_baseline_args(cli, args)?;
     push_number_flag(cli, args, "top", "--top")?;
     Ok(())
+}
+
+fn impact_args(args: &Map<String, Value>) -> Result<Vec<String>, String> {
+    let mut cli = json_command_args(&["impact"]);
+    cli.push("--quiet".to_owned());
+    push_string_flag(&mut cli, args, "root", "--root")?;
+    Ok(cli)
+}
+
+fn impact_all_args(args: &Map<String, Value>) -> Result<Vec<String>, String> {
+    let mut cli = json_command_args(&["impact"]);
+    cli.extend(["--quiet".to_owned(), "--all".to_owned()]);
+    push_string_flag(&mut cli, args, "sort", "--sort")?;
+    push_number_flag(&mut cli, args, "limit", "--limit")?;
+    Ok(cli)
 }
 
 fn audit_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
