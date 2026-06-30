@@ -89,12 +89,14 @@ Run through npm/npx:
 npx @sgaabdu4/decimate check . --format json
 npx @sgaabdu4/decimate check --root . --format json
 npx --package @sgaabdu4/decimate decimate check . --format json
+npx --package @sgaabdu4/decimate decimate-mcp
 ```
 
-The npm package exposes the executable as `decimate`. The unscoped npm package
-name `decimate` is already owned by an unrelated GeoJSON package, so
-`npx decimate` cannot safely target this project unless that package name is
-transferred. Public npm installs use `@sgaabdu4/decimate`.
+The npm package exposes the executables as `decimate` and `decimate-mcp`. The
+unscoped npm package name `decimate` is already owned by an unrelated GeoJSON
+package, so `npx decimate` cannot safely target this project unless that package
+name is transferred. Public npm installs use `@sgaabdu4/decimate` or
+`npx --package @sgaabdu4/decimate decimate ...`.
 
 Root-aware commands accept both the existing positional `ROOT` form
 (`decimate check .`) and the Fallow-style `--root ROOT` form
@@ -266,12 +268,12 @@ decimate config-schema --format json
 decimate rule-pack-schema --format json
 ```
 
-The manifest includes `mcp_tools` metadata for read-only agent wrappers over
-existing Decimate commands such as `analyze`, `project_info`, `inspect_target`,
-`trace_file`, `trace_export`, `trace_dependency`, `find_dupes`,
-`check_health`, `security_candidates`, `feature_flags`, `audit`,
-`decision_surface`, and `decimate_explain`. This is a contract manifest, not a
-running stdio MCP server yet.
+`decimate-mcp` starts a read-only MCP stdio server. It implements
+`initialize`, `ping`, `tools/list`, and `tools/call` for the same agent wrappers
+listed under `mcp_tools` in `decimate schema`: `analyze`, `project_info`,
+`inspect_target`, `trace_file`, `trace_export`, `trace_dependency`,
+`trace_clone`, `find_dupes`, `check_health`, `security_candidates`,
+`feature_flags`, `audit`, `decision_surface`, and `decimate_explain`.
 
 Important schemas:
 
@@ -403,8 +405,8 @@ Decimate also adds Dart-specific graph intelligence that Fallow does not need:
 
 Known gaps before claiming full product parity with Fallow:
 
-- MCP tool contracts are exposed in `decimate schema`, but there is no stdio MCP
-  server implementation yet
+- MCP stdio support is read-only; mutating `fix_apply` and sandboxed
+  `code_execute` are not exposed yet
 - no embedded Node/NAPI-style bindings, because Decimate is not a JS tool
 - no hosted/cloud continuous runtime monitoring
 - no `watch`, `migrate`, telemetry, license, editor, or viz commands yet

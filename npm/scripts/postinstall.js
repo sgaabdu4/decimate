@@ -9,11 +9,9 @@ if (process.env.DECIMATE_SKIP_BUILD === "1") {
 }
 
 const root = path.resolve(__dirname, "../..");
-const exeName = process.platform === "win32" ? "decimate.exe" : "decimate";
+const exeExt = process.platform === "win32" ? ".exe" : "";
 const cargo = process.env.CARGO || "cargo";
-const builtBinary = path.join(root, "target", "release", exeName);
 const cacheDir = path.join(root, "npm", "bin-cache");
-const cachedBinary = path.join(cacheDir, exeName);
 
 const build = spawnSync(cargo, ["build", "--release", "--locked"], {
   cwd: root,
@@ -38,7 +36,11 @@ if (build.status !== 0) {
 }
 
 fs.mkdirSync(cacheDir, { recursive: true });
-fs.copyFileSync(builtBinary, cachedBinary);
-if (process.platform !== "win32") {
-  fs.chmodSync(cachedBinary, 0o755);
+for (const binary of ["decimate", "decimate-mcp"]) {
+  const builtBinary = path.join(root, "target", "release", `${binary}${exeExt}`);
+  const cachedBinary = path.join(cacheDir, `${binary}${exeExt}`);
+  fs.copyFileSync(builtBinary, cachedBinary);
+  if (process.platform !== "win32") {
+    fs.chmodSync(cachedBinary, 0o755);
+  }
 }

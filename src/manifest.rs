@@ -103,34 +103,34 @@ fn mcp_tools() -> Value {
         "note": "Read-only agent tool contracts backed by existing Decimate CLI commands. Mutating fixes are intentionally not advertised.",
         "tools": [
             mcp_tool("analyze", "decimate check --format json", SCHEMA_VERSION, [
-                "root", "config", "issue_types", "entry", "file", "workspace", "changed_since", "runtime_coverage"
+                "root", "config", "issue_types", "entry", "file", "workspace", "changed_since", "runtime_coverage", "production"
             ]),
             mcp_tool("project_info", "decimate list --format json", PROJECT_LIST_SCHEMA_VERSION, [
-                "root", "config", "files", "plugins", "boundaries", "workspace"
+                "root", "config", "files", "entry_points", "plugins", "boundaries", "workspaces", "file", "workspace"
             ]),
             mcp_tool("inspect_target", "decimate inspect --format json", INSPECT_SCHEMA_VERSION, [
-                "root", "config", "file", "symbol", "dependency"
+                "root", "config", "target", "file", "symbol"
             ]),
             mcp_tool("trace_file", "decimate trace-file --format json", TRACE_SCHEMA_VERSION, [
-                "root", "config", "file", "entry"
+                "root", "config", "file"
             ]),
             mcp_tool("trace_export", "decimate trace-symbol --format json", TRACE_SCHEMA_VERSION, [
-                "root", "config", "file", "symbol"
+                "root", "config", "file", "symbol", "export_name"
             ]),
             mcp_tool("trace_dependency", "decimate trace-dependency --format json", TRACE_SCHEMA_VERSION, [
-                "root", "config", "dependency", "workspace"
+                "root", "config", "dependency", "package_name"
             ]),
             mcp_tool("trace_clone", "decimate trace-clone --format json", TRACE_SCHEMA_VERSION, [
                 "root", "config", "fingerprint"
             ]),
             mcp_tool("find_dupes", "decimate dupes --format json", SCHEMA_VERSION, [
-                "root", "config", "mode", "min_tokens", "min_lines", "top"
+                "root", "config", "mode", "min_tokens", "min_lines", "min_occurrences", "top"
             ]),
             mcp_tool("check_health", "decimate health --format json", SCHEMA_VERSION, [
-                "root", "config", "max_cyclomatic", "max_cognitive", "runtime_coverage"
+                "root", "config", "max_cyclomatic", "max_cognitive", "max_crap", "coverage", "runtime_coverage", "coverage_gaps", "file_scores", "hotspots", "targets", "ownership", "complexity_breakdown"
             ]),
             mcp_tool("security_candidates", "decimate security --format json", SCHEMA_VERSION, [
-                "root", "config", "security_candidates", "production"
+                "root", "config", "top", "file", "surface", "production"
             ]),
             mcp_tool("feature_flags", "decimate flags --format json", SCHEMA_VERSION, [
                 "root", "config", "top", "changed_since"

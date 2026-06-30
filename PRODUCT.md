@@ -190,8 +190,8 @@ Parity areas:
 - Runtime coverage: local Dart/Flutter coverage ingestion for hot paths,
   cleanup confidence, and coverage gaps; cloud/runtime agent capture remains
   future work.
-- Integrations: schema output, CI templates, MCP/server API, editor-ready JSON
-  contracts, and impact reporting.
+- Integrations: schema output, CI templates, a read-only MCP stdio server,
+  editor-ready JSON contracts, and impact reporting.
 
 Current implemented parity:
 

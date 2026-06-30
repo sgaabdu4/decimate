@@ -29,6 +29,7 @@ pub mod init;
 pub mod inspect;
 pub mod intelligence;
 pub mod manifest;
+pub mod mcp;
 pub mod output;
 pub(crate) mod package_map;
 pub mod policy;

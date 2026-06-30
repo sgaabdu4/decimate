@@ -4,7 +4,8 @@
   "description": "Rust-native codebase intelligence for Dart and Flutter module graphs.",
   "license": "MIT OR Apache-2.0",
   "bin": {
-    "decimate": "npm/bin/decimate.js"
+    "decimate": "npm/bin/decimate.js",
+    "decimate-mcp": "npm/bin/decimate-mcp.js"
   },
   "files": [
     "Cargo.toml",
@@ -20,7 +21,9 @@
     "postinstall": "node npm/scripts/postinstall.js",
     "pack:check": "npm pack --dry-run",
     "test:npm": "npm exec --package . -- decimate --help",
-    "test:npx:local": "npx --package . decimate --help"
+    "test:npm:mcp": "printf '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-11-25\"}}\\n' | node npm/bin/decimate-mcp.js",
+    "test:npx:local": "npx --package . decimate --help",
+    "test:npx:mcp:local": "node npm/scripts/test-npx-mcp-local.js"
   },
   "engines": {
     "node": ">=18"
