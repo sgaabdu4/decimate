@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -113,7 +114,8 @@ fn collect_ref_rules(
                         location: await_node.start_position().into(),
                     });
             }
-            for watch in ref_watch_calls(body, source) {
+            let aliases = ref_aliases(body, source);
+            for watch in ref_watch_calls(body, source, &aliases) {
                 findings
                     .riverpod_watch_in_notifier_methods
                     .push(RiverpodWatchInNotifierMethod {
@@ -133,40 +135,92 @@ fn class_methods(class: Node<'_>) -> Vec<Node<'_>> {
     methods
 }
 
+#[derive(Clone, Copy)]
+enum GuardMode {
+    Normal,
+    Finally,
+}
+
 fn unguarded_awaits<'tree>(body: Node<'tree>, source: &str, receiver: &str) -> Vec<Node<'tree>> {
-    let Some(block) = find_first_named_descendant(body, "block") else {
-        return Vec::new();
-    };
     let mut findings = Vec::new();
-    collect_unguarded_awaits_in_block(block, source, receiver, &mut findings);
+    collect_unguarded_awaits_in_function_body(body, source, receiver, &mut findings);
     findings
+}
+
+fn collect_unguarded_awaits_in_function_body<'tree>(
+    body: Node<'tree>,
+    source: &str,
+    receiver: &str,
+    findings: &mut Vec<Node<'tree>>,
+) {
+    if body.kind() == "block" {
+        collect_unguarded_awaits_in_block(
+            body,
+            source,
+            receiver,
+            GuardMode::Normal,
+            false,
+            findings,
+        );
+        return;
+    }
+    if let Some(block) = direct_named_child(body, "block") {
+        collect_unguarded_awaits_in_block(
+            block,
+            source,
+            receiver,
+            GuardMode::Normal,
+            false,
+            findings,
+        );
+        return;
+    }
+    collect_expression_body_awaits(body, source, receiver, findings);
+    collect_child_block_awaits(body, source, receiver, GuardMode::Normal, findings);
+}
+
+fn collect_expression_body_awaits<'tree>(
+    body: Node<'tree>,
+    source: &str,
+    receiver: &str,
+    findings: &mut Vec<Node<'tree>>,
+) {
+    if !contains_await(body) || !contains_lifecycle_use(body, source, receiver) {
+        return;
+    }
+    let mut awaits = Vec::new();
+    collect_awaits(body, true, &mut awaits);
+    findings.extend(awaits);
 }
 
 fn collect_unguarded_awaits_in_block<'tree>(
     block: Node<'tree>,
     source: &str,
     receiver: &str,
+    mode: GuardMode,
+    trailing_guard: bool,
     findings: &mut Vec<Node<'tree>>,
 ) {
     let statements = block_statements(block);
     for (index, statement) in statements.iter().copied().enumerate() {
         let awaits = direct_awaits(statement);
         if awaits.is_empty() {
-            collect_child_block_awaits(statement, source, receiver, findings);
+            collect_child_block_awaits(statement, source, receiver, mode, findings);
             continue;
         }
         if is_terminal_return_await(statement) {
-            collect_child_block_awaits(statement, source, receiver, findings);
+            collect_child_block_awaits(statement, source, receiver, mode, findings);
             continue;
         }
         let guarded = statements
             .get(index + 1)
             .copied()
-            .is_some_and(|next| is_mounted_return_guard(next, source, receiver));
+            .is_some_and(|next| is_valid_post_await_guard(next, source, receiver, mode))
+            || (index + 1 == statements.len() && trailing_guard);
         if !guarded {
             findings.extend(awaits);
         }
-        collect_child_block_awaits(statement, source, receiver, findings);
+        collect_child_block_awaits(statement, source, receiver, mode, findings);
     }
 }
 
@@ -174,17 +228,70 @@ fn collect_child_block_awaits<'tree>(
     node: Node<'tree>,
     source: &str,
     receiver: &str,
+    mode: GuardMode,
     findings: &mut Vec<Node<'tree>>,
 ) {
-    if is_nested_function_scope(node.kind()) {
+    if node.kind() == "function_expression" {
+        if let Some(body) = node.child_by_field_name("body") {
+            collect_unguarded_awaits_in_function_body(body, source, receiver, findings);
+        }
+        return;
+    }
+    if is_nested_non_closure_scope(node.kind()) {
+        return;
+    }
+    if node.kind() == "try_statement" {
+        collect_try_awaits(node, source, receiver, mode, findings);
         return;
     }
     let mut cursor = node.walk();
     for child in node.named_children(&mut cursor) {
         if child.kind() == "block" {
-            collect_unguarded_awaits_in_block(child, source, receiver, findings);
+            collect_unguarded_awaits_in_block(child, source, receiver, mode, false, findings);
         } else {
-            collect_child_block_awaits(child, source, receiver, findings);
+            collect_child_block_awaits(child, source, receiver, mode, findings);
+        }
+    }
+}
+
+fn collect_try_awaits<'tree>(
+    try_statement: Node<'tree>,
+    source: &str,
+    receiver: &str,
+    mode: GuardMode,
+    findings: &mut Vec<Node<'tree>>,
+) {
+    let body = try_statement.child_by_field_name("body");
+    let has_finally_guard = receiver == "ref" && finally_has_positive_guard(try_statement, source);
+    if let Some(block) = body {
+        collect_unguarded_awaits_in_block(
+            block,
+            source,
+            receiver,
+            mode,
+            has_finally_guard,
+            findings,
+        );
+    }
+
+    let mut cursor = try_statement.walk();
+    for child in try_statement.named_children(&mut cursor) {
+        if body.is_some_and(|body| same_node(body, child)) {
+            continue;
+        }
+        if child.kind() == "finally_clause" {
+            if let Some(block) = direct_named_child(child, "block") {
+                collect_unguarded_awaits_in_block(
+                    block,
+                    source,
+                    receiver,
+                    GuardMode::Finally,
+                    false,
+                    findings,
+                );
+            }
+        } else {
+            collect_child_block_awaits(child, source, receiver, mode, findings);
         }
     }
 }
@@ -216,6 +323,18 @@ fn collect_awaits<'tree>(node: Node<'tree>, root: bool, awaits: &mut Vec<Node<'t
     }
 }
 
+fn is_valid_post_await_guard(
+    node: Node<'_>,
+    source: &str,
+    receiver: &str,
+    mode: GuardMode,
+) -> bool {
+    match mode {
+        GuardMode::Normal => is_mounted_return_guard(node, source, receiver),
+        GuardMode::Finally => receiver == "ref" && is_mounted_positive_block_guard(node, source),
+    }
+}
+
 fn is_mounted_return_guard(node: Node<'_>, source: &str, receiver: &str) -> bool {
     if node.kind() != "if_statement" {
         return false;
@@ -223,7 +342,35 @@ fn is_mounted_return_guard(node: Node<'_>, source: &str, receiver: &str) -> bool
     let Ok(text) = node.utf8_text(source.as_bytes()) else {
         return false;
     };
-    compact(text) == format!("if(!{receiver}.mounted)return;")
+    let compact = compact(text);
+    let unbraced = format!("if(!{receiver}.mounted)return");
+    let braced = format!("if(!{receiver}.mounted){{return");
+    (compact.starts_with(&unbraced) && compact.ends_with(';'))
+        || (compact.starts_with(&braced) && compact.ends_with(";}"))
+}
+
+fn is_mounted_positive_block_guard(node: Node<'_>, source: &str) -> bool {
+    if node.kind() != "if_statement" || node.child_by_field_name("alternative").is_some() {
+        return false;
+    }
+    let Ok(text) = node.utf8_text(source.as_bytes()) else {
+        return false;
+    };
+    let compact = compact(text);
+    compact.starts_with("if(ref.mounted){") && compact.ends_with('}')
+}
+
+fn finally_has_positive_guard(try_statement: Node<'_>, source: &str) -> bool {
+    let Some(finally) = direct_named_child(try_statement, "finally_clause") else {
+        return false;
+    };
+    let Some(block) = direct_named_child(finally, "block") else {
+        return false;
+    };
+    block_statements(block)
+        .first()
+        .copied()
+        .is_some_and(|statement| is_mounted_positive_block_guard(statement, source))
 }
 
 fn is_terminal_return_await(statement: Node<'_>) -> bool {
@@ -238,15 +385,20 @@ fn contains_await(node: Node<'_>) -> bool {
     node.named_children(&mut cursor).any(contains_await)
 }
 
-fn ref_watch_calls<'tree>(body: Node<'tree>, source: &str) -> Vec<Node<'tree>> {
+fn ref_watch_calls<'tree>(
+    body: Node<'tree>,
+    source: &str,
+    aliases: &BTreeSet<String>,
+) -> Vec<Node<'tree>> {
     let mut calls = Vec::new();
-    collect_ref_watch_calls(body, source, true, &mut calls);
+    collect_ref_watch_calls(body, source, aliases, true, &mut calls);
     calls
 }
 
 fn collect_ref_watch_calls<'tree>(
     node: Node<'tree>,
     source: &str,
+    aliases: &BTreeSet<String>,
     root: bool,
     calls: &mut Vec<Node<'tree>>,
 ) {
@@ -256,17 +408,30 @@ fn collect_ref_watch_calls<'tree>(
     if node.kind() == "call_expression"
         && node
             .child_by_field_name("function")
-            .is_some_and(|function| is_ref_watch_member(function, source))
+            .is_some_and(|function| is_ref_watch_function(function, source, aliases))
     {
         calls.push(node);
     }
     let mut cursor = node.walk();
     for child in node.named_children(&mut cursor) {
-        collect_ref_watch_calls(child, source, false, calls);
+        collect_ref_watch_calls(child, source, aliases, false, calls);
     }
 }
 
-fn is_ref_watch_member(node: Node<'_>, source: &str) -> bool {
+fn is_ref_watch_function(node: Node<'_>, source: &str, aliases: &BTreeSet<String>) -> bool {
+    if is_ref_watch_member(node, source, aliases) {
+        return true;
+    }
+    let text = node
+        .utf8_text(source.as_bytes())
+        .ok()
+        .map(compact)
+        .unwrap_or_default();
+    matches!(text.as_str(), "ref.watch" | "this.ref.watch")
+        || aliases.iter().any(|alias| text == format!("{alias}.watch"))
+}
+
+fn is_ref_watch_member(node: Node<'_>, source: &str, aliases: &BTreeSet<String>) -> bool {
     if !matches!(
         node.kind(),
         "member_expression" | "null_aware_member_expression" | "assignable_expression"
@@ -279,8 +444,50 @@ fn is_ref_watch_member(node: Node<'_>, source: &str) -> bool {
     let Some(property) = node.child_by_field_name("property") else {
         return false;
     };
-    object.utf8_text(source.as_bytes()).ok() == Some("ref")
-        && property.utf8_text(source.as_bytes()).ok() == Some("watch")
+    let object_text = object
+        .utf8_text(source.as_bytes())
+        .ok()
+        .map(compact)
+        .unwrap_or_default();
+    let is_ref_object = matches!(object_text.as_str(), "ref" | "this.ref")
+        || aliases.contains(object_text.as_str());
+    is_ref_object && property.utf8_text(source.as_bytes()).ok() == Some("watch")
+}
+
+fn ref_aliases(body: Node<'_>, source: &str) -> BTreeSet<String> {
+    let mut aliases = BTreeSet::new();
+    let mut initialized = Vec::new();
+    collect_nodes(body, "initialized_identifier", &mut initialized);
+    collect_nodes(body, "initialized_variable_definition", &mut initialized);
+    for node in initialized {
+        if let Some(name) = ref_alias_from_fields(node, source) {
+            aliases.insert(name);
+        }
+    }
+    aliases
+}
+
+fn ref_alias_from_fields(node: Node<'_>, source: &str) -> Option<String> {
+    let name = field_text(node, "name", source)?;
+    let value = field_text(node, "value", source).map(|value| compact(&value))?;
+    matches!(value.as_str(), "ref" | "this.ref").then_some(name)
+}
+
+fn contains_lifecycle_use(node: Node<'_>, source: &str, receiver: &str) -> bool {
+    if receiver == "context" {
+        contains_identifier(node, source, "context")
+    } else {
+        contains_identifier(node, source, "ref") || contains_identifier(node, source, "state")
+    }
+}
+
+fn contains_identifier(node: Node<'_>, source: &str, name: &str) -> bool {
+    if node.kind() == "identifier" && node.utf8_text(source.as_bytes()).ok() == Some(name) {
+        return true;
+    }
+    let mut cursor = node.walk();
+    node.named_children(&mut cursor)
+        .any(|child| contains_identifier(child, source, name))
 }
 
 fn is_notifier_class(class: Node<'_>, _class_name: &str, source: &str) -> bool {
@@ -335,22 +542,19 @@ fn collect_nodes<'tree>(node: Node<'tree>, kind: &str, nodes: &mut Vec<Node<'tre
     }
 }
 
-fn find_first_named_descendant<'tree>(node: Node<'tree>, kind: &str) -> Option<Node<'tree>> {
-    if node.kind() == kind {
-        return Some(node);
-    }
+fn direct_named_child<'tree>(node: Node<'tree>, kind: &str) -> Option<Node<'tree>> {
     let mut cursor = node.walk();
-    for child in node.named_children(&mut cursor) {
-        if let Some(found) = find_first_named_descendant(child, kind) {
-            return Some(found);
-        }
-    }
-    None
+    node.named_children(&mut cursor)
+        .find(|child| child.kind() == kind)
 }
 
 fn first_named_child(node: Node<'_>) -> Option<Node<'_>> {
     let mut cursor = node.walk();
     node.named_children(&mut cursor).next()
+}
+
+fn same_node(left: Node<'_>, right: Node<'_>) -> bool {
+    left.start_byte() == right.start_byte() && left.end_byte() == right.end_byte()
 }
 
 fn is_statement_kind(kind: &str) -> bool {
@@ -371,6 +575,10 @@ fn is_statement_kind(kind: &str) -> bool {
             | "while_statement"
             | "yield_statement"
     )
+}
+
+fn is_nested_non_closure_scope(kind: &str) -> bool {
+    is_nested_function_scope(kind) && kind != "function_expression"
 }
 
 fn is_nested_function_scope(kind: &str) -> bool {

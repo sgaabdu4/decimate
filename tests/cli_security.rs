@@ -45,6 +45,23 @@ fn security_command_emits_json_contract() -> Result<(), Box<dyn std::error::Erro
     let Some(candidates) = json["security_candidates"].as_array() else {
         panic!("security_candidates array");
     };
+    let Some(secret) = candidates
+        .iter()
+        .find(|candidate| candidate["category"] == "hardcoded-secret")
+    else {
+        panic!("hardcoded-secret candidate");
+    };
+    assert_eq!(secret["finding_id"], secret["fingerprint"]);
+    assert_eq!(secret["cwe"][0], "CWE-798");
+    assert_eq!(secret["severity"], "error");
+    assert_eq!(secret["candidate"]["source"], "source-code-literal");
+    assert_eq!(secret["candidate"]["sink"], "secret-literal");
+    assert_eq!(secret["candidate"]["boundary"], "source-control");
+    assert_eq!(
+        secret["evidence"]["occurrences"][0]["path"],
+        "lib/main.dart"
+    );
+    assert_eq!(secret["trace"][0]["role"], "source");
     assert!(
         candidates
             .iter()
@@ -126,6 +143,9 @@ fn security_command_emits_sarif_contract() -> Result<(), Box<dyn std::error::Err
     assert_eq!(json["runs"][0]["properties"]["command"], "security");
     assert_eq!(results.len(), 2);
     assert!(results.iter().all(|result| result["level"] == "error"));
+    assert!(results.iter().all(|result| {
+        result["properties"]["findingId"] == result["partialFingerprints"]["decimateFingerprint"]
+    }));
     assert!(results.iter().all(|result| {
         result["properties"]["safeToDelete"] == false
             && result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]

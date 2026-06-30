@@ -19,6 +19,7 @@ fn scan_command_with_format(command: Command, format: Arg) -> Command {
         .arg(root_arg())
         .arg(root_flag_arg())
         .arg(format)
+        .arg(quiet_arg())
         .arg(config_arg())
         .arg(entry_arg())
         .arg(super::mode_args::production_arg())
@@ -80,6 +81,13 @@ pub(super) fn config_arg() -> Arg {
         .value_name("PATH")
         .help("Decimate config file")
         .value_parser(value_parser!(PathBuf))
+}
+
+fn quiet_arg() -> Arg {
+    Arg::new("quiet")
+        .long("quiet")
+        .help("Suppress non-JSON progress output")
+        .action(ArgAction::SetTrue)
 }
 
 pub(super) fn entry_arg() -> Arg {

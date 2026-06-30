@@ -393,6 +393,50 @@ class SaveButton extends StatelessWidget {
 }
 
 #[test]
+fn flags_widget_async_closure_awaits_and_accepts_return_guards()
+-> Result<(), Box<dyn std::error::Error>> {
+    let source = r"
+class SaveButton extends StatelessWidget {
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: () async {
+        await doWork();
+        Navigator.of(context).pop();
+      },
+      child: const Text('Save'),
+    );
+  }
+
+  Future<bool> guardedFalse(BuildContext context) async {
+    await doWork();
+    if (!context.mounted) return false;
+    return true;
+  }
+
+  Future<String?> guardedNull(BuildContext context) async {
+    await doWork();
+    if (!context.mounted) return null;
+    return 'ok';
+  }
+
+  Future<void> guardedBraced(BuildContext context) async {
+    await doWork();
+    if (!context.mounted) {
+      return;
+    }
+    Navigator.of(context).pop();
+  }
+}
+";
+    let findings = parse_findings(source)?.missing_context_mounted_after_await;
+
+    assert_eq!(findings.len(), 1);
+    assert_eq!(findings[0].owner, "SaveButton.build");
+    assert_eq!(findings[0].location.line, 6);
+    Ok(())
+}
+
+#[test]
 fn flags_notifier_awaits_without_ref_mounted_guard() -> Result<(), Box<dyn std::error::Error>> {
     let source = r"
 class CounterNotifier extends _$CounterNotifier {
@@ -423,6 +467,84 @@ class CounterNotifier extends _$CounterNotifier {
 }
 
 #[test]
+fn flags_expression_bodied_lifecycle_awaits() -> Result<(), Box<dyn std::error::Error>> {
+    let source = r"
+class SaveButton extends StatelessWidget {
+  Future<void> save(BuildContext context) async =>
+      Navigator.of(context).pop(await doWork());
+}
+
+class CounterNotifier extends _$CounterNotifier {
+  int build() => 0;
+
+  Future<void> save() async => state = await repo.count();
+}
+";
+    let findings = parse_findings(source)?;
+
+    assert_eq!(findings.missing_context_mounted_after_await.len(), 1);
+    assert_eq!(
+        findings.missing_context_mounted_after_await[0].owner,
+        "SaveButton.save"
+    );
+    assert_eq!(findings.missing_ref_mounted_after_await.len(), 1);
+    assert_eq!(
+        findings.missing_ref_mounted_after_await[0].owner,
+        "CounterNotifier.save"
+    );
+    Ok(())
+}
+
+#[test]
+fn accepts_positive_ref_mounted_finally_guard_only() -> Result<(), Box<dyn std::error::Error>> {
+    let source = r"
+class CounterNotifier extends _$CounterNotifier {
+  int build() => 0;
+
+  Future<void> guardedFinally() async {
+    try {
+      await repo.save();
+    } finally {
+      if (ref.mounted) {
+        state = 0;
+      }
+    }
+  }
+
+  Future<void> earlyReturnFinally() async {
+    try {
+      await repo.save();
+    } finally {
+      if (!ref.mounted) return;
+      state = 0;
+    }
+  }
+
+  Future<void> positiveGuardOutsideFinally() async {
+    await repo.save();
+    if (ref.mounted) {
+      state = 0;
+    }
+  }
+}
+";
+    let findings = parse_findings(source)?.missing_ref_mounted_after_await;
+
+    let owners = findings
+        .iter()
+        .map(|finding| finding.owner.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        owners,
+        vec![
+            "CounterNotifier.earlyReturnFinally",
+            "CounterNotifier.positiveGuardOutsideFinally",
+        ]
+    );
+    Ok(())
+}
+
+#[test]
 fn recognizes_generated_riverpod_notifier_superclasses() -> Result<(), Box<dyn std::error::Error>> {
     let source = r"
 class Counter extends _$Counter {
@@ -438,6 +560,29 @@ class Counter extends _$Counter {
 
     assert_eq!(findings.len(), 1);
     assert_eq!(findings[0].owner, "Counter.save");
+    Ok(())
+}
+
+#[test]
+fn flags_this_ref_watch_and_simple_ref_aliases_in_notifiers()
+-> Result<(), Box<dyn std::error::Error>> {
+    let source = r"
+class CounterNotifier extends _$CounterNotifier {
+  int build() => 0;
+
+  void save() {
+    this.ref.watch(counterProvider);
+    final localRef = ref;
+    localRef.watch(otherProvider);
+    final instanceRef = this.ref;
+    instanceRef.watch(thirdProvider);
+  }
+}
+";
+    let findings = parse_findings(source)?.riverpod_watch_in_notifier_methods;
+
+    assert_eq!(findings.len(), 3);
+    assert!(findings.iter().all(|finding| finding.method_name == "save"));
     Ok(())
 }
 

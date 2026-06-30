@@ -92,6 +92,7 @@ fn sarif_results(findings: &[&Finding]) -> Vec<Value> {
                 "partialFingerprints": partial_fingerprints(finding),
                 "properties": {
                     "kind": finding.kind,
+                    "findingId": &finding.fingerprint,
                     "safeToDelete": finding.safe_to_delete,
                     "files": &finding.files,
                     "actions": &finding.actions

@@ -43,6 +43,29 @@ fn fix_command_dry_run_reports_safe_plan_without_writing() -> Result<(), Box<dyn
 }
 
 #[test]
+fn fix_command_accepts_fallow_dry_run_alias() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = fix_fixture()?;
+
+    let (code, json) = run_json([
+        "decimate",
+        "fix",
+        fixture.path().to_str().unwrap_or("."),
+        "--format",
+        "json",
+        "--entry",
+        "lib/main.dart",
+        "--dry-run",
+    ])?;
+
+    assert_eq!(code, 0);
+    assert_eq!(json["mode"], "dry-run");
+    assert_eq!(json["summary"]["planned"], 2);
+    assert!(fixture.path().join("lib/dead.dart").exists());
+
+    Ok(())
+}
+
+#[test]
 fn fix_command_applies_confirmed_safe_changes() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = fix_fixture()?;
 
@@ -80,6 +103,30 @@ fn fix_command_applies_confirmed_safe_changes() -> Result<(), Box<dyn std::error
     ])?;
     assert_eq!(check_code, 0);
     assert_eq!(check_json["summary"]["findings"], 0);
+
+    Ok(())
+}
+
+#[test]
+fn fix_command_applies_with_fallow_yes_alias() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = fix_fixture()?;
+
+    let (code, json) = run_json([
+        "decimate",
+        "fix",
+        fixture.path().to_str().unwrap_or("."),
+        "--format",
+        "json",
+        "--entry",
+        "lib/main.dart",
+        "--yes",
+    ])?;
+
+    assert_eq!(code, 0);
+    assert_eq!(json["mode"], "apply");
+    assert_eq!(json["summary"]["planned"], 2);
+    assert_eq!(json["summary"]["applied"], 2);
+    assert!(!fixture.path().join("lib/dead.dart").exists());
 
     Ok(())
 }

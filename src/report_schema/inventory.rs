@@ -209,14 +209,52 @@ pub(super) fn security_candidate_schema() -> Value {
     json!({
         "type": "object",
         "additionalProperties": false,
-        "required": ["rule_id", "fingerprint", "category", "sink", "confidence", "occurrences"],
+        "required": [
+            "rule_id",
+            "finding_id",
+            "fingerprint",
+            "category",
+            "cwe",
+            "severity",
+            "candidate",
+            "sink",
+            "confidence",
+            "occurrences",
+            "evidence",
+            "trace"
+        ],
         "properties": {
             "rule_id": string_schema(),
+            "finding_id": string_schema(),
             "fingerprint": string_schema(),
             "category": security_category_schema(),
+            "cwe": string_array_schema(),
+            "severity": severity_schema(),
+            "candidate": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["source", "sink", "boundary"],
+                "properties": {
+                    "source": string_schema(),
+                    "sink": string_schema(),
+                    "boundary": string_schema()
+                }
+            },
             "sink": string_schema(),
             "confidence": confidence_schema(),
-            "occurrences": array_ref_schema("security_occurrence")
+            "occurrences": array_ref_schema("security_occurrence"),
+            "evidence": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["occurrences"],
+                "properties": {
+                    "occurrences": array_ref_schema("security_occurrence")
+                }
+            },
+            "trace": {
+                "type": "array",
+                "items": security_trace_step_schema()
+            }
         }
     })
 }
@@ -230,6 +268,23 @@ pub(super) fn security_occurrence_schema() -> Value {
         "type": "object",
         "additionalProperties": false,
         "required": ["path", "line", "column", "expression", "evidence"],
+        "properties": properties
+    })
+}
+
+fn security_trace_step_schema() -> Value {
+    let mut properties = location_expression_properties();
+    if let Some(object) = properties.as_object_mut() {
+        object.insert(
+            "role".to_owned(),
+            json!({ "type": "string", "enum": ["source", "sink", "boundary"] }),
+        );
+        object.insert("evidence".to_owned(), string_schema());
+    }
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "path", "line", "column", "expression", "evidence"],
         "properties": properties
     })
 }
@@ -301,6 +356,10 @@ fn coverage_status_schema() -> Value {
 
 fn confidence_schema() -> Value {
     json!({ "type": "string", "enum": ["low", "medium", "high"] })
+}
+
+fn severity_schema() -> Value {
+    json!({ "type": "string", "enum": ["error", "warning"] })
 }
 
 fn array_ref_schema(definition: &str) -> Value {

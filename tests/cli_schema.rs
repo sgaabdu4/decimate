@@ -6,6 +6,7 @@ fn schema_command_emits_agent_manifest() -> Result<(), Box<dyn std::error::Error
     let json = schema_json()?;
     assert_eq!(json["schema_version"], "decimate.schema.v1");
     assert_eq!(json["kind"], "schema");
+    assert_manifest_metadata(&json);
     assert!(
         json["commands"]
             .as_array()
@@ -98,6 +99,46 @@ fn schema_command_emits_agent_manifest() -> Result<(), Box<dyn std::error::Error
                     .is_some_and(|command| command.contains("decimate inspect"))
         })
     }));
+
+    Ok(())
+}
+
+fn assert_manifest_metadata(json: &Value) {
+    assert_eq!(json["manifest_version"], "decimate.schema.v1");
+    assert_eq!(
+        json["output_formats"],
+        serde_json::json!(["human", "json", "sarif"])
+    );
+    assert!(json["global_flags"].as_array().is_some_and(|flags| {
+        ["--root", "--format", "--config", "--quiet"]
+            .iter()
+            .all(|expected| flags.iter().any(|flag| flag == expected))
+    }));
+    assert!(
+        json["exit_codes"]
+            .as_array()
+            .is_some_and(|codes| { codes.iter().any(|code| code["code"] == 2) })
+    );
+    assert_eq!(
+        json["severity_levels"],
+        serde_json::json!(["error", "warning"])
+    );
+}
+
+#[test]
+fn quiet_flag_is_accepted_by_report_commands() -> Result<(), Box<dyn std::error::Error>> {
+    let mut output = Vec::new();
+    let code = run_from(
+        [
+            "decimate", "check", "--format", "json", "--quiet", "--root", ".",
+        ],
+        &mut output,
+    )?;
+
+    assert!(matches!(code, 0 | 1));
+    let json = serde_json::from_slice::<Value>(&output)?;
+    assert_eq!(json["schema_version"], "decimate.report.v1");
+    assert_eq!(json["command"], "check");
 
     Ok(())
 }

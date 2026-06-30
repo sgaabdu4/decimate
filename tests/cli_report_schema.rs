@@ -37,6 +37,9 @@ fn report_schema_types_inventory_arrays() -> Result<(), Box<dyn std::error::Erro
         &json["$defs"]["security_candidate"]["properties"]["category"]["enum"],
         "plain-secret-storage",
     );
+    for field in ["finding_id", "cwe", "candidate", "trace"] {
+        assert_array_contains(&json["$defs"]["security_candidate"]["required"], field);
+    }
     assert_array_contains(
         &json["$defs"]["complexity_finding"]["required"],
         "contributions",

@@ -24,6 +24,20 @@ pub fn decimate_schema() -> Value {
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "kind": "schema",
         "tool": "decimate",
+        "manifest_version": MANIFEST_SCHEMA_VERSION,
+        "version": env!("CARGO_PKG_VERSION"),
+        "global_flags": ["--root", "--format", "--config", "--quiet"],
+        "output_formats": ["human", "json", "sarif"],
+        "exit_codes": [
+            { "code": 0, "meaning": "success or no error-severity findings" },
+            { "code": 1, "meaning": "error-severity findings or skipped apply fixes" },
+            { "code": 2, "meaning": "runtime or configuration error" }
+        ],
+        "severity_levels": ["error", "warning"],
+        "suppression_comments": {
+            "next_line": "// decimate-ignore-next-line <issue-type>",
+            "file": "// decimate-ignore-file <issue-type>"
+        },
         "schemas": {
             "report": SCHEMA_VERSION,
             "trace": TRACE_SCHEMA_VERSION,
@@ -251,7 +265,7 @@ fn support_commands() -> Value {
             "kind": "fix",
             "description": "Plan or apply safe auto-fixes.",
             "schema": FIX_SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--action", "--apply", "--confirm"]
+            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--action", "--dry-run", "--apply", "--yes", "--confirm"]
         },
         {
             "name": "init",

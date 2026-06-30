@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 use std::io::Write;
 
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command};
 
 use crate::config::apply_rules_to_report;
 use crate::fix::{FixMode, fix_findings, render_fix_report};
@@ -27,10 +27,23 @@ pub(super) fn fix_command() -> Command {
             .action(ArgAction::Append),
     )
     .arg(
+        Arg::new("dry-run")
+            .long("dry-run")
+            .help("Preview safe fixes without modifying files")
+            .conflicts_with_all(["apply", "yes"])
+            .action(ArgAction::SetTrue),
+    )
+    .arg(
         Arg::new("apply")
             .long("apply")
             .help("Apply planned fixes")
-            .requires("confirm")
+            .requires("apply-confirmation")
+            .action(ArgAction::SetTrue),
+    )
+    .arg(
+        Arg::new("yes")
+            .long("yes")
+            .help("Apply planned fixes without prompting")
             .action(ArgAction::SetTrue),
     )
     .arg(
@@ -38,6 +51,11 @@ pub(super) fn fix_command() -> Command {
             .long("confirm")
             .help("Confirm that --apply may modify files")
             .action(ArgAction::SetTrue),
+    )
+    .group(
+        ArgGroup::new("apply-confirmation")
+            .args(["confirm", "yes"])
+            .multiple(false),
     )
 }
 
@@ -119,7 +137,7 @@ pub(super) fn run_fix<W: Write>(subcommand: &ArgMatches, mut writer: W) -> Resul
         .get_many::<String>("action")
         .map(|values| values.cloned().collect::<BTreeSet<_>>())
         .unwrap_or_default();
-    let mode = if subcommand.get_flag("apply") {
+    let mode = if subcommand.get_flag("apply") || subcommand.get_flag("yes") {
         FixMode::Apply
     } else {
         FixMode::DryRun
