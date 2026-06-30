@@ -40,7 +40,8 @@ pub(super) fn extract_directive(
             let import_specification =
                 find_first_named_descendant(kind_node, "import_specification");
             let prefix = import_specification
-                .and_then(|specification| field_text(specification, "alias", source));
+                .and_then(|specification| field_text(specification, "alias", source))
+                .filter(|prefix| prefix != "_");
             let deferred = import_specification.is_some_and(|specification| {
                 import_uses_deferred_as(specification, uri_node, source)
             });

@@ -16,7 +16,7 @@ fn collect_identifier_references(
     source: &str,
     references: &mut Vec<IdentifierReference>,
 ) {
-    if is_reference_identifier(node)
+    if is_reference_identifier(node, source)
         && let Ok(name) = node.utf8_text(source.as_bytes())
     {
         references.push(IdentifierReference {
@@ -31,8 +31,11 @@ fn collect_identifier_references(
     }
 }
 
-fn is_reference_identifier(node: Node<'_>) -> bool {
+fn is_reference_identifier(node: Node<'_>, source: &str) -> bool {
     if !matches!(node.kind(), "identifier" | "type_identifier") {
+        return false;
+    }
+    if node.utf8_text(source.as_bytes()).ok() == Some("_") {
         return false;
     }
     if has_ancestor_kind(node, &["import_or_export", "part_directive"]) {
@@ -41,6 +44,12 @@ fn is_reference_identifier(node: Node<'_>) -> bool {
     let Some(parent) = node.parent() else {
         return true;
     };
+    if parent.kind() == "variable_pattern" || is_pattern_binding(node, source) {
+        return false;
+    }
+    if is_pattern_field_label(node, source) {
+        return false;
+    }
     if parent.kind() == "type_alias" && is_type_alias_name(parent, node) {
         return false;
     }
@@ -99,6 +108,40 @@ fn is_type_alias_name(parent: Node<'_>, child: Node<'_>) -> bool {
         .named_children(&mut cursor)
         .find(|node| matches!(node.kind(), "identifier" | "type_identifier"))
         .is_some_and(|name| same_node(name, child))
+}
+
+fn is_pattern_field_label(node: Node<'_>, source: &str) -> bool {
+    if !has_ancestor_kind(node, &["object_pattern", "record_pattern"]) {
+        return false;
+    }
+    source
+        .get(node.end_byte()..)
+        .is_some_and(|suffix| suffix.trim_start().starts_with(':'))
+}
+
+fn is_pattern_binding(node: Node<'_>, source: &str) -> bool {
+    if !has_ancestor_kind(
+        node,
+        &[
+            "constant_pattern",
+            "list_pattern",
+            "map_pattern",
+            "object_pattern",
+            "record_pattern",
+        ],
+    ) {
+        return false;
+    }
+    let Some(prefix) = source.get(..node.start_byte()) else {
+        return false;
+    };
+    let token_prefix = prefix
+        .rsplit(|character: char| {
+            character.is_whitespace() || matches!(character, '(' | '[' | '{' | ':' | ',')
+        })
+        .find(|segment| !segment.is_empty())
+        .unwrap_or_default();
+    matches!(token_prefix, "final" | "var")
 }
 
 fn same_node(left: Node<'_>, right: Node<'_>) -> bool {

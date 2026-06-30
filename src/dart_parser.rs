@@ -56,7 +56,7 @@ pub(crate) fn parse_dart_source_strict<'source>(
         });
     }
 
-    if let Some(normalized) = normalize_primary_constructors(source) {
+    if let Some(normalized) = normalize_modern_dart_compatibility(source) {
         let tree = parse_raw(path, &normalized)?;
         if !tree.root_node().has_error() {
             return Ok(ParsedDart {
@@ -87,7 +87,7 @@ pub(crate) fn parse_dart_source_lossy<'source>(
         });
     }
 
-    if let Some(normalized) = normalize_primary_constructors(source) {
+    if let Some(normalized) = normalize_modern_dart_compatibility(source) {
         let tree = parse_raw(path, &normalized)?;
         if !tree.root_node().has_error() {
             return Ok(ParsedDart {
@@ -111,6 +111,15 @@ fn parse_raw(path: &Path, source: &str) -> Result<Tree, DartParseError> {
         .ok_or_else(|| DartParseError::ParseCancelled {
             path: path.to_path_buf(),
         })
+}
+
+fn normalize_modern_dart_compatibility(source: &str) -> Option<String> {
+    let mut normalized = normalize_primary_constructors(source);
+    let mut output = normalized.take().unwrap_or_else(|| source.to_owned());
+    let mut changed = output != source;
+    changed |= normalize_dot_shorthands(&mut output);
+    changed |= normalize_null_aware_collection_elements(&mut output);
+    changed.then_some(output)
 }
 
 fn normalize_primary_constructors(source: &str) -> Option<String> {
@@ -147,6 +156,7 @@ fn normalize_primary_constructors(source: &str) -> Option<String> {
         let after_params = skip_whitespace(source, params_end + 1).unwrap_or(params_end + 1);
         let next = source.as_bytes().get(after_params).copied();
 
+        let terminator = find_header_terminator(source, after_params);
         match next {
             Some(b'{') => {
                 replacements.push(Replacement {
@@ -164,6 +174,29 @@ fn normalize_primary_constructors(source: &str) -> Option<String> {
                 });
                 cursor = after_params + 1;
             }
+            _ if terminator.is_some_and(|(_, byte)| byte == b';') && keyword == "class" => {
+                replacements.push(Replacement {
+                    start: header_cursor,
+                    end: params_end + 1,
+                    kind: ReplacementKind::Whitespace,
+                });
+                if let Some((terminator_start, _)) = terminator {
+                    replacements.push(Replacement {
+                        start: terminator_start,
+                        end: terminator_start + 1,
+                        kind: ReplacementKind::Body,
+                    });
+                }
+                cursor = params_end + 1;
+            }
+            _ if terminator.is_some_and(|(_, byte)| byte == b'{') => {
+                replacements.push(Replacement {
+                    start: header_cursor,
+                    end: params_end + 1,
+                    kind: ReplacementKind::Whitespace,
+                });
+                cursor = params_end + 1;
+            }
             _ => {}
         }
     }
@@ -172,6 +205,10 @@ fn normalize_primary_constructors(source: &str) -> Option<String> {
         return None;
     }
 
+    Some(apply_primary_constructor_replacements(source, replacements))
+}
+
+fn apply_primary_constructor_replacements(source: &str, replacements: Vec<Replacement>) -> String {
     let mut normalized = String::with_capacity(source.len());
     let mut copied = 0;
     for replacement in replacements {
@@ -192,11 +229,139 @@ fn normalize_primary_constructors(source: &str) -> Option<String> {
                     .map_or(span.len(), |(index, _)| index);
                 push_preserved_whitespace(&mut normalized, &span[skip..]);
             }
+            ReplacementKind::Body => normalized.push_str("{}"),
         }
         copied = replacement.end;
     }
     normalized.push_str(&source[copied..]);
-    Some(normalized)
+    normalized
+}
+
+fn normalize_dot_shorthands(source: &mut String) -> bool {
+    let bytes = source.as_bytes().to_vec();
+    let mut replacements = Vec::new();
+    let mut cursor = 0;
+    while cursor < bytes.len() {
+        if bytes[cursor] != b'.' {
+            cursor += 1;
+            continue;
+        }
+        if !is_dot_shorthand_start(&bytes, cursor) {
+            cursor += 1;
+            continue;
+        }
+        if source
+            .get(cursor + 1..)
+            .is_some_and(|suffix| suffix.starts_with("new"))
+            && source
+                .get(cursor + 4..)
+                .and_then(|suffix| suffix.chars().next())
+                .is_none_or(|ch| !is_identifier_char(ch))
+        {
+            replacements.push((cursor, cursor + 4, "New_".to_owned()));
+            cursor += 4;
+        } else {
+            replacements.push((cursor, cursor + 1, " ".to_owned()));
+            cursor += 1;
+        }
+    }
+    apply_text_replacements(source, replacements)
+}
+
+fn is_dot_shorthand_start(bytes: &[u8], cursor: usize) -> bool {
+    if cursor > 0 && bytes[cursor - 1] == b'?' {
+        return false;
+    }
+    let Some(next) = bytes.get(cursor + 1).copied() else {
+        return false;
+    };
+    if !(next == b'_' || next.is_ascii_alphabetic()) {
+        return false;
+    }
+    if matches!(next, b'.' | b'?') {
+        return false;
+    }
+    let Some(previous) = previous_non_whitespace_byte(bytes, cursor) else {
+        return true;
+    };
+    matches!(
+        previous,
+        b'=' | b'(' | b'[' | b'{' | b',' | b':' | b'?' | b'!' | b'>' | b'|'
+    )
+}
+
+fn normalize_null_aware_collection_elements(source: &mut String) -> bool {
+    let bytes = source.as_bytes().to_vec();
+    let mut replacements = Vec::new();
+    for cursor in 0..bytes.len() {
+        if bytes[cursor] != b'?' || !is_null_aware_collection_marker(&bytes, cursor) {
+            continue;
+        }
+        replacements.push((cursor, cursor + 1, " ".to_owned()));
+    }
+    apply_text_replacements(source, replacements)
+}
+
+fn is_null_aware_collection_marker(bytes: &[u8], cursor: usize) -> bool {
+    if matches!(bytes.get(cursor + 1), Some(b'?' | b'.')) {
+        return false;
+    }
+    let Some(next) = next_non_whitespace_byte(bytes, cursor + 1) else {
+        return false;
+    };
+    if next == b':' || next == b',' || next == b']' || next == b'}' {
+        return false;
+    }
+    let Some(previous) = previous_non_whitespace_byte(bytes, cursor) else {
+        return false;
+    };
+    matches!(previous, b'[' | b'{' | b',' | b':')
+        || (previous == b'.'
+            && cursor >= 3
+            && bytes.get(cursor - 3..cursor) == Some(&[b'.', b'.', b'.'][..]))
+}
+
+fn apply_text_replacements(source: &mut String, replacements: Vec<(usize, usize, String)>) -> bool {
+    if replacements.is_empty() {
+        return false;
+    }
+    for (start, end, replacement) in replacements.into_iter().rev() {
+        source.replace_range(start..end, &replacement);
+    }
+    true
+}
+
+fn find_header_terminator(source: &str, start: usize) -> Option<(usize, u8)> {
+    let bytes = source.as_bytes();
+    let mut cursor = start;
+    while cursor < bytes.len() {
+        match bytes[cursor] {
+            b'{' | b';' => return Some((cursor, bytes[cursor])),
+            b'(' => cursor = matching_delimiter(source, cursor, b'(', b')')?,
+            b'<' => cursor = matching_delimiter(source, cursor, b'<', b'>')?,
+            b'\'' | b'"' => cursor = skip_quoted(source, cursor)?,
+            _ => {}
+        }
+        cursor += 1;
+    }
+    None
+}
+
+fn previous_non_whitespace_byte(bytes: &[u8], cursor: usize) -> Option<u8> {
+    bytes
+        .get(..cursor)?
+        .iter()
+        .rev()
+        .copied()
+        .find(|byte| !byte.is_ascii_whitespace())
+}
+
+fn next_non_whitespace_byte(bytes: &[u8], cursor: usize) -> Option<u8> {
+    bytes
+        .get(cursor..)?
+        .iter()
+        .copied()
+        .find(|byte| !byte.is_ascii_whitespace())
 }
 
 #[derive(Debug)]
@@ -210,6 +375,7 @@ struct Replacement {
 enum ReplacementKind {
     Whitespace,
     EmptyBody,
+    Body,
 }
 
 fn find_next_header_keyword(source: &str, start: usize) -> Option<(usize, &'static str)> {
@@ -343,7 +509,7 @@ mod tests {
 class Point(
   var int x,
   var int y
-);
+) extends Shape with Traceable implements Drawable;
 
 enum Tone(final String label) {
   quiet('q');
@@ -353,8 +519,32 @@ enum Tone(final String label) {
         let parsed = parse_dart_source_strict(Path::new("lib/modern.dart"), source)?;
 
         assert!(!parsed.tree().root_node().has_error());
-        assert!(parsed.source().contains("class Point{}"));
+        assert!(parsed.source().contains("class Point"));
+        assert!(parsed.source().contains("extends Shape"));
         assert!(parsed.source().contains("enum Tone"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn strict_parse_normalizes_current_dart_shorthands() -> Result<(), DartParseError> {
+        let source = "\
+enum Color { red, blue }
+
+Widget build(Banner? banner, List<Widget>? extras) {
+  final key = banner?.key;
+  final color = .red;
+  return Column(children: [
+    ?banner,
+    ...?extras,
+    Button.style(.filled),
+  ]);
+}
+";
+
+        let parsed = parse_dart_source_strict(Path::new("lib/current.dart"), source)?;
+
+        assert!(!parsed.tree().root_node().has_error());
 
         Ok(())
     }

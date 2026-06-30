@@ -101,6 +101,7 @@ int helper(String value) => value.length;
 fn extracts_import_export_visibility_metadata() -> Result<(), ExtractError> {
     let source = "\
 import 'deferred.dart' deferred as deferred_lib show DeferredThing hide HiddenThing;
+import 'side_effects.dart' as _;
 export 'public.dart' show PublicThing hide InternalThing;
 ";
 
@@ -120,6 +121,8 @@ export 'public.dart' show PublicThing hide InternalThing;
             (DartCombinatorKind::Hide, &["HiddenThing".to_owned()][..]),
         ]
     );
+    assert_eq!(extracted.imports[1].uri, "side_effects.dart");
+    assert_eq!(extracted.imports[1].prefix, None);
     assert_eq!(
         extracted.exports[0]
             .combinators
@@ -601,8 +604,10 @@ class HomeController {
   Future<Result<User?>> load(Map<String, List<User>> items) => throw UnimplementedError();
 }
 
-void read(Object value) {
+void read(Object value, Object record) {
   if (value case User(role: Role.admin)) {}
+  if (value case AsyncData(value: final user)) { print(user); }
+  switch (record) { case (:final name, _): print(name); }
 }
 ";
 
@@ -613,14 +618,17 @@ void read(Object value) {
         .map(|reference| reference.name.as_str())
         .collect::<Vec<_>>();
 
-    for expected in [
-        "Route", "Future", "Result", "User", "Map", "String", "List", "Object", "Role",
-    ] {
+    for expected in
+        "Route Future Result User Map String List Object Role AsyncData".split_whitespace()
+    {
         assert!(names.contains(&expected), "missing reference {expected}");
     }
     assert!(!names.contains(&"HomeController"));
     assert!(!names.contains(&"load"));
     assert!(!names.contains(&"read"));
+    assert!(!names.contains(&"_"));
+    assert_eq!(names.iter().filter(|name| **name == "user").count(), 1);
+    assert_eq!(names.iter().filter(|name| **name == "name").count(), 1);
 
     Ok(())
 }
