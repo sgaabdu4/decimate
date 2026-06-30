@@ -11,12 +11,30 @@ pub(super) fn tools() -> Value {
 
 fn overview_tools() -> Vec<Value> {
     vec![
+        code_execute_tool(),
         analyze_tool(),
         check_changed_tool(),
         project_info_tool(),
         list_boundaries_tool(),
         inspect_target_tool(),
     ]
+}
+
+fn code_execute_tool() -> Value {
+    tool(
+        "code_execute",
+        "Compose bounded read-only Decimate MCP calls with a JSON program.",
+        schema(
+            &[
+                ("code", "object"),
+                ("program", "object"),
+                ("max_steps", "integer"),
+                ("max_tool_calls", "integer"),
+                ("max_result_bytes", "integer"),
+            ],
+            &[],
+        ),
+    )
 }
 
 fn analyze_tool() -> Value {

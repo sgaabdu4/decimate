@@ -6,6 +6,7 @@ use crate::explain::EXPLAIN_SCHEMA_VERSION;
 use crate::fix::FIX_SCHEMA_VERSION;
 use crate::impact::IMPACT_SCHEMA_VERSION;
 use crate::inspect::INSPECT_SCHEMA_VERSION;
+use crate::mcp::code_execute::CODE_EXECUTE_SCHEMA_VERSION;
 use crate::output::{SCHEMA_VERSION, TRACE_SCHEMA_VERSION};
 use crate::project_list::PROJECT_LIST_SCHEMA_VERSION;
 
@@ -27,6 +28,12 @@ fn mcp_tool_list() -> Vec<Value> {
 
 fn mcp_overview_tools() -> Vec<Value> {
     vec![
+        mcp_tool(
+            "code_execute",
+            "decimate-mcp code_execute",
+            CODE_EXECUTE_SCHEMA_VERSION,
+            &["code", "max_steps", "max_tool_calls", "max_result_bytes"],
+        ),
         analyze_mcp_tool(),
         mcp_tool(
             "check_changed",

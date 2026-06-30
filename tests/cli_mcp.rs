@@ -44,6 +44,8 @@ fn mcp_initialize_and_tools_list_follow_json_rpc_contract() -> Result<(), Box<dy
         assert_eq!(tool["inputSchema"]["additionalProperties"], false);
     }
     assert_tool_property(tool_defs, "analyze", "changed_workspaces")?;
+    assert_tool_property(tool_defs, "code_execute", "code")?;
+    assert_tool_property(tool_defs, "code_execute", "max_tool_calls")?;
     assert_tool_property(tool_defs, "analyze", "private_type_leaks")?;
     assert_tool_property(tool_defs, "check_changed", "since")?;
     assert_tool_property(tool_defs, "list_boundaries", "workspace")?;
@@ -57,6 +59,178 @@ fn mcp_initialize_and_tools_list_follow_json_rpc_contract() -> Result<(), Box<dy
     assert_tool_property(tool_defs, "fix_preview", "action")?;
     assert_tool_property(tool_defs, "fix_apply", "yes")?;
     assert_tool_property(tool_defs, "audit", "dead_code_baseline")?;
+
+    Ok(())
+}
+
+#[test]
+fn mcp_call_code_execute_composes_read_only_tools() -> Result<(), Box<dyn std::error::Error>> {
+    let message = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 15,
+        "method": "tools/call",
+        "params": {
+            "name": "code_execute",
+            "arguments": {
+                "code": {
+                    "steps": [
+                        {
+                            "id": "explain",
+                            "call": "decimate_explain",
+                            "arguments": { "issue_type": "unused-export" }
+                        },
+                        {
+                            "id": "id",
+                            "select": {
+                                "from": "explain",
+                                "pointer": "/structuredContent/id"
+                            }
+                        }
+                    ],
+                    "return": { "from": "id" }
+                }
+            }
+        }
+    });
+
+    let output = response(&serde_json::to_string(&message)?)?;
+
+    assert_eq!(output["result"]["isError"], false);
+    assert_eq!(
+        output["result"]["structuredContent"]["schema_version"],
+        "decimate.mcp.code_execute.v1"
+    );
+    assert_eq!(output["result"]["structuredContent"]["ok"], true);
+    assert_eq!(
+        output["result"]["structuredContent"]["result"],
+        "decimate/unused-export"
+    );
+    assert_eq!(
+        output["result"]["structuredContent"]["calls"][0]["tool"],
+        "decimate_explain"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn mcp_call_code_execute_can_ref_previous_results() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(&fixture, "lib/main.dart", "void main() {}\n")?;
+    let message = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 16,
+        "method": "tools/call",
+        "params": {
+            "name": "code_execute",
+            "arguments": {
+                "code": {
+                    "steps": [
+                        {
+                            "id": "info",
+                            "call": "project_info",
+                            "arguments": { "root": fixture.path(), "files": true }
+                        },
+                        {
+                            "id": "first",
+                            "select": {
+                                "from": "info",
+                                "pointer": "/structuredContent/files",
+                                "where": { "equals": { "/path": "lib/main.dart" } },
+                                "fields": ["path"],
+                                "limit": 1
+                            }
+                        },
+                        {
+                            "id": "trace",
+                            "call": "trace_file",
+                            "arguments": {
+                                "root": fixture.path(),
+                                "file": { "$ref": { "from": "first", "pointer": "/0/path" } }
+                            }
+                        }
+                    ],
+                    "return": { "from": "trace", "pointer": "/structuredContent/path" }
+                }
+            }
+        }
+    });
+
+    let output = response(&serde_json::to_string(&message)?)?;
+
+    assert_eq!(output["result"]["isError"], false);
+    assert_eq!(
+        output["result"]["structuredContent"]["result"],
+        "lib/main.dart"
+    );
+    assert_eq!(
+        output["result"]["structuredContent"]["calls"]
+            .as_array()
+            .map_or(0, Vec::len),
+        2
+    );
+
+    Ok(())
+}
+
+#[test]
+fn mcp_call_code_execute_rejects_mutating_tools() -> Result<(), Box<dyn std::error::Error>> {
+    let message = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 17,
+        "method": "tools/call",
+        "params": {
+            "name": "code_execute",
+            "arguments": {
+                "code": {
+                    "steps": [
+                        {
+                            "id": "fix",
+                            "call": "fix_apply",
+                            "arguments": { "yes": true }
+                        }
+                    ],
+                    "return": { "from": "fix" }
+                }
+            }
+        }
+    });
+
+    let output = response(&serde_json::to_string(&message)?)?;
+
+    assert_eq!(output["result"]["isError"], true);
+    assert!(
+        output["result"]["structuredContent"]["error"]
+            .as_str()
+            .is_some_and(|error| error.contains("fix_apply"))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn mcp_call_code_execute_rejects_javascript_like_input() -> Result<(), Box<dyn std::error::Error>> {
+    let message = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 18,
+        "method": "tools/call",
+        "params": {
+            "name": "code_execute",
+            "arguments": {
+                "code": "return { ok: true };"
+            }
+        }
+    });
+
+    let output = response(&serde_json::to_string(&message)?)?;
+
+    assert_eq!(output["result"]["isError"], true);
+    assert!(
+        output["result"]["structuredContent"]["error"]
+            .as_str()
+            .is_some_and(|error| error.contains("invalid code_execute program"))
+    );
 
     Ok(())
 }

@@ -20,7 +20,9 @@ fn pubspec_overrides_dependency_overrides_drive_package_resolution()
     )?;
 
     let main = fixture.file("lib/main.dart", vec![import("package:shared/shared.dart")]);
+    fixture.write("old_shared/pubspec.yaml", "name: shared\n")?;
     let stale = fixture.file("old_shared/lib/shared.dart", vec![]);
+    fixture.write("patched_shared/pubspec.yaml", "name: shared\n")?;
     let patched = fixture.file("patched_shared/lib/shared.dart", vec![]);
 
     let graph = build_module_graph(fixture.root(), &[main, stale, patched])?;

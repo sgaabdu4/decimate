@@ -119,6 +119,14 @@ fn assert_manifest_identity(json: &Value) {
     assert_eq!(json["mcp_tools"]["server"], "decimate-mcp");
     assert!(json["mcp_tools"]["tools"].as_array().is_some_and(|tools| {
         tools.iter().any(|tool| {
+            tool["name"] == "code_execute"
+                && tool["read_only"] == true
+                && tool["schema"] == "decimate.mcp.code_execute.v1"
+        })
+    }));
+    assert_mcp_tool_key(json, "code_execute", "code");
+    assert!(json["mcp_tools"]["tools"].as_array().is_some_and(|tools| {
+        tools.iter().any(|tool| {
             tool["name"] == "analyze"
                 && tool["read_only"] == true
                 && tool["command"] == "decimate check --format json"

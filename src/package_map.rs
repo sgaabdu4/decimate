@@ -107,6 +107,9 @@ impl PackageMap {
 
         for dependency in pubspec.path_dependencies {
             let dependency_root = normalize_path(&package_root.join(dependency.path));
+            if !dependency_root.join("pubspec.yaml").is_file() {
+                continue;
+            }
             self.insert(
                 dependency.name,
                 dependency_root.clone(),
@@ -450,4 +453,43 @@ fn should_skip_dir(path: &Path) -> bool {
         path.file_name().and_then(|name| name.to_str()),
         Some(".dart_tool" | ".git" | ".idea" | ".pub-cache" | "build" | "target")
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use tempfile::TempDir;
+
+    use super::*;
+
+    #[test]
+    fn skips_missing_path_dependencies_from_nested_pubspec_overrides()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = TempDir::new()?;
+        write(&fixture, "pubspec.yaml", "name: hydrated_bloc\n")?;
+        write(
+            &fixture,
+            "example/pubspec.yaml",
+            "name: example\ndependencies:\n  hydrated_bloc: ^10.0.0\n",
+        )?;
+        write(
+            &fixture,
+            "example/pubspec_overrides.yaml",
+            "dependency_overrides:\n  bloc:\n    path: ../../bloc\n",
+        )?;
+
+        let packages = PackageMap::discover(fixture.path())?;
+
+        assert_eq!(packages.names(), vec!["example", "hydrated_bloc"]);
+        assert!(packages.resolve("bloc", "bloc.dart").is_none());
+
+        Ok(())
+    }
+
+    fn write(fixture: &TempDir, path: &str, source: &str) -> Result<(), std::io::Error> {
+        let path = fixture.path().join(path);
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, source)
+    }
 }

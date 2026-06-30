@@ -55,18 +55,41 @@ and machine-actionable `actions`.
 
 ## Quick Start
 
-Build from source:
+### Install From GitHub
+
+This works today and does not require cloning the repo:
+
+```bash
+cargo install --git https://github.com/sgaabdu4/decimate
+```
+
+`cargo install` puts the binaries in `~/.cargo/bin`. If your shell says
+`Unknown command: decimate`, add that directory to your `PATH`.
+
+Fish:
+
+```bash
+fish_add_path ~/.cargo/bin
+decimate check . --format json
+```
+
+Bash or Zsh:
+
+```bash
+export PATH="$HOME/.cargo/bin:$PATH"
+decimate check . --format json
+```
+
+That install step does not run an analysis by itself. After it prints
+`Installed package ...`, run `decimate check . --format json` inside the Dart or
+Flutter repo you want to analyze.
+
+### Build From Source
 
 ```bash
 git clone https://github.com/sgaabdu4/decimate.git
 cd decimate
 cargo build --release
-```
-
-Run a full static check:
-
-```bash
-./target/release/decimate
 ./target/release/decimate check . --format json
 ```
 
@@ -77,19 +100,22 @@ cargo install --path .
 decimate check . --format json
 ```
 
-Install from GitHub after cloning is not required:
+### Run Through npx
 
-```bash
-cargo install --git https://github.com/sgaabdu4/decimate
-```
-
-Run through npm/npx:
+The npm registry package is planned as `@sgaabdu4/decimate`. Until it is
+published, this command will fail with `npm error 404 Not Found`:
 
 ```bash
 npx @sgaabdu4/decimate check . --format json
 npx @sgaabdu4/decimate check --root . --format json
 npx --package @sgaabdu4/decimate decimate check . --format json
 npx --package @sgaabdu4/decimate decimate-mcp
+```
+
+Before the npm publish, use the GitHub package form instead:
+
+```bash
+npx --yes --package github:sgaabdu4/decimate decimate check . --format json
 ```
 
 The npm package exposes the executables as `decimate` and `decimate-mcp`. The
@@ -270,14 +296,36 @@ decimate rule-pack-schema --format json
 
 `decimate-mcp` starts an MCP stdio server. It implements
 `initialize`, `ping`, `tools/list`, and `tools/call` for the same agent wrappers
-listed under `mcp_tools` in `decimate schema`: `analyze`, `project_info`,
-`check_changed`, `list_boundaries`, `inspect_target`, `trace_file`,
+listed under `mcp_tools` in `decimate schema`: `code_execute`, `analyze`,
+`project_info`, `check_changed`, `list_boundaries`, `inspect_target`, `trace_file`,
 `trace_export`, `trace_dependency`, `trace_clone`, `find_dupes`,
 `check_health`, `check_runtime_coverage`, `get_hot_paths`, `get_blast_radius`,
 `get_importance`, `get_cleanup_candidates`, `security_candidates`,
 `feature_flags`, `impact`, `impact_all`, `fix_preview`, `fix_apply`, `audit`,
 `decision_surface`, and `decimate_explain`. `fix_apply` is mutating and
 requires explicit `yes: true`; all other MCP tools are read-only.
+
+`code_execute` is a bounded read-only composition tool. It accepts `code` or
+`program` as a JSON program, not arbitrary JavaScript:
+
+```json
+{
+  "code": {
+    "steps": [
+      {
+        "id": "explain",
+        "call": "decimate_explain",
+        "arguments": { "issue_type": "unused-export" }
+      },
+      {
+        "id": "id",
+        "select": { "from": "explain", "pointer": "/structuredContent/id" }
+      }
+    ],
+    "return": { "from": "id" }
+  }
+}
+```
 
 Important schemas:
 
@@ -416,7 +464,8 @@ Decimate also adds Dart-specific graph intelligence that Fallow does not need:
 
 Known gaps before claiming full product parity with Fallow:
 
-- sandboxed MCP `code_execute` is not exposed yet
+- `code_execute` is Rust-native JSON composition, not Fallow's JavaScript
+  sandbox
 - no embedded Node/NAPI-style bindings, because Decimate is not a JS tool
 - no hosted/cloud continuous runtime monitoring
 - no `watch`, `migrate`, telemetry, license, editor, or viz commands yet

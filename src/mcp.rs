@@ -7,9 +7,11 @@ use crate::cli::run_from;
 mod cli_args;
 #[cfg(test)]
 mod cli_args_tests;
+pub(crate) mod code_execute;
 mod tools;
 
 use cli_args::cli_args_for_tool;
+use code_execute::execute as execute_code;
 use tools::tools;
 
 const PROTOCOL_VERSION: &str = "2025-11-25";
@@ -101,6 +103,9 @@ fn call_tool(id: &Value, message: &Value) -> Value {
     let Some(arguments) = arguments.as_object() else {
         return response_error(id, -32602, "tools/call params.arguments must be an object");
     };
+    if name == "code_execute" {
+        return response_result(id, &tool_result(execute_code(arguments)));
+    }
     match cli_args_for_tool(name, arguments) {
         Ok(args) => response_result(id, &tool_result(run_cli_json(args))),
         Err(message) => response_error(id, -32602, message),
@@ -112,22 +117,12 @@ fn run_cli_json(args: Vec<String>) -> CliToolOutput {
     let code = match run_from(args, &mut output) {
         Ok(code) => code,
         Err(error) => {
-            return CliToolOutput {
-                exit_code: 2,
-                text: error.to_string(),
-                structured: None,
-                is_error: true,
-            };
+            return CliToolOutput::text(2, error.to_string(), true);
         }
     };
     let text = String::from_utf8_lossy(&output).into_owned();
     let structured = serde_json::from_str::<Value>(&text).ok();
-    CliToolOutput {
-        exit_code: code,
-        text,
-        structured,
-        is_error: code == 2,
-    }
+    CliToolOutput::new(code, text, structured, code == 2)
 }
 
 fn tool_result(output: CliToolOutput) -> Value {
@@ -150,6 +145,30 @@ struct CliToolOutput {
     text: String,
     structured: Option<Value>,
     is_error: bool,
+}
+
+impl CliToolOutput {
+    fn new(exit_code: i32, text: String, structured: Option<Value>, is_error: bool) -> Self {
+        Self {
+            exit_code,
+            text,
+            structured,
+            is_error,
+        }
+    }
+
+    fn text(exit_code: i32, text: String, is_error: bool) -> Self {
+        Self::new(exit_code, text, None, is_error)
+    }
+
+    fn json(exit_code: i32, structured: Value, is_error: bool) -> Self {
+        Self::new(
+            exit_code,
+            structured.to_string(),
+            Some(structured),
+            is_error,
+        )
+    }
 }
 
 fn response_result(id: &Value, result: &Value) -> Value {
