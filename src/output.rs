@@ -1,5 +1,6 @@
 use std::collections::BTreeSet;
 
+mod audit_risk;
 mod dependency_findings;
 mod duplication_findings;
 mod feature_flag_findings;
@@ -24,6 +25,7 @@ use crate::{
     ReExportCycle, RouteCollisionReport, SecurityReport, SymbolReport, WidgetReport,
     scan::ScannedProject,
 };
+pub use audit_risk::apply_audit_risk;
 use dependency_findings::add_dependency_hygiene_findings;
 pub use duplication_findings::{JsonCloneGroup, JsonCloneInstance};
 use duplication_findings::{add_duplication_findings, json_clone_groups};
@@ -65,8 +67,8 @@ pub(crate) use security_sarif::render_sarif_report;
 use suppressions::filter_suppressed_findings;
 use symbol_findings::add_symbol_findings;
 pub use types::{
-    Finding, FindingAction, FindingEdge, FindingKind, JsonReport, NextStep, ReportCommand,
-    ReportSummary, Severity, Verdict,
+    AuditAttribution, AuditAttributionCounts, AuditRiskLevel, Finding, FindingAction, FindingEdge,
+    FindingKind, JsonReport, NextStep, ReportCommand, ReportSummary, Severity, Verdict,
 };
 use widget_findings::add_widget_findings;
 

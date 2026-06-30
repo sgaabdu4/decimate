@@ -59,6 +59,7 @@ fn mcp_initialize_and_tools_list_follow_json_rpc_contract() -> Result<(), Box<dy
     assert_tool_property(tool_defs, "security_candidates", "gate")?;
     assert_tool_property(tool_defs, "fix_preview", "action")?;
     assert_tool_property(tool_defs, "fix_apply", "yes")?;
+    assert_tool_property(tool_defs, "audit", "gate")?;
     assert_tool_property(tool_defs, "audit", "dead_code_baseline")?;
 
     Ok(())

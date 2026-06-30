@@ -500,6 +500,7 @@ fn audit_tool() -> Value {
                 ("root", "string"),
                 ("config", "string"),
                 ("base", "string"),
+                ("gate", "string"),
                 ("entry", "array"),
                 ("dart_platform", "string"),
                 ("file", "array"),

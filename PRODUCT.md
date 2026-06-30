@@ -157,6 +157,9 @@ Phase 4 exposes the CLI and agent output contract:
   provide count-based regression gates
 - `decimate audit` accepts per-analysis baseline inputs with
   `--dead-code-baseline`, `--health-baseline`, and `--dupes-baseline`
+- `decimate audit` summary includes `risk_score`, `risk_level`, and
+  introduced/pre-existing attribution; `--gate new-only` fails only on
+  introduced error findings while keeping related pre-existing findings visible
 - JSON findings include paths, line/column locations, `safe_to_delete`, and `actions`
 - JSON reports include read-only `next_steps` for trace-before-delete workflows
 - `decimate audit --base REF` runs full graph analysis and reports only findings

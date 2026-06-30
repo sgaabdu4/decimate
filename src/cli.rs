@@ -13,14 +13,14 @@ use crate::baseline::{
     regression_baseline_from_report, save_baseline as write_baseline,
     save_regression_baseline as write_regression_baseline,
 };
-use crate::changed_scope::{ChangedScopeError, changed_file_scope};
+use crate::changed_scope::ChangedScopeError;
 use crate::config::{
     ConfigError, DecimateConfig, IgnoreDependencyOverrideRule, RuleConfig, apply_rules_to_report,
     load_decimate_config,
 };
 use crate::output::{
-    ReportCommand, build_json_report, filter_report_findings, render_human_report,
-    render_sarif_report,
+    ReportCommand, apply_audit_risk, build_json_report, filter_report_findings,
+    render_human_report, render_sarif_report,
 };
 use crate::scan::{ScanError, ScanOptions, scan_project_with_options};
 use crate::{
@@ -31,6 +31,7 @@ use crate::{
 
 mod analyze;
 mod analyzer_options;
+mod audit_run;
 mod boundary_args;
 mod ci_template_run;
 mod command_name;
@@ -253,6 +254,7 @@ struct CommandRequest {
     boundary_calls: Vec<BoundaryCallRule>,
     policy_packs: Vec<PathBuf>,
     audit_base: Option<String>,
+    audit_gate: audit_run::AuditGate,
     file_paths: Vec<PathBuf>,
     workspace_patterns: Vec<String>,
     changed_workspaces: Option<String>,
@@ -358,12 +360,7 @@ fn run_request<W: Write>(request: &CommandRequest, mut writer: W) -> Result<i32,
     }
 
     let mut results = analyze_project(&project, request)?;
-    if request.command == ReportCommand::Audit {
-        let Some(base) = request.audit_base.as_deref() else {
-            unreachable!("clap requires --base for audit");
-        };
-        results.file_scope = Some(changed_file_scope(&project, base)?);
-    }
+    let audit_changed_files = audit_run::apply_scope(&project, request, &mut results)?;
     scope_args::apply_report_scope(&project, &mut results, request)?;
     let mut report = build_json_report(&project, &results);
     apply_rules_to_report(&mut report, &request.rules)?;
@@ -392,8 +389,9 @@ fn run_request<W: Write>(request: &CommandRequest, mut writer: W) -> Result<i32,
         serde_json::to_writer_pretty(&mut file, &render_sarif_report(&report))?;
         writeln!(file)?;
     }
-    let code = security_summary_run::exit_code(request, &report, regressed);
     security_summary_run::apply_security_summary(request, &mut report);
+    apply_audit_risk(&project.root, &audit_changed_files, &mut report);
+    let code = security_summary_run::exit_code(request, &report, regressed);
 
     match request.format {
         ReportOutputFormat::Human => writer.write_all(render_human_report(&report).as_bytes())?,
@@ -438,6 +436,7 @@ fn command() -> Command {
                                 .help("Git ref used to scope changed files")
                                 .required(true),
                         )
+                        .arg(audit_run::gate_arg())
                         .arg(audit_baseline_arg(
                             "dead-code-baseline",
                             "Dead-code baseline file",
@@ -584,6 +583,7 @@ fn request_from_matches(matches: &ArgMatches) -> Result<CommandRequest, CliError
         boundary_calls,
         policy_packs,
         audit_base,
+        audit_gate: audit_run::gate(command, subcommand),
         file_paths,
         workspace_patterns,
         changed_workspaces,

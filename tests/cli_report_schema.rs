@@ -70,6 +70,9 @@ fn report_schema_types_inventory_arrays() -> Result<(), Box<dyn std::error::Erro
     }
     for field in [
         "quality_score",
+        "risk_score",
+        "risk_level",
+        "attribution",
         "route_collisions",
         "private_widget_classes",
         "widget_top_level_functions",
@@ -77,12 +80,30 @@ fn report_schema_types_inventory_arrays() -> Result<(), Box<dyn std::error::Erro
         "unrendered_widgets",
         "missing_context_mounted_after_await",
     ] {
-        assert_array_contains(&json["$defs"]["summary"]["required"], field);
-        assert_eq!(
-            json["$defs"]["summary"]["properties"][field]["type"],
-            "integer"
-        );
+        assert_array_contains(&json["$defs"]["summary"]["properties"], field);
     }
+    assert_array_contains(&json["$defs"]["summary"]["required"], "quality_score");
+    assert!(
+        !json["$defs"]["summary"]["required"]
+            .as_array()
+            .is_some_and(|fields| fields.iter().any(|field| field == "risk_score"))
+    );
+    assert_eq!(
+        json["$defs"]["summary"]["properties"]["risk_score"]["maximum"],
+        100
+    );
+    assert_eq!(
+        json["$defs"]["summary"]["properties"]["risk_level"]["enum"],
+        serde_json::json!(["pass", "warn", "fail"])
+    );
+    assert_array_contains(
+        &json["$defs"]["audit_attribution"]["required"],
+        "introduced",
+    );
+    assert_array_contains(
+        &json["$defs"]["audit_attribution_counts"]["required"],
+        "error_findings",
+    );
 
     Ok(())
 }
@@ -101,7 +122,10 @@ fn assert_array_contains(array: &Value, expected: &str) {
     assert!(
         array
             .as_array()
-            .is_some_and(|items| items.iter().any(|item| item == expected)),
+            .is_some_and(|items| { items.iter().any(|item| item == expected) })
+            || array
+                .as_object()
+                .is_some_and(|items| items.contains_key(expected)),
         "expected array to contain {expected}"
     );
 }

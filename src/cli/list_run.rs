@@ -143,6 +143,7 @@ fn scoped_project(
         boundary_calls: Vec::new(),
         policy_packs: Vec::new(),
         audit_base: None,
+        audit_gate: super::audit_run::AuditGate::default(),
         file_paths: matches
             .get_many::<std::path::PathBuf>("file")
             .map(|values| values.cloned().collect::<Vec<_>>())

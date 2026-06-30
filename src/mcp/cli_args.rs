@@ -238,6 +238,7 @@ fn extend_audit_allowed(allowed: &mut Vec<&'static str>) {
     allowed.extend(HEALTH_KEYS);
     allowed.extend([
         "base",
+        "gate",
         "brief",
         "dead_code_baseline",
         "health_baseline",
@@ -528,6 +529,7 @@ fn fix_apply_args(args: &Map<String, Value>) -> Result<Vec<String>, String> {
 
 fn audit_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
     push_required_string(cli, args, "base", "--base")?;
+    push_string_flag(cli, args, "gate", "--gate")?;
     push_report_scope_args(cli, args)?;
     push_symbol_args(cli, args)?;
     push_boundary_args(cli, args)?;

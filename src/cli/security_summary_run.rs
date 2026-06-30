@@ -1,6 +1,6 @@
-use crate::output::{JsonReport, ReportCommand, Verdict};
+use crate::output::{AuditRiskLevel, JsonReport, ReportCommand, Verdict};
 
-use super::{CommandRequest, ReportOutputFormat};
+use super::{CommandRequest, ReportOutputFormat, audit_run::AuditGate};
 
 pub(super) fn apply_security_summary(request: &CommandRequest, report: &mut JsonReport) {
     if !request.security_summary_mode.is_counts_only()
@@ -33,6 +33,8 @@ pub(super) fn exit_code(request: &CommandRequest, report: &JsonReport, regressed
         }
     } else if request.security_issue_mode.fails_on_issues() {
         i32::from(report.summary.findings > 0)
+    } else if request.command == ReportCommand::Audit && request.audit_gate == AuditGate::NewOnly {
+        i32::from(report.summary.risk_level == Some(AuditRiskLevel::Fail))
     } else if request.fail_on_regression {
         i32::from(regressed)
     } else {

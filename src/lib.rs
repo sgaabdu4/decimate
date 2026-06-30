@@ -145,15 +145,15 @@ pub use intelligence::{
 };
 pub use manifest::{MANIFEST_SCHEMA_VERSION, decimate_schema};
 pub use output::{
-    Finding, JsonAttackSurfaceEntry, JsonCloneGroup, JsonCloneInstance, JsonComplexityContribution,
-    JsonComplexityFinding, JsonEffectiveThresholds, JsonFeatureFlag, JsonFeatureFlagOccurrence,
-    JsonFileHealthScore, JsonHealthHotspot, JsonRefactoringTarget, JsonReport,
-    JsonRuntimeBlastRadius, JsonRuntimeCoverage, JsonRuntimeCoverageActionable,
-    JsonRuntimeCoverageFinding, JsonRuntimeCoverageIntelligence, JsonRuntimeCoverageProvenance,
-    JsonRuntimeCoverageSummary, JsonRuntimeCoverageWatermark, JsonRuntimeHotPath,
-    JsonRuntimeImportance, JsonSecurityCandidate, JsonSecurityOccurrence, JsonSecurityReachability,
-    JsonThresholdOverride, ReportCommand, ReportSummary, TRACE_SCHEMA_VERSION, Verdict,
-    build_json_report,
+    AuditAttribution, AuditAttributionCounts, AuditRiskLevel, Finding, JsonAttackSurfaceEntry,
+    JsonCloneGroup, JsonCloneInstance, JsonComplexityContribution, JsonComplexityFinding,
+    JsonEffectiveThresholds, JsonFeatureFlag, JsonFeatureFlagOccurrence, JsonFileHealthScore,
+    JsonHealthHotspot, JsonRefactoringTarget, JsonReport, JsonRuntimeBlastRadius,
+    JsonRuntimeCoverage, JsonRuntimeCoverageActionable, JsonRuntimeCoverageFinding,
+    JsonRuntimeCoverageIntelligence, JsonRuntimeCoverageProvenance, JsonRuntimeCoverageSummary,
+    JsonRuntimeCoverageWatermark, JsonRuntimeHotPath, JsonRuntimeImportance, JsonSecurityCandidate,
+    JsonSecurityOccurrence, JsonSecurityReachability, JsonThresholdOverride, ReportCommand,
+    ReportSummary, TRACE_SCHEMA_VERSION, Verdict, build_json_report,
 };
 pub use policy::{
     BoundaryCallRule, BoundaryCallViolation, PolicyError, PolicyPack, PolicyRule, PolicyRuleKind,

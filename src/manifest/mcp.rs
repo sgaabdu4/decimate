@@ -449,6 +449,7 @@ fn audit_mcp_tool() -> Value {
             "root",
             "config",
             "base",
+            "gate",
             "entry",
             "dart_platform",
             "file",

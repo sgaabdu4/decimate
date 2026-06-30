@@ -43,6 +43,13 @@ fn audit_ignores_unchanged_existing_findings() -> Result<(), Box<dyn std::error:
     assert_eq!(code, 0);
     assert_eq!(json["command"], "audit");
     assert_eq!(json["verdict"], "pass");
+    assert_eq!(json["summary"]["risk_score"], 0);
+    assert_eq!(json["summary"]["risk_level"], "pass");
+    assert_eq!(json["summary"]["attribution"]["introduced"]["findings"], 0);
+    assert_eq!(
+        json["summary"]["attribution"]["pre_existing"]["findings"],
+        0
+    );
     assert_eq!(json["summary"]["dead_files"], 0);
     assert_eq!(json["summary"]["findings"], 0);
     assert!(json["findings"].as_array().is_some_and(Vec::is_empty));
@@ -79,10 +86,42 @@ fn audit_reports_findings_on_changed_files() -> Result<(), Box<dyn std::error::E
     assert_eq!(code, 1);
     assert_eq!(json["command"], "audit");
     assert_eq!(json["verdict"], "fail");
+    assert_eq!(json["summary"]["risk_score"], 40);
+    assert_eq!(json["summary"]["risk_level"], "fail");
+    assert_eq!(json["summary"]["attribution"]["introduced"]["findings"], 1);
+    assert_eq!(
+        json["summary"]["attribution"]["introduced"]["error_findings"],
+        1
+    );
+    assert_eq!(
+        json["summary"]["attribution"]["pre_existing"]["findings"],
+        0
+    );
     assert_eq!(json["summary"]["dead_files"], 1);
     assert_eq!(json["summary"]["findings"], 1);
     assert_eq!(json["findings"][0]["rule_id"], "decimate/dead-file");
     assert_eq!(json["findings"][0]["path"], "lib/new_dead.dart");
+
+    let mut new_only_output = Vec::new();
+    let new_only_code = run_from(
+        [
+            "decimate",
+            "audit",
+            fixture.path().to_str().unwrap_or("."),
+            "--format",
+            "json",
+            "--base",
+            "HEAD",
+            "--gate",
+            "new-only",
+            "--entry",
+            "lib/main.dart",
+        ],
+        &mut new_only_output,
+    )?;
+    let new_only_json = serde_json::from_slice::<Value>(&new_only_output)?;
+    assert_eq!(new_only_code, 1);
+    assert_eq!(new_only_json["summary"]["risk_level"], "fail");
 
     Ok(())
 }
@@ -180,6 +219,8 @@ fn audit_keeps_related_findings_when_changed_file_participates()
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 1);
     assert_eq!(json["summary"]["cycles"], 1);
+    assert_eq!(json["summary"]["risk_level"], "fail");
+    assert_eq!(json["summary"]["attribution"]["introduced"]["findings"], 1);
     assert_eq!(
         json["findings"][0]["rule_id"],
         "decimate/circular-dependency"
@@ -233,11 +274,50 @@ fn audit_expands_scope_to_one_hop_related_files() -> Result<(), Box<dyn std::err
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 1);
     assert_eq!(json["summary"]["complex_functions"], 1);
+    assert_eq!(json["summary"]["risk_score"], 10);
+    assert_eq!(json["summary"]["risk_level"], "warn");
+    assert_eq!(json["summary"]["attribution"]["introduced"]["findings"], 0);
+    assert_eq!(
+        json["summary"]["attribution"]["pre_existing"]["findings"],
+        1
+    );
+    assert_eq!(
+        json["summary"]["attribution"]["pre_existing"]["error_findings"],
+        1
+    );
     assert_eq!(
         json["findings"][0]["rule_id"],
         "decimate/high-cyclomatic-complexity"
     );
     assert_eq!(json["findings"][0]["path"], "lib/b.dart");
+
+    let mut new_only_output = Vec::new();
+    let new_only_code = run_from(
+        [
+            "decimate",
+            "audit",
+            fixture.path().to_str().unwrap_or("."),
+            "--format",
+            "json",
+            "--base",
+            "HEAD",
+            "--gate",
+            "new-only",
+            "--max-cyclomatic",
+            "1",
+            "--max-cognitive",
+            "99",
+        ],
+        &mut new_only_output,
+    )?;
+    let new_only_json = serde_json::from_slice::<Value>(&new_only_output)?;
+    assert_eq!(new_only_code, 0);
+    assert_eq!(new_only_json["verdict"], "fail");
+    assert_eq!(new_only_json["summary"]["risk_level"], "warn");
+    assert_eq!(
+        new_only_json["summary"]["attribution"]["pre_existing"]["findings"],
+        1
+    );
 
     Ok(())
 }

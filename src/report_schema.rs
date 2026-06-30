@@ -60,6 +60,8 @@ pub fn report_schema() -> Value {
         },
         "$defs": {
             "summary": summary_schema(),
+            "audit_attribution": audit_attribution_schema(),
+            "audit_attribution_counts": audit_attribution_counts_schema(),
             "finding": finding_schema(),
             "finding_edge": finding_edge_schema(),
             "finding_action": finding_action_schema(),
@@ -165,6 +167,54 @@ fn summary_schema() -> Value {
         "policy_violations",
         "missing_suppression_reasons",
         "findings",
+    ] {
+        properties.insert(key.to_owned(), json!({ "type": "integer", "minimum": 0 }));
+    }
+    properties.insert(
+        "risk_score".to_owned(),
+        json!({ "type": "integer", "minimum": 0, "maximum": 100 }),
+    );
+    properties.insert(
+        "risk_level".to_owned(),
+        json!({ "type": "string", "enum": ["pass", "warn", "fail"] }),
+    );
+    properties.insert(
+        "attribution".to_owned(),
+        json!({ "$ref": "#/$defs/audit_attribution" }),
+    );
+
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": properties
+            .keys()
+            .filter(|key| !matches!(key.as_str(), "risk_score" | "risk_level" | "attribution"))
+            .cloned()
+            .collect::<Vec<_>>(),
+        "properties": properties
+    })
+}
+
+fn audit_attribution_schema() -> Value {
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["introduced", "pre_existing"],
+        "properties": {
+            "introduced": { "$ref": "#/$defs/audit_attribution_counts" },
+            "pre_existing": { "$ref": "#/$defs/audit_attribution_counts" }
+        }
+    })
+}
+
+fn audit_attribution_counts_schema() -> Value {
+    let mut properties = serde_json::Map::new();
+    for key in [
+        "findings",
+        "error_findings",
+        "warning_findings",
+        "safe_to_delete",
+        "files",
     ] {
         properties.insert(key.to_owned(), json!({ "type": "integer", "minimum": 0 }));
     }

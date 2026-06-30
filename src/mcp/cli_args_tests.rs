@@ -308,6 +308,7 @@ fn audit_maps_baselines_and_analysis_knobs() -> Result<(), String> {
     let args = arguments_json(
         r#"{
             "base": "origin/main",
+            "gate": "new-only",
             "dead_code_baseline": "dead.json",
             "health_baseline": "health.json",
             "dupes_baseline": "dupes.json",
@@ -323,6 +324,7 @@ fn audit_maps_baselines_and_analysis_knobs() -> Result<(), String> {
 
     assert_eq!(cli[..4], ["decimate", "audit", "--format", "json"]);
     assert_pair(&cli, "--base", "origin/main");
+    assert_pair(&cli, "--gate", "new-only");
     assert_pair(&cli, "--dead-code-baseline", "dead.json");
     assert_pair(&cli, "--health-baseline", "health.json");
     assert_pair(&cli, "--dupes-baseline", "dupes.json");

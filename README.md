@@ -41,8 +41,8 @@ Decimate follows Fallow's product shape, adapted to Dart and Flutter:
   hygiene, architecture, ownership, coverage gaps, hotspots, and refactoring
   targets.
 - **PR risk**: changed-code analysis through `decimate audit`, `review`, and
-  `decision-surface`, with verdicts and pre-existing versus introduced finding
-  attribution.
+  `decision-surface`, with risk score, risk level, and introduced versus
+  pre-existing finding attribution.
 - **Hotspots**: functions and files ranked by complexity, size, coupling,
   ownership, coverage, and optional runtime importance.
 - **Duplication**: exact and semantic Dart clone families with stable
@@ -217,6 +217,7 @@ Review changed code against `origin/main`:
 
 ```bash
 decimate audit . --base origin/main --format json
+decimate audit . --base origin/main --gate new-only --format json
 ```
 
 Surface architecture decisions without failing CI:
@@ -298,11 +299,17 @@ The main report envelope is `decimate.report.v1`:
   "tool": "decimate",
   "command": "check",
   "verdict": "fail",
-  "summary": { "files": 42, "findings": 3 },
+  "summary": { "files": 42, "findings": 3, "quality_score": 88 },
   "findings": [],
   "next_steps": []
 }
 ```
+
+`decimate audit --format json` adds audit-only summary fields:
+`risk_score` (`0-100`), `risk_level` (`pass`, `warn`, or `fail`), and
+`attribution.introduced` / `attribution.pre_existing` counts. `--gate all` is
+the default; `--gate new-only` keeps related pre-existing findings visible but
+only fails the process for introduced error findings.
 
 Discover the full command and issue manifest:
 

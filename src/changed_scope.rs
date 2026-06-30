@@ -74,7 +74,16 @@ pub fn changed_file_scope(
     base: &str,
 ) -> Result<Vec<PathBuf>, ChangedScopeError> {
     let changed = changed_files(&project.root, base)?;
-    Ok(expand_related_files(project, changed))
+    Ok(changed_file_scope_from_changed(project, &changed))
+}
+
+/// Expand an already discovered changed-file list with one graph hop.
+#[must_use]
+pub fn changed_file_scope_from_changed(
+    project: &ScannedProject,
+    changed: &[PathBuf],
+) -> Vec<PathBuf> {
+    expand_related_files(project, changed.to_vec())
 }
 
 fn expand_related_files(project: &ScannedProject, changed: Vec<PathBuf>) -> Vec<PathBuf> {

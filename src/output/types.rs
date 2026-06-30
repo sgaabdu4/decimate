@@ -90,6 +90,42 @@ pub enum Verdict {
     Fail,
 }
 
+/// Audit review risk band.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum AuditRiskLevel {
+    /// No visible audit risk.
+    Pass,
+    /// Visible findings need review but were not introduced as errors.
+    Warn,
+    /// The change introduced at least one error-severity finding.
+    Fail,
+}
+
+/// Introduced/pre-existing audit finding split.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AuditAttribution {
+    /// Findings touching files changed since the audit base.
+    pub introduced: AuditAttributionCounts,
+    /// Findings surfaced only through related unchanged files.
+    pub pre_existing: AuditAttributionCounts,
+}
+
+/// Audit attribution counters.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AuditAttributionCounts {
+    /// Findings in this attribution bucket.
+    pub findings: usize,
+    /// Error-severity findings.
+    pub error_findings: usize,
+    /// Warning-severity findings.
+    pub warning_findings: usize,
+    /// Findings marked safe to delete from graph evidence alone.
+    pub safe_to_delete: usize,
+    /// Distinct files referenced by these findings.
+    pub files: usize,
+}
+
 /// JSON report emitted by `--format json`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct JsonReport {
@@ -132,7 +168,7 @@ pub struct JsonReport {
     pub next_steps: Vec<NextStep>,
 }
 
-/// Numeric report summary.
+/// Report summary.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ReportSummary {
     /// Dart files parsed.
@@ -239,6 +275,15 @@ pub struct ReportSummary {
     pub policy_violations: usize,
     /// Suppression comments missing required justification text.
     pub missing_suppression_reasons: usize,
+    /// Changed-code audit risk score from 0-100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub risk_score: Option<usize>,
+    /// Changed-code audit risk band.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub risk_level: Option<AuditRiskLevel>,
+    /// Changed-code finding attribution split.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attribution: Option<AuditAttribution>,
     /// Total finding count.
     pub findings: usize,
 }

@@ -93,6 +93,7 @@ pub(super) fn run_fix<W: Write>(subcommand: &ArgMatches, mut writer: W) -> Resul
         boundary_calls: Vec::new(),
         policy_packs: Vec::new(),
         audit_base: None,
+        audit_gate: super::audit_run::AuditGate::default(),
         file_paths: subcommand
             .get_many::<std::path::PathBuf>("file")
             .map(|values| values.cloned().collect())

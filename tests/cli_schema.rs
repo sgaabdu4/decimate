@@ -144,6 +144,7 @@ fn assert_manifest_identity(json: &Value) {
     assert_mcp_tool_key(json, "security_candidates", "gate");
     assert_mcp_tool_key(json, "fix_preview", "action");
     assert_mcp_tool_key(json, "fix_apply", "yes");
+    assert_mcp_tool_key(json, "audit", "gate");
     assert!(json["mcp_tools"]["tools"].as_array().is_some_and(|tools| {
         tools
             .iter()
@@ -248,6 +249,7 @@ fn schema_command_lists_actual_cli_flags() -> Result<(), Box<dyn std::error::Err
         &json,
         "audit",
         &[
+            "--gate",
             "--dead-code-baseline",
             "--no-production",
             "--complexity-breakdown",
