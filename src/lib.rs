@@ -94,9 +94,9 @@ pub use explain::{
 };
 pub use extract::{
     DartCombinator, DartCombinatorKind, DartExport, DartFile, DartImport, DartLibrary, DartPart,
-    DartPartOf, DartRouteDeclaration, DeclarationKind, ExtractError, IdentifierReference, Location,
-    MemberDeclaration, MemberKind, SignatureReference, SourceRange, TopLevelDeclaration,
-    extract_dart_file, extract_dart_source,
+    DartPartOf, DartRouteDeclaration, DartUriCondition, DeclarationKind, ExtractError,
+    IdentifierReference, Location, MemberDeclaration, MemberKind, SignatureReference, SourceRange,
+    TopLevelDeclaration, extract_dart_file, extract_dart_source,
 };
 pub use feature_flags::{
     FeatureFlag, FeatureFlagConfidence, FeatureFlagError, FeatureFlagOccurrence,
@@ -107,9 +107,9 @@ pub use fix::{
     render_fix_report,
 };
 pub use graph::{
-    DependencyEdge, DependencyKind, DependencyVisibility, GraphError, InvalidPartReason,
-    InvalidPartRelationship, ModuleGraph, ModuleNode, ResolvedDependency, UnresolvedDependency,
-    build_module_graph,
+    DependencyEdge, DependencyKind, DependencyVisibility, GraphError, GraphOptions,
+    InvalidPartReason, InvalidPartRelationship, ModuleGraph, ModuleNode, ResolvedDependency,
+    UnresolvedDependency, build_module_graph, build_module_graph_with_options,
 };
 pub use health::{
     ComplexityContribution, ComplexityFinding, ComplexityFunctionKind, ComplexityRule,
@@ -187,9 +187,8 @@ pub use trace::{
     render_file_trace, render_symbol_trace, trace_dependency, trace_file, trace_symbol,
 };
 pub use widgets::{
-    MissingContextMountedAfterAwait, MissingRefMountedAfterAwait, PrivateWidgetClass,
-    RiverpodWatchInNotifierMethod, UnrenderedWidgetClass, UnusedWidgetParam, WidgetAnalysisError,
-    WidgetClassKind, WidgetReport, WidgetTopLevelFunction, analyze_widgets,
+    MissingContextMountedAfterAwait, PrivateWidgetClass, UnrenderedWidgetClass, UnusedWidgetParam,
+    WidgetAnalysisError, WidgetClassKind, WidgetReport, WidgetTopLevelFunction, analyze_widgets,
 };
 pub use workspace_scope::{
     WorkspaceScopeError, changed_workspace_file_scope, workspace_file_scope,

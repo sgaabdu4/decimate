@@ -24,6 +24,7 @@ int helper(String value) => value.length;
         vec![
             DartImport {
                 uri: "dart:async".to_owned(),
+                condition: None,
                 prefix: None,
                 deferred: false,
                 combinators: Vec::new(),
@@ -31,6 +32,7 @@ int helper(String value) => value.length;
             },
             DartImport {
                 uri: "package:app/src/service.dart".to_owned(),
+                condition: None,
                 prefix: None,
                 deferred: false,
                 combinators: Vec::new(),
@@ -38,6 +40,7 @@ int helper(String value) => value.length;
             },
             DartImport {
                 uri: "../shared.dart".to_owned(),
+                condition: None,
                 prefix: Some("shared".to_owned()),
                 deferred: false,
                 combinators: vec![DartCombinator {
@@ -53,6 +56,7 @@ int helper(String value) => value.length;
         extracted.exports,
         vec![DartExport {
             uri: "src/public.dart".to_owned(),
+            condition: None,
             combinators: Vec::new(),
             location: loc(4, 0),
         }]
@@ -657,17 +661,36 @@ export r'src\\raw.dart' if (dart.library.html) 'src\\web.dart';
         extracted
             .imports
             .iter()
-            .map(|import| import.uri.as_str())
+            .map(|import| (
+                import.uri.as_str(),
+                import.condition.as_ref().map(|condition| (
+                    condition.variable.as_str(),
+                    condition.expected_value.as_str()
+                ))
+            ))
             .collect::<Vec<_>>(),
-        vec!["io.dart", "html.dart", "wasm.dart"]
+        vec![
+            ("io.dart", None),
+            ("html.dart", Some(("dart.library.html", "true"))),
+            ("wasm.dart", Some(("dart.library.js_interop", "true")))
+        ]
     );
     assert_eq!(
         extracted
             .exports
             .iter()
-            .map(|export| export.uri.as_str())
+            .map(|export| (
+                export.uri.as_str(),
+                export.condition.as_ref().map(|condition| (
+                    condition.variable.as_str(),
+                    condition.expected_value.as_str()
+                ))
+            ))
             .collect::<Vec<_>>(),
-        vec!["src\\raw.dart", "src\\web.dart"]
+        vec![
+            ("src\\raw.dart", None),
+            ("src\\web.dart", Some(("dart.library.html", "true")))
+        ]
     );
 
     Ok(())

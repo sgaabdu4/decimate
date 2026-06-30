@@ -214,6 +214,7 @@ impl Fixture {
 fn import(uri: &str) -> DartImport {
     DartImport {
         uri: uri.to_owned(),
+        condition: None,
         prefix: None,
         deferred: false,
         combinators: Vec::new(),
@@ -224,6 +225,7 @@ fn import(uri: &str) -> DartImport {
 fn export(uri: &str) -> DartExport {
     DartExport {
         uri: uri.to_owned(),
+        condition: None,
         combinators: Vec::new(),
         location: Location { line: 1, column: 0 },
     }

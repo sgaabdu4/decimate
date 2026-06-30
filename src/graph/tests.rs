@@ -6,6 +6,7 @@ use tempfile::TempDir;
 use super::*;
 use crate::{
     DartCombinator, DartCombinatorKind, DartExport, DartImport, DartLibrary, DartPart, DartPartOf,
+    DartUriCondition,
 };
 
 #[test]
@@ -80,6 +81,155 @@ fn resolves_package_imports_to_pub_workspace_members() -> Result<(), Box<dyn std
         strip_root(fixture.root(), &graph.dependencies()[0].to_path),
         "packages/shared/lib/shared.dart"
     );
+
+    Ok(())
+}
+
+#[test]
+fn platform_environment_selects_one_configurable_import_branch()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = Fixture::new()?;
+    fixture.write("pubspec.yaml", "name: app\n")?;
+    let mut conditional = import("web.dart");
+    conditional.condition = Some(condition("dart.library.html", "true", 1));
+
+    let main = fixture.file(
+        "lib/main.dart",
+        vec![import("io.dart"), conditional],
+        vec![],
+    );
+    let io = fixture.file("lib/io.dart", vec![], vec![]);
+    let web = fixture.file("lib/web.dart", vec![], vec![]);
+
+    let graph = build_module_graph_with_options(
+        fixture.root(),
+        &[main, io, web],
+        &GraphOptions {
+            conditional_environment: [("dart.library.html".to_owned(), "true".to_owned())].into(),
+        },
+    )?;
+
+    let dependencies = graph.dependencies();
+    assert_eq!(dependencies.len(), 1);
+    assert_eq!(dependencies[0].specifier, "web.dart");
+    assert_eq!(
+        dependencies[0]
+            .visibility
+            .condition
+            .as_ref()
+            .map(|condition| condition.variable.as_str()),
+        Some("dart.library.html")
+    );
+    assert_eq!(
+        strip_root(fixture.root(), &dependencies[0].to_path),
+        "lib/web.dart"
+    );
+    assert!(graph.unresolved().is_empty());
+
+    Ok(())
+}
+
+#[test]
+fn platform_environment_falls_back_to_default_configurable_import()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = Fixture::new()?;
+    fixture.write("pubspec.yaml", "name: app\n")?;
+    let mut conditional = import("web.dart");
+    conditional.condition = Some(condition("dart.library.html", "true", 1));
+
+    let main = fixture.file(
+        "lib/main.dart",
+        vec![import("io.dart"), conditional],
+        vec![],
+    );
+    let io = fixture.file("lib/io.dart", vec![], vec![]);
+    let web = fixture.file("lib/web.dart", vec![], vec![]);
+
+    let graph = build_module_graph_with_options(
+        fixture.root(),
+        &[main, io, web],
+        &GraphOptions {
+            conditional_environment: [("dart.library.html".to_owned(), "false".to_owned())].into(),
+        },
+    )?;
+
+    let dependencies = graph.dependencies();
+    assert_eq!(dependencies.len(), 1);
+    assert_eq!(dependencies[0].specifier, "io.dart");
+    assert!(dependencies[0].visibility.condition.is_none());
+    assert_eq!(
+        strip_root(fixture.root(), &dependencies[0].to_path),
+        "lib/io.dart"
+    );
+    assert!(graph.unresolved().is_empty());
+
+    Ok(())
+}
+
+#[test]
+fn platform_environment_selects_package_uri_branches_before_resolution()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = Fixture::new()?;
+    fixture.write("pubspec.yaml", "name: app\nworkspace:\n  - packages/*\n")?;
+    fixture.write("packages/shared/pubspec.yaml", "name: shared\n")?;
+    let mut conditional = import("package:shared/web.dart");
+    conditional.condition = Some(condition("dart.library.html", "true", 1));
+
+    let main = fixture.file(
+        "lib/main.dart",
+        vec![import("stub.dart"), conditional],
+        vec![],
+    );
+    let stub = fixture.file("lib/stub.dart", vec![], vec![]);
+    let web = fixture.file("packages/shared/lib/web.dart", vec![], vec![]);
+
+    let graph = build_module_graph_with_options(
+        fixture.root(),
+        &[main, stub, web],
+        &GraphOptions {
+            conditional_environment: [("dart.library.html".to_owned(), "true".to_owned())].into(),
+        },
+    )?;
+
+    let dependencies = graph.dependencies();
+    assert_eq!(dependencies.len(), 1);
+    assert_eq!(dependencies[0].specifier, "package:shared/web.dart");
+    assert_eq!(
+        strip_root(fixture.root(), &dependencies[0].to_path),
+        "packages/shared/lib/web.dart"
+    );
+    assert!(graph.unresolved().is_empty());
+
+    Ok(())
+}
+
+#[test]
+fn default_graph_keeps_all_configurable_import_branches() -> Result<(), Box<dyn std::error::Error>>
+{
+    let fixture = Fixture::new()?;
+    fixture.write("pubspec.yaml", "name: app\n")?;
+    let mut conditional = import("web.dart");
+    conditional.condition = Some(condition("dart.library.html", "true", 1));
+
+    let main = fixture.file(
+        "lib/main.dart",
+        vec![import("io.dart"), conditional],
+        vec![],
+    );
+    let io = fixture.file("lib/io.dart", vec![], vec![]);
+    let web = fixture.file("lib/web.dart", vec![], vec![]);
+
+    let graph = build_module_graph(fixture.root(), &[main, io, web])?;
+
+    assert_eq!(
+        graph
+            .dependencies()
+            .into_iter()
+            .map(|dependency| dependency.specifier)
+            .collect::<Vec<_>>(),
+        vec!["io.dart".to_owned(), "web.dart".to_owned()]
+    );
+    assert!(graph.unresolved().is_empty());
 
     Ok(())
 }
@@ -269,6 +419,7 @@ fn preserves_import_and_export_visibility_metadata_on_edges()
         part_of: None,
         imports: vec![DartImport {
             uri: "src/service.dart".to_owned(),
+            condition: None,
             prefix: Some("svc".to_owned()),
             deferred: true,
             combinators: vec![
@@ -279,6 +430,7 @@ fn preserves_import_and_export_visibility_metadata_on_edges()
         }],
         exports: vec![DartExport {
             uri: "src/public.dart".to_owned(),
+            condition: None,
             combinators: vec![combinator(DartCombinatorKind::Show, &["PublicApi"])],
             location: Location { line: 2, column: 0 },
         }],
@@ -579,6 +731,7 @@ fn does_not_join_paths_that_already_start_with_root() {
 fn import(uri: &str) -> DartImport {
     DartImport {
         uri: uri.to_owned(),
+        condition: None,
         prefix: None,
         deferred: false,
         combinators: Vec::new(),
@@ -589,6 +742,7 @@ fn import(uri: &str) -> DartImport {
 fn export(uri: &str) -> DartExport {
     DartExport {
         uri: uri.to_owned(),
+        condition: None,
         combinators: Vec::new(),
         location: Location { line: 1, column: 0 },
     }
@@ -622,6 +776,14 @@ fn combinator(kind: DartCombinatorKind, names: &[&str]) -> DartCombinator {
         kind,
         names: names.iter().map(|name| (*name).to_owned()).collect(),
         location: Location { line: 1, column: 0 },
+    }
+}
+
+fn condition(variable: &str, expected_value: &str, line: usize) -> DartUriCondition {
+    DartUriCondition {
+        variable: variable.to_owned(),
+        expected_value: expected_value.to_owned(),
+        location: Location { line, column: 0 },
     }
 }
 

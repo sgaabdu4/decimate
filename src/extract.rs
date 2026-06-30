@@ -107,6 +107,9 @@ pub struct DartLibrary {
 pub struct DartImport {
     /// The import URI without surrounding quotes.
     pub uri: String,
+    /// Conditional import guard for a `if (dart.library.*)` branch.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<DartUriCondition>,
     /// Optional import prefix after `as`.
     pub prefix: Option<String>,
     /// Whether this import uses `deferred as`.
@@ -122,6 +125,9 @@ pub struct DartImport {
 pub struct DartExport {
     /// The export URI without surrounding quotes.
     pub uri: String,
+    /// Conditional export guard for a `if (dart.library.*)` branch.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<DartUriCondition>,
     /// `show` and `hide` combinators applied to this export.
     pub combinators: Vec<DartCombinator>,
     /// Location of the `import_or_export` syntax node.
@@ -136,6 +142,17 @@ pub struct DartCombinator {
     /// Names listed by the combinator.
     pub names: Vec<String>,
     /// Location of the combinator syntax node.
+    pub location: Location,
+}
+
+/// A Dart configurable URI condition, such as `dart.library.html == 'true'`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DartUriCondition {
+    /// Environment declaration tested by the configurable URI branch.
+    pub variable: String,
+    /// String value required by the branch. Bare tests require `"true"`.
+    pub expected_value: String,
+    /// Location of the `uri_test` syntax node.
     pub location: Location,
 }
 

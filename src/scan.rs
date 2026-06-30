@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -10,7 +10,8 @@ use thiserror::Error;
 use crate::graph::normalize_path;
 use crate::package_map::PackageMap;
 use crate::{
-    DartFile, ExtractError, GraphError, ModuleGraph, build_module_graph, extract_dart_file,
+    DartFile, ExtractError, GraphError, GraphOptions, ModuleGraph, build_module_graph_with_options,
+    extract_dart_file,
 };
 
 /// Parsed Dart files plus their resolved module graph.
@@ -29,6 +30,8 @@ pub struct ScannedProject {
 pub struct ScanOptions {
     /// Glob patterns excluded from Dart file discovery.
     pub ignore_patterns: Vec<String>,
+    /// Dart conditional URI environment values. Empty means include every branch.
+    pub conditional_environment: BTreeMap<String, String>,
 }
 
 /// Errors returned while scanning a Dart or Flutter project.
@@ -152,7 +155,13 @@ pub fn scan_project_with_options(
         .collect::<Result<Vec<_>, _>>()?;
     files.sort_by(|left, right| left.path.cmp(&right.path));
 
-    let graph = build_module_graph(&root, &files)?;
+    let graph = build_module_graph_with_options(
+        &root,
+        &files,
+        &GraphOptions {
+            conditional_environment: options.conditional_environment.clone(),
+        },
+    )?;
 
     Ok(ScannedProject { root, files, graph })
 }

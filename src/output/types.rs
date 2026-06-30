@@ -185,10 +185,6 @@ pub struct ReportSummary {
     pub unrendered_widgets: usize,
     /// Widget or `State` awaits missing an immediate `context.mounted` guard.
     pub missing_context_mounted_after_await: usize,
-    /// Riverpod notifier awaits missing an immediate `ref.mounted` guard.
-    pub missing_ref_mounted_after_await: usize,
-    /// `ref.watch` calls inside Riverpod notifier methods other than `build`.
-    pub riverpod_watch_in_notifier_methods: usize,
     /// Duplicated Dart code clone groups.
     pub code_duplications: usize,
     /// Dart source files included in health analysis.
@@ -304,10 +300,6 @@ pub enum FindingKind {
     UnrenderedWidget,
     /// Widget or `State` await lacks an immediate `context.mounted` guard.
     MissingContextMountedAfterAwait,
-    /// Riverpod notifier await lacks an immediate `ref.mounted` guard.
-    MissingRefMountedAfterAwait,
-    /// Riverpod notifier method calls `ref.watch` outside `build`.
-    RiverpodWatchInNotifierMethod,
     /// Missing entry point.
     MissingEntryPoint,
     /// Strongly connected dependency component.

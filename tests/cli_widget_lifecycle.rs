@@ -10,7 +10,7 @@ fn check_reports_widget_lifecycle_findings() -> Result<(), Box<dyn std::error::E
     write(
         &fixture,
         ".decimaterc.json",
-        r#"{ "rules": { "missing-context-mounted-after-await": "warn", "missing-ref-mounted-after-await": "warn", "riverpod-watch-in-notifier-method": "warn" } }"#,
+        r#"{ "rules": { "missing-context-mounted-after-await": "warn" } }"#,
     )?;
     let mut output = Vec::new();
 
@@ -20,8 +20,6 @@ fn check_reports_widget_lifecycle_findings() -> Result<(), Box<dyn std::error::E
     assert_eq!(code, 0);
     assert_eq!(json["verdict"], "pass");
     assert_eq!(json["summary"]["missing_context_mounted_after_await"], 1);
-    assert_eq!(json["summary"]["missing_ref_mounted_after_await"], 1);
-    assert_eq!(json["summary"]["riverpod_watch_in_notifier_methods"], 1);
 
     let context = finding(&json, "missing-context-mounted-after-await")?;
     assert_eq!(
@@ -45,25 +43,6 @@ fn check_reports_widget_lifecycle_findings() -> Result<(), Box<dyn std::error::E
         "// decimate-ignore-next-line missing-context-mounted-after-await"
     );
 
-    let ref_guard = finding(&json, "missing-ref-mounted-after-await")?;
-    assert_eq!(
-        ref_guard["rule_id"],
-        "decimate/missing-ref-mounted-after-await"
-    );
-    assert_eq!(ref_guard["line"], 13);
-    assert_eq!(
-        ref_guard["actions"][0]["target_symbol"],
-        "CounterNotifier.save"
-    );
-
-    let watch = finding(&json, "riverpod-watch-in-notifier-method")?;
-    assert_eq!(
-        watch["rule_id"],
-        "decimate/riverpod-watch-in-notifier-method"
-    );
-    assert_eq!(watch["line"], 14);
-    assert_eq!(watch["actions"][0]["target_symbol"], "CounterNotifier.save");
-
     Ok(())
 }
 
@@ -73,7 +52,7 @@ fn widget_lifecycle_rules_can_error_or_turn_off() -> Result<(), Box<dyn std::err
     write(
         &fixture,
         ".decimaterc.json",
-        r#"{ "rules": { "use-build-context-synchronously": "error", "ref-mounted-after-await": "error", "notifier-ref-watch": "error" } }"#,
+        r#"{ "rules": { "use-build-context-synchronously": "error" } }"#,
     )?;
     let mut output = Vec::new();
 
@@ -85,19 +64,11 @@ fn widget_lifecycle_rules_can_error_or_turn_off() -> Result<(), Box<dyn std::err
         finding(&json, "missing-context-mounted-after-await")?["severity"],
         "error"
     );
-    assert_eq!(
-        finding(&json, "missing-ref-mounted-after-await")?["severity"],
-        "error"
-    );
-    assert_eq!(
-        finding(&json, "riverpod-watch-in-notifier-method")?["severity"],
-        "error"
-    );
 
     write(
         &fixture,
         ".decimaterc.json",
-        r#"{ "rules": { "missing-context-mounted-after-await": "off", "missing-ref-mounted-after-await": "off", "riverpod-watch-in-notifier-method": "off" } }"#,
+        r#"{ "rules": { "missing-context-mounted-after-await": "off" } }"#,
     )?;
     output.clear();
 
@@ -106,8 +77,6 @@ fn widget_lifecycle_rules_can_error_or_turn_off() -> Result<(), Box<dyn std::err
     assert_eq!(code, 0);
     assert_eq!(json["verdict"], "pass");
     assert_eq!(json["summary"]["missing_context_mounted_after_await"], 0);
-    assert_eq!(json["summary"]["missing_ref_mounted_after_await"], 0);
-    assert_eq!(json["summary"]["riverpod_watch_in_notifier_methods"], 0);
     assert!(json["findings"].as_array().is_some_and(Vec::is_empty));
 
     Ok(())

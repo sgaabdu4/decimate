@@ -444,10 +444,6 @@ fn apply_widget_summary(summary: &mut ReportSummary, findings: &[Finding]) {
     summary.unrendered_widgets = kind_count(findings, FindingKind::UnrenderedWidget);
     summary.missing_context_mounted_after_await =
         kind_count(findings, FindingKind::MissingContextMountedAfterAwait);
-    summary.missing_ref_mounted_after_await =
-        kind_count(findings, FindingKind::MissingRefMountedAfterAwait);
-    summary.riverpod_watch_in_notifier_methods =
-        kind_count(findings, FindingKind::RiverpodWatchInNotifierMethod);
 }
 
 fn apply_quality_summary(
@@ -589,10 +585,6 @@ fn apply_scoped_counts(summary: &mut ReportSummary, findings: &[Finding]) {
     summary.unrendered_widgets = kind_count(findings, FindingKind::UnrenderedWidget);
     summary.missing_context_mounted_after_await =
         kind_count(findings, FindingKind::MissingContextMountedAfterAwait);
-    summary.missing_ref_mounted_after_await =
-        kind_count(findings, FindingKind::MissingRefMountedAfterAwait);
-    summary.riverpod_watch_in_notifier_methods =
-        kind_count(findings, FindingKind::RiverpodWatchInNotifierMethod);
     summary.code_duplications = kind_count(findings, FindingKind::CodeDuplication);
     summary.complex_functions = complexity_count(findings);
     summary.coverage_gaps = kind_count(findings, FindingKind::CoverageGap);

@@ -607,6 +607,7 @@ fn request_from_matches(matches: &ArgMatches) -> Result<CommandRequest, CliError
         issue_filters,
         scan_options: ScanOptions {
             ignore_patterns: config.ignore_patterns.clone(),
+            conditional_environment: common_args::conditional_environment(subcommand),
         },
         ignore_dependencies: config.ignore_dependencies.clone(),
         ignore_dependency_overrides: config.ignore_dependency_overrides.clone(),

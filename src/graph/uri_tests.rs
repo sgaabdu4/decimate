@@ -44,6 +44,7 @@ fn directive_uri_paths_are_percent_decoded_for_graph_resolution()
 fn import(uri: &str) -> DartImport {
     DartImport {
         uri: uri.to_owned(),
+        condition: None,
         prefix: None,
         deferred: false,
         combinators: Vec::new(),

@@ -11,6 +11,7 @@ use value_args::{
 const GLOBAL_KEYS: &[&str] = &["root", "config"];
 const REPORT_SCOPE_KEYS: &[&str] = &[
     "entry",
+    "dart_platform",
     "file",
     "workspace",
     "changed_workspaces",
@@ -19,6 +20,7 @@ const REPORT_SCOPE_KEYS: &[&str] = &[
 ];
 const LIST_SCOPE_KEYS: &[&str] = &[
     "entry",
+    "dart_platform",
     "file",
     "workspace",
     "changed_workspaces",
@@ -161,7 +163,7 @@ fn extend_analyze_allowed(allowed: &mut Vec<&'static str>) {
 fn extend_check_changed_allowed(allowed: &mut Vec<&'static str>) {
     allowed.extend(["since", "changed_since"]);
     allowed.extend(BASELINE_KEYS);
-    allowed.extend(["production"]);
+    allowed.extend(["dart_platform", "production"]);
 }
 
 fn extend_project_info_allowed(allowed: &mut Vec<&'static str>) {
@@ -287,11 +289,13 @@ fn check_changed_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Resul
         .ok_or_else(|| "check_changed requires since".to_owned())?;
     cli.extend(["--changed-since".to_owned(), since]);
     push_baseline_args(cli, args)?;
+    push_string_flag(cli, args, "dart_platform", "--dart-platform")?;
     push_bool_mode(cli, args, "production", "--production", "--no-production")
 }
 
 fn project_info_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
     push_string_flags(cli, args, "entry", "--entry")?;
+    push_string_flag(cli, args, "dart_platform", "--dart-platform")?;
     push_string_flags(cli, args, "file", "--file")?;
     push_string_flags(cli, args, "workspace", "--workspace")?;
     push_string_flag(cli, args, "changed_workspaces", "--changed-workspaces")?;
@@ -310,6 +314,7 @@ fn project_info_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result
 
 fn list_boundaries_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
     push_string_flags(cli, args, "entry", "--entry")?;
+    push_string_flag(cli, args, "dart_platform", "--dart-platform")?;
     push_string_flags(cli, args, "file", "--file")?;
     push_string_flags(cli, args, "workspace", "--workspace")?;
     push_string_flag(cli, args, "changed_workspaces", "--changed-workspaces")?;
@@ -561,6 +566,7 @@ fn explain_args(args: &Map<String, Value>) -> Result<Vec<String>, String> {
 
 fn push_report_scope_args(cli: &mut Vec<String>, args: &Map<String, Value>) -> Result<(), String> {
     push_string_flags(cli, args, "entry", "--entry")?;
+    push_string_flag(cli, args, "dart_platform", "--dart-platform")?;
     push_string_flags(cli, args, "file", "--file")?;
     push_string_flags(cli, args, "workspace", "--workspace")?;
     push_string_flag(cli, args, "changed_workspaces", "--changed-workspaces")?;

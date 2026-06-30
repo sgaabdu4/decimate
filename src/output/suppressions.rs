@@ -291,8 +291,6 @@ const fn kind_key(kind: FindingKind) -> &'static str {
         FindingKind::UnusedWidgetParam => "unused-widget-param",
         FindingKind::UnrenderedWidget => "unrendered-widget",
         FindingKind::MissingContextMountedAfterAwait => "missing-context-mounted-after-await",
-        FindingKind::MissingRefMountedAfterAwait => "missing-ref-mounted-after-await",
-        FindingKind::RiverpodWatchInNotifierMethod => "riverpod-watch-in-notifier-method",
         FindingKind::MissingEntryPoint => "missing-entry-point",
         FindingKind::CircularDependency => "circular-dependency",
         FindingKind::ReExportCycle => "re-export-cycle",

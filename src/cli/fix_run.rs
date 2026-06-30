@@ -71,6 +71,7 @@ pub(super) fn run_fix<W: Write>(subcommand: &ArgMatches, mut writer: W) -> Resul
         &root,
         &ScanOptions {
             ignore_patterns: config.ignore_patterns.clone(),
+            conditional_environment: super::common_args::conditional_environment(subcommand),
         },
     )?;
     let request = CommandRequest {
@@ -124,6 +125,7 @@ pub(super) fn run_fix<W: Write>(subcommand: &ArgMatches, mut writer: W) -> Resul
         issue_filters: super::issue_filter_args::IssueFilters::default(),
         scan_options: ScanOptions {
             ignore_patterns: config.ignore_patterns.clone(),
+            conditional_environment: super::common_args::conditional_environment(subcommand),
         },
         ignore_dependencies: config.ignore_dependencies.clone(),
         ignore_dependency_overrides: config.ignore_dependency_overrides.clone(),

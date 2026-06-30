@@ -71,6 +71,7 @@ fn dart_file(path: PathBuf, import_uri: &str) -> DartFile {
         part_of: None,
         imports: vec![DartImport {
             uri: import_uri.to_owned(),
+            condition: None,
             prefix: None,
             deferred: false,
             combinators: Vec::new(),

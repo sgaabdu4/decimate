@@ -7,10 +7,12 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::package_map::PackageMap;
-use crate::{DartCombinator, DartFile, Location};
+use crate::{DartCombinator, DartFile, DartUriCondition, Location};
 
+mod conditionals;
 mod parts;
 
+use conditionals::{selected_exports, selected_imports};
 pub use parts::{InvalidPartReason, InvalidPartRelationship};
 use parts::{add_orphan_part_relationships, add_part_dependency};
 
@@ -44,8 +46,18 @@ pub struct DependencyVisibility {
     pub prefix: Option<String>,
     /// Whether the import uses `deferred as`.
     pub deferred: bool,
+    /// Conditional URI guard that selected this edge, if any.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<DartUriCondition>,
     /// `show` and `hide` combinators applied to the import or export.
     pub combinators: Vec<DartCombinator>,
+}
+
+/// Options controlling dependency graph construction.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GraphOptions {
+    /// Conditional URI environment values. Empty means include every branch.
+    pub conditional_environment: BTreeMap<String, String>,
 }
 
 /// Import/export/part/augment dependency category.
@@ -270,6 +282,19 @@ pub fn build_module_graph(
     root: impl AsRef<Path>,
     files: &[DartFile],
 ) -> Result<ModuleGraph, GraphError> {
+    build_module_graph_with_options(root, files, &GraphOptions::default())
+}
+
+/// Build a directed module graph using explicit graph construction options.
+///
+/// # Errors
+///
+/// Returns [`GraphError`] under the same conditions as [`build_module_graph`].
+pub fn build_module_graph_with_options(
+    root: impl AsRef<Path>,
+    files: &[DartFile],
+    options: &GraphOptions,
+) -> Result<ModuleGraph, GraphError> {
     let root = normalize_path(root.as_ref());
     let packages = PackageMap::discover(&root)?;
     let mut graph = DependencyGraph::new();
@@ -303,6 +328,7 @@ pub fn build_module_graph(
             &mut invalid_part_relationships,
             &mut referenced_part_paths,
             &mut part_owners,
+            options,
             file,
         );
     }
@@ -354,6 +380,7 @@ fn add_file_dependencies(
     invalid_part_relationships: &mut Vec<InvalidPartRelationship>,
     referenced_part_paths: &mut BTreeSet<PathBuf>,
     part_owners: &mut BTreeMap<PathBuf, PathBuf>,
+    options: &GraphOptions,
     file: &DartFile,
 ) {
     let from_path = normalize_against(root, &file.path);
@@ -380,7 +407,8 @@ fn add_file_dependencies(
         );
     }
 
-    for import in &file.imports {
+    let imports = selected_imports(&file.imports, &options.conditional_environment);
+    for import in imports {
         add_dependency(
             root,
             packages,
@@ -396,12 +424,14 @@ fn add_file_dependencies(
             DependencyVisibility {
                 prefix: import.prefix.clone(),
                 deferred: import.deferred,
+                condition: import.condition.clone(),
                 combinators: import.combinators.clone(),
             },
         );
     }
 
-    for export in &file.exports {
+    let exports = selected_exports(&file.exports, &options.conditional_environment);
+    for export in exports {
         add_dependency(
             root,
             packages,
@@ -415,6 +445,7 @@ fn add_file_dependencies(
             DependencyKind::Export,
             export.location,
             DependencyVisibility {
+                condition: export.condition.clone(),
                 combinators: export.combinators.clone(),
                 ..DependencyVisibility::default()
             },

@@ -425,10 +425,6 @@ fn recompute_summary(report: &mut JsonReport) {
     report.summary.unrendered_widgets = kind_count(report, FindingKind::UnrenderedWidget);
     report.summary.missing_context_mounted_after_await =
         kind_count(report, FindingKind::MissingContextMountedAfterAwait);
-    report.summary.missing_ref_mounted_after_await =
-        kind_count(report, FindingKind::MissingRefMountedAfterAwait);
-    report.summary.riverpod_watch_in_notifier_methods =
-        kind_count(report, FindingKind::RiverpodWatchInNotifierMethod);
     report.summary.code_duplications = report.clone_groups.len();
     report.summary.complex_functions = complexity_count(report);
     report.summary.coverage_gaps = kind_count(report, FindingKind::CoverageGap);

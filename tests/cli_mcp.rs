@@ -47,6 +47,7 @@ fn mcp_initialize_and_tools_list_follow_json_rpc_contract() -> Result<(), Box<dy
     assert_tool_property(tool_defs, "code_execute", "code")?;
     assert_tool_property(tool_defs, "code_execute", "max_tool_calls")?;
     assert_tool_property(tool_defs, "analyze", "private_type_leaks")?;
+    assert_tool_property(tool_defs, "analyze", "dart_platform")?;
     assert_tool_property(tool_defs, "check_changed", "since")?;
     assert_tool_property(tool_defs, "list_boundaries", "workspace")?;
     assert_tool_property(tool_defs, "analyze", "policy_pack")?;

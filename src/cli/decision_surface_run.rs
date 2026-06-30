@@ -62,6 +62,7 @@ pub(super) fn run_decision_surface<W: Write>(
         &root,
         &ScanOptions {
             ignore_patterns: config.ignore_patterns.clone(),
+            ..ScanOptions::default()
         },
     )?;
     let Some(base) = subcommand.get_one::<String>("base") else {

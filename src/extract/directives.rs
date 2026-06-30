@@ -2,8 +2,8 @@ use tree_sitter::Node;
 
 use super::{
     DartCombinator, DartCombinatorKind, DartExport, DartImport, DartLibrary, DartPart, DartPartOf,
-    collect_direct_identifier_children, extract_uri, field_text, find_first_named_descendant,
-    first_named_child,
+    DartUriCondition, collect_direct_identifier_children, extract_uri, field_text,
+    find_first_named_descendant, first_named_child,
 };
 
 pub(super) fn extract_library_name(node: Node<'_>, source: &str) -> DartLibrary {
@@ -46,7 +46,8 @@ pub(super) fn extract_directive(
                 import_uses_deferred_as(specification, uri_node, source)
             });
             imports.extend(uris.into_iter().map(|uri| DartImport {
-                uri,
+                uri: uri.uri,
+                condition: uri.condition,
                 prefix: prefix.clone(),
                 deferred,
                 combinators: combinators.clone(),
@@ -55,7 +56,8 @@ pub(super) fn extract_directive(
         }
         "library_export" => {
             exports.extend(uris.into_iter().map(|uri| DartExport {
-                uri,
+                uri: uri.uri,
+                condition: uri.condition,
                 combinators: combinators.clone(),
                 location,
             }));
@@ -121,24 +123,80 @@ pub(super) fn import_uses_deferred_as(
     false
 }
 
-fn extract_directive_uris(uri_node: Node<'_>, source: &str) -> Vec<String> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ConfiguredUri {
+    uri: String,
+    condition: Option<DartUriCondition>,
+}
+
+fn extract_directive_uris(uri_node: Node<'_>, source: &str) -> Vec<ConfiguredUri> {
+    if uri_node.kind() == "uri" {
+        if let Some(uri) = extract_uri(uri_node, source) {
+            return vec![ConfiguredUri {
+                uri,
+                condition: None,
+            }];
+        }
+        return Vec::new();
+    }
+
+    if uri_node.kind() != "configurable_uri" {
+        return Vec::new();
+    }
+
     let mut uris = Vec::new();
-    collect_directive_uris(uri_node, source, &mut uris);
+    let mut cursor = uri_node.walk();
+    for child in uri_node.named_children(&mut cursor) {
+        match child.kind() {
+            "uri" => {
+                if let Some(uri) = extract_uri(child, source) {
+                    uris.push(ConfiguredUri {
+                        uri,
+                        condition: None,
+                    });
+                }
+            }
+            "configuration_uri" => {
+                if let Some(uri) = configured_branch_uri(child, source) {
+                    uris.push(uri);
+                }
+            }
+            _ => {}
+        }
+    }
     uris
 }
 
-fn collect_directive_uris(node: Node<'_>, source: &str, uris: &mut Vec<String>) {
-    if node.kind() == "uri" {
-        if let Some(uri) = extract_uri(node, source) {
-            uris.push(uri);
-        }
-        return;
-    }
-
+fn configured_branch_uri(node: Node<'_>, source: &str) -> Option<ConfiguredUri> {
+    let mut condition = None;
+    let mut uri = None;
     let mut cursor = node.walk();
     for child in node.named_children(&mut cursor) {
-        collect_directive_uris(child, source, uris);
+        match child.kind() {
+            "uri_test" => condition = uri_condition(child, source),
+            "uri" => uri = extract_uri(child, source),
+            _ => {}
+        }
     }
+
+    Some(ConfiguredUri {
+        uri: uri?,
+        condition,
+    })
+}
+
+fn uri_condition(node: Node<'_>, source: &str) -> Option<DartUriCondition> {
+    let variable = dotted_identifier_text(node, source)?;
+    let expected_value = find_first_named_descendant(node, "string_literal")
+        .and_then(|literal| literal.utf8_text(source.as_bytes()).ok())
+        .and_then(super::strings::unquote_dart_string)
+        .unwrap_or_else(|| "true".to_owned());
+
+    Some(DartUriCondition {
+        variable,
+        expected_value,
+        location: node.start_position().into(),
+    })
 }
 
 fn extract_combinators(node: Node<'_>, source: &str) -> Vec<DartCombinator> {

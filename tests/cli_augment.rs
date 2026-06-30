@@ -146,6 +146,43 @@ fn base_library_reachability_keeps_augment_file_live() -> Result<(), Box<dyn std
     Ok(())
 }
 
+#[test]
+fn dart_platform_ignores_unselected_conditional_import_branches()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(
+        &fixture,
+        "lib/main.dart",
+        "import 'io_missing.dart' if (dart.library.html) 'web.dart';\nvoid main() {}\n",
+    )?;
+    write(&fixture, "lib/web.dart", "class Web {}\n")?;
+
+    let mut output = Vec::new();
+    let code = run_from(
+        [
+            "decimate",
+            "check",
+            fixture.path().to_str().unwrap_or_default(),
+            "--format",
+            "json",
+            "--entry",
+            "lib/main.dart",
+            "--unresolved-imports",
+            "--dart-platform",
+            "web",
+        ],
+        &mut output,
+    )?;
+
+    let json = serde_json::from_slice::<Value>(&output)?;
+    assert_eq!(code, 0);
+    assert_eq!(json["summary"]["unresolved_dependencies"], 0);
+    assert_eq!(json["findings"].as_array().map(Vec::len), Some(0));
+
+    Ok(())
+}
+
 fn write(fixture: &TempDir, path: &str, source: &str) -> Result<(), std::io::Error> {
     let path = fixture.path().join(path);
     if let Some(parent) = path.parent() {

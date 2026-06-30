@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use clap::{Arg, ArgAction, ArgMatches, Command, value_parser};
@@ -22,6 +23,7 @@ fn scan_command_with_format(command: Command, format: Arg) -> Command {
         .arg(quiet_arg())
         .arg(config_arg())
         .arg(entry_arg())
+        .arg(dart_platform_arg())
         .arg(super::mode_args::production_arg())
         .arg(super::mode_args::no_production_arg())
 }
@@ -98,6 +100,42 @@ pub(super) fn entry_arg() -> Arg {
         .num_args(1)
         .action(ArgAction::Append)
         .value_parser(value_parser!(PathBuf))
+}
+
+pub(super) fn conditional_environment(matches: &ArgMatches) -> BTreeMap<String, String> {
+    match matches
+        .try_get_one::<String>("dart-platform")
+        .ok()
+        .flatten()
+        .map(String::as_str)
+    {
+        Some("web") => dart_platform_environment(true),
+        Some("vm") => dart_platform_environment(false),
+        _ => BTreeMap::new(),
+    }
+}
+
+pub(super) fn dart_platform_arg() -> Arg {
+    Arg::new("dart-platform")
+        .long("dart-platform")
+        .value_name("PLATFORM")
+        .help("Resolve Dart conditional imports/exports for a target platform")
+        .value_parser(["vm", "web"])
+}
+
+fn dart_platform_environment(web: bool) -> BTreeMap<String, String> {
+    [
+        ("dart.library.html", web),
+        ("dart.library.js", web),
+        ("dart.library.js_interop", web),
+        ("dart.library.io", !web),
+        ("dart.library.ffi", !web),
+        ("dart.library.isolate", !web),
+        ("dart.library.mirrors", !web),
+    ]
+    .into_iter()
+    .map(|(name, enabled)| (name.to_owned(), enabled.to_string()))
+    .collect()
 }
 
 pub(super) fn audit_baseline_arg(id: &'static str, help: &'static str) -> Arg {

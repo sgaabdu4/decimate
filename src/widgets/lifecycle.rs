@@ -1,4 +1,3 @@
-use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -6,7 +5,7 @@ use tree_sitter::Node;
 
 use crate::Location;
 
-use super::{simple_type_name, state_widget_class, superclass_type_text, widget_kind};
+use super::{state_widget_class, widget_kind};
 
 /// A widget or `State` await without the required post-await mounted guard.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -19,35 +18,9 @@ pub struct MissingContextMountedAfterAwait {
     pub location: Location,
 }
 
-/// A Riverpod notifier await without the required post-await mounted guard.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct MissingRefMountedAfterAwait {
-    /// Dart file containing the await.
-    pub path: PathBuf,
-    /// Notifier method containing the await.
-    pub owner: String,
-    /// Location of the await expression.
-    pub location: Location,
-}
-
-/// A `ref.watch` call inside a Riverpod notifier mutation/helper method.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct RiverpodWatchInNotifierMethod {
-    /// Dart file containing the call.
-    pub path: PathBuf,
-    /// Notifier class containing the method.
-    pub notifier_class: String,
-    /// Method containing the call.
-    pub method_name: String,
-    /// Location of the `ref.watch` call.
-    pub location: Location,
-}
-
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub(super) struct LifecycleFindings {
     pub(super) missing_context_mounted_after_await: Vec<MissingContextMountedAfterAwait>,
-    pub(super) missing_ref_mounted_after_await: Vec<MissingRefMountedAfterAwait>,
-    pub(super) riverpod_watch_in_notifier_methods: Vec<RiverpodWatchInNotifierMethod>,
 }
 
 pub(super) fn lifecycle_findings(
@@ -60,9 +33,6 @@ pub(super) fn lifecycle_findings(
         let class_name = class_name(*class, source).unwrap_or_default();
         if widget_kind(*class, source).is_some() || state_widget_class(*class, source).is_some() {
             collect_context_guards(path, *class, &class_name, source, &mut findings);
-        }
-        if is_notifier_class(*class, &class_name, source) {
-            collect_ref_rules(path, *class, &class_name, source, &mut findings);
         }
     }
     findings
@@ -88,43 +58,6 @@ fn collect_context_guards(
                     owner: format!("{class_name}.{method_name}"),
                     location: await_node.start_position().into(),
                 });
-        }
-    }
-}
-
-fn collect_ref_rules(
-    path: &Path,
-    class: Node<'_>,
-    class_name: &str,
-    source: &str,
-    findings: &mut LifecycleFindings,
-) {
-    for method in class_methods(class) {
-        let method_name = method_name(method, source).unwrap_or_else(|| "<method>".to_owned());
-        let Some(body) = method.child_by_field_name("body") else {
-            continue;
-        };
-        if method_name != "build" {
-            for await_node in unguarded_awaits(body, source, "ref") {
-                findings
-                    .missing_ref_mounted_after_await
-                    .push(MissingRefMountedAfterAwait {
-                        path: path.to_path_buf(),
-                        owner: format!("{class_name}.{method_name}"),
-                        location: await_node.start_position().into(),
-                    });
-            }
-            let aliases = ref_aliases(body, source);
-            for watch in ref_watch_calls(body, source, &aliases) {
-                findings
-                    .riverpod_watch_in_notifier_methods
-                    .push(RiverpodWatchInNotifierMethod {
-                        path: path.to_path_buf(),
-                        notifier_class: class_name.to_owned(),
-                        method_name: method_name.clone(),
-                        location: watch.start_position().into(),
-                    });
-            }
         }
     }
 }
@@ -445,94 +378,6 @@ fn contains_await(node: Node<'_>) -> bool {
     node.named_children(&mut cursor).any(contains_await)
 }
 
-fn ref_watch_calls<'tree>(
-    body: Node<'tree>,
-    source: &str,
-    aliases: &BTreeSet<String>,
-) -> Vec<Node<'tree>> {
-    let mut calls = Vec::new();
-    collect_ref_watch_calls(body, source, aliases, true, &mut calls);
-    calls
-}
-
-fn collect_ref_watch_calls<'tree>(
-    node: Node<'tree>,
-    source: &str,
-    aliases: &BTreeSet<String>,
-    root: bool,
-    calls: &mut Vec<Node<'tree>>,
-) {
-    if !root && is_nested_function_scope(node.kind()) {
-        return;
-    }
-    if node.kind() == "call_expression"
-        && node
-            .child_by_field_name("function")
-            .is_some_and(|function| is_ref_watch_function(function, source, aliases))
-    {
-        calls.push(node);
-    }
-    let mut cursor = node.walk();
-    for child in node.named_children(&mut cursor) {
-        collect_ref_watch_calls(child, source, aliases, false, calls);
-    }
-}
-
-fn is_ref_watch_function(node: Node<'_>, source: &str, aliases: &BTreeSet<String>) -> bool {
-    if is_ref_watch_member(node, source, aliases) {
-        return true;
-    }
-    let text = node
-        .utf8_text(source.as_bytes())
-        .ok()
-        .map(compact)
-        .unwrap_or_default();
-    matches!(text.as_str(), "ref.watch" | "this.ref.watch")
-        || aliases.iter().any(|alias| text == format!("{alias}.watch"))
-}
-
-fn is_ref_watch_member(node: Node<'_>, source: &str, aliases: &BTreeSet<String>) -> bool {
-    if !matches!(
-        node.kind(),
-        "member_expression" | "null_aware_member_expression" | "assignable_expression"
-    ) {
-        return false;
-    }
-    let Some(object) = node.child_by_field_name("object") else {
-        return false;
-    };
-    let Some(property) = node.child_by_field_name("property") else {
-        return false;
-    };
-    let object_text = object
-        .utf8_text(source.as_bytes())
-        .ok()
-        .map(compact)
-        .unwrap_or_default();
-    let is_ref_object = matches!(object_text.as_str(), "ref" | "this.ref")
-        || aliases.contains(object_text.as_str());
-    is_ref_object && property.utf8_text(source.as_bytes()).ok() == Some("watch")
-}
-
-fn ref_aliases(body: Node<'_>, source: &str) -> BTreeSet<String> {
-    let mut aliases = BTreeSet::new();
-    let mut initialized = Vec::new();
-    collect_nodes(body, "initialized_identifier", &mut initialized);
-    collect_nodes(body, "initialized_variable_definition", &mut initialized);
-    for node in initialized {
-        if let Some(name) = ref_alias_from_fields(node, source) {
-            aliases.insert(name);
-        }
-    }
-    aliases
-}
-
-fn ref_alias_from_fields(node: Node<'_>, source: &str) -> Option<String> {
-    let name = field_text(node, "name", source)?;
-    let value = field_text(node, "value", source).map(|value| compact(&value))?;
-    matches!(value.as_str(), "ref" | "this.ref").then_some(name)
-}
-
 fn contains_lifecycle_use(node: Node<'_>, source: &str, receiver: &str) -> bool {
     if receiver == "context" {
         contains_identifier(node, source, "context", true)
@@ -552,28 +397,6 @@ fn contains_identifier(node: Node<'_>, source: &str, name: &str, root: bool) -> 
     let mut cursor = node.walk();
     node.named_children(&mut cursor)
         .any(|child| contains_identifier(child, source, name, false))
-}
-
-fn is_notifier_class(class: Node<'_>, _class_name: &str, source: &str) -> bool {
-    let Some(type_text) = superclass_type_text(class, source) else {
-        return false;
-    };
-    let compact = compact(&type_text);
-    let base = simple_type_name(compact.split('<').next().unwrap_or(&compact));
-    if base.starts_with("_$") {
-        return true;
-    }
-    matches!(
-        base.as_str(),
-        "Notifier"
-            | "AsyncNotifier"
-            | "AutoDisposeNotifier"
-            | "AutoDisposeAsyncNotifier"
-            | "BuildlessNotifier"
-            | "BuildlessAsyncNotifier"
-            | "BuildlessAutoDisposeNotifier"
-            | "BuildlessAutoDisposeAsyncNotifier"
-    )
 }
 
 fn class_name(class: Node<'_>, source: &str) -> Option<String> {

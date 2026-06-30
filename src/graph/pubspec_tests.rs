@@ -61,6 +61,7 @@ fn pubspec_overrides_workspace_replaces_pubspec_workspace() -> Result<(), Box<dy
 fn import(uri: &str) -> DartImport {
     DartImport {
         uri: uri.to_owned(),
+        condition: None,
         prefix: None,
         deferred: false,
         combinators: Vec::new(),

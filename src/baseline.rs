@@ -618,10 +618,6 @@ fn recompute_summary(report: &mut JsonReport) {
         &report.findings,
         FindingKind::MissingContextMountedAfterAwait,
     );
-    report.summary.missing_ref_mounted_after_await =
-        kind_count(&report.findings, FindingKind::MissingRefMountedAfterAwait);
-    report.summary.riverpod_watch_in_notifier_methods =
-        kind_count(&report.findings, FindingKind::RiverpodWatchInNotifierMethod);
     report.summary.code_duplications = report.clone_groups.len();
     report.summary.complex_functions = report.complexity.len();
     report.summary.coverage_gaps = kind_count(&report.findings, FindingKind::CoverageGap);

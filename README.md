@@ -21,6 +21,18 @@ treats a project as a graph:
 The goal is simple: make cleanup, architectural review, and AI-assisted code
 maintenance cheap enough to run constantly.
 
+## Why Teams Using AI Need Decimate
+
+AI makes Dart and Flutter code easier to generate, but it also makes stale files,
+duplicate implementations, dependency drift, and architecture shortcuts easier to
+miss. Decimate gives reviewers and agents deterministic evidence: what changed,
+what depends on it, what is unused, what forms a cycle, where duplication exists,
+which files are risky hotspots, and which cleanup actions are safe enough to
+review.
+
+The aim is Fallow-style codebase intelligence for Dart and Flutter, not a
+Flutter house-style rulebook.
+
 ## What Decimate Reports
 
 Decimate follows Fallow's product shape, adapted to Dart and Flutter:
@@ -458,7 +470,8 @@ Decimate also adds Dart-specific graph intelligence that Fallow does not need:
 
 - `part` and `part of` relationship validation
 - `library augment` dependency edges and companion reachability
-- conditional import/export branch scanning
+- conditional import/export branch scanning, with `--dart-platform vm|web` for
+  target-specific graph edges
 - Dart library privacy rules
 - Pub `.dart_tool/package_config.json`, path dependency, and workspace
   resolution

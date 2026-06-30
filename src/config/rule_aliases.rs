@@ -150,8 +150,6 @@ fn all_known_aliases() -> Vec<&'static str> {
         FindingKind::UnusedWidgetParam,
         FindingKind::UnrenderedWidget,
         FindingKind::MissingContextMountedAfterAwait,
-        FindingKind::MissingRefMountedAfterAwait,
-        FindingKind::RiverpodWatchInNotifierMethod,
         FindingKind::MissingEntryPoint,
         FindingKind::CircularDependency,
         FindingKind::ReExportCycle,
@@ -279,19 +277,6 @@ fn widget_kind_aliases(kind: FindingKind) -> Option<Vec<&'static str>> {
             "context-mounted-after-await",
             "flutter-context-mounted",
             "use-build-context-synchronously",
-        ]),
-        FindingKind::MissingRefMountedAfterAwait => Some(vec![
-            "decimate/missing-ref-mounted-after-await",
-            "missing-ref-mounted-after-await",
-            "ref-mounted-after-await",
-            "riverpod-ref-mounted",
-        ]),
-        FindingKind::RiverpodWatchInNotifierMethod => Some(vec![
-            "decimate/riverpod-watch-in-notifier-method",
-            "riverpod-watch-in-notifier-method",
-            "ref-watch-in-notifier-method",
-            "riverpod-ref-watch-in-method",
-            "notifier-ref-watch",
         ]),
         _ => None,
     }

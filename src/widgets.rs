@@ -16,10 +16,8 @@ mod params;
 mod top_level;
 mod unrendered;
 
+pub use lifecycle::MissingContextMountedAfterAwait;
 use lifecycle::lifecycle_findings;
-pub use lifecycle::{
-    MissingContextMountedAfterAwait, MissingRefMountedAfterAwait, RiverpodWatchInNotifierMethod,
-};
 use params::constructor_params;
 use top_level::top_level_widget_functions;
 use unrendered::unrendered_widgets;
@@ -39,10 +37,6 @@ pub struct WidgetReport {
     pub unrendered_widgets: Vec<UnrenderedWidgetClass>,
     /// Widget or `State` awaits missing an immediate `context.mounted` guard.
     pub missing_context_mounted_after_await: Vec<MissingContextMountedAfterAwait>,
-    /// Riverpod notifier awaits missing an immediate `ref.mounted` guard.
-    pub missing_ref_mounted_after_await: Vec<MissingRefMountedAfterAwait>,
-    /// `ref.watch` calls inside Riverpod notifier methods other than `build`.
-    pub riverpod_watch_in_notifier_methods: Vec<RiverpodWatchInNotifierMethod>,
 }
 
 /// A widget constructor parameter that is not used by the widget.
@@ -167,8 +161,6 @@ pub fn analyze_widgets(
         top_level_functions: findings.top_level_functions,
         unrendered_widgets,
         missing_context_mounted_after_await: findings.missing_context_mounted_after_await,
-        missing_ref_mounted_after_await: findings.missing_ref_mounted_after_await,
-        riverpod_watch_in_notifier_methods: findings.riverpod_watch_in_notifier_methods,
     })
 }
 
@@ -208,12 +200,6 @@ fn merge_file_widget_findings(file_findings: Vec<FileWidgetFindings>) -> FileWid
         merged
             .missing_context_mounted_after_await
             .append(&mut findings.missing_context_mounted_after_await);
-        merged
-            .missing_ref_mounted_after_await
-            .append(&mut findings.missing_ref_mounted_after_await);
-        merged
-            .riverpod_watch_in_notifier_methods
-            .append(&mut findings.riverpod_watch_in_notifier_methods);
     }
     merged
 }
@@ -287,40 +273,6 @@ fn sort_lifecycle_findings(findings: &mut FileWidgetFindings) {
                     &right.owner,
                 ))
         });
-    findings
-        .missing_ref_mounted_after_await
-        .sort_by(|left, right| {
-            (
-                &left.path,
-                left.location.line,
-                left.location.column,
-                &left.owner,
-            )
-                .cmp(&(
-                    &right.path,
-                    right.location.line,
-                    right.location.column,
-                    &right.owner,
-                ))
-        });
-    findings
-        .riverpod_watch_in_notifier_methods
-        .sort_by(|left, right| {
-            (
-                &left.path,
-                left.location.line,
-                left.location.column,
-                &left.notifier_class,
-                &left.method_name,
-            )
-                .cmp(&(
-                    &right.path,
-                    right.location.line,
-                    right.location.column,
-                    &right.notifier_class,
-                    &right.method_name,
-                ))
-        });
 }
 
 fn analyze_file(path: &Path) -> Result<FileWidgetFindings, WidgetAnalysisError> {
@@ -359,8 +311,6 @@ struct FileWidgetFindings {
     private_widget_classes: Vec<PrivateWidgetClass>,
     top_level_functions: Vec<WidgetTopLevelFunction>,
     missing_context_mounted_after_await: Vec<MissingContextMountedAfterAwait>,
-    missing_ref_mounted_after_await: Vec<MissingRefMountedAfterAwait>,
-    riverpod_watch_in_notifier_methods: Vec<RiverpodWatchInNotifierMethod>,
 }
 
 fn findings_in_source(path: &Path, root: Node<'_>, source: &str) -> FileWidgetFindings {
@@ -374,8 +324,6 @@ fn findings_in_source(path: &Path, root: Node<'_>, source: &str) -> FileWidgetFi
     findings.top_level_functions = top_level_widget_functions(path, root, source, has_widget_class);
     let lifecycle = lifecycle_findings(path, &classes, source);
     findings.missing_context_mounted_after_await = lifecycle.missing_context_mounted_after_await;
-    findings.missing_ref_mounted_after_await = lifecycle.missing_ref_mounted_after_await;
-    findings.riverpod_watch_in_notifier_methods = lifecycle.riverpod_watch_in_notifier_methods;
 
     for class in classes {
         let Some(widget_kind) = widget_kind(class, source) else {

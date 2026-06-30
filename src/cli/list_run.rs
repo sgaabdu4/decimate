@@ -2,7 +2,10 @@ use std::io::Write;
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
 
-use super::common_args::{config_arg, entry_arg, format_arg, root_arg, root_flag_arg, root_path};
+use super::common_args::{
+    conditional_environment, config_arg, dart_platform_arg, entry_arg, format_arg, root_arg,
+    root_flag_arg, root_path,
+};
 use super::entry_points::entry_points_for_check;
 use super::{CliError, OutputFormat, entry_points, load_config, output_format};
 use crate::{
@@ -18,6 +21,7 @@ pub(super) fn list_command() -> Command {
         .arg(format_arg())
         .arg(config_arg())
         .arg(entry_arg())
+        .arg(dart_platform_arg())
         .arg(super::mode_args::production_arg())
         .arg(super::mode_args::no_production_arg())
         .arg(section_arg("files", "Include parsed Dart files"))
@@ -47,6 +51,7 @@ pub(super) fn workspaces_command() -> Command {
         .arg(format_arg())
         .arg(config_arg())
         .arg(entry_arg())
+        .arg(dart_platform_arg())
         .arg(super::mode_args::production_arg())
         .arg(super::mode_args::no_production_arg())
         .arg(super::scope_args::file_arg())
@@ -84,6 +89,7 @@ fn run_list_with_options<W: Write>(
     let entry_source = entry_source(subcommand, explicit_entries.is_empty(), production);
     let scan_options = crate::ScanOptions {
         ignore_patterns: config.ignore_patterns.clone(),
+        conditional_environment: conditional_environment(subcommand),
     };
     let project = scan_project_with_options(&root, &scan_options)?;
     let mut packages = local_pub_packages(&project.root)?;

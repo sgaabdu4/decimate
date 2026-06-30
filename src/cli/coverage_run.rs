@@ -140,6 +140,7 @@ fn run_coverage_setup<W: Write>(subcommand: &ArgMatches, mut writer: W) -> Resul
         &root,
         &ScanOptions {
             ignore_patterns: config.ignore_patterns.clone(),
+            ..ScanOptions::default()
         },
     )?;
     let report = coverage_setup_report(
@@ -179,6 +180,7 @@ fn run_coverage_analyze<W: Write>(subcommand: &ArgMatches, mut writer: W) -> Res
         &root,
         &ScanOptions {
             ignore_patterns: config.ignore_patterns.clone(),
+            ..ScanOptions::default()
         },
     )?;
     let mut health = crate::analyze_health(&project, &health_options)?;
@@ -222,6 +224,7 @@ fn run_coverage_upload_inventory<W: Write>(
         &root,
         &ScanOptions {
             ignore_patterns: config.ignore_patterns.clone(),
+            ..ScanOptions::default()
         },
     )?;
     let report = coverage_inventory_upload_report(

@@ -9,6 +9,7 @@ fn analyze_maps_read_only_parity_flags() -> Result<(), String> {
             "root": "/repo",
             "config": "decimate.json",
             "entry": ["lib/main.dart"],
+            "dart_platform": "web",
             "file": ["lib/src/a.dart"],
             "changed_workspaces": "origin/main",
             "changed_since": "HEAD~1",
@@ -55,6 +56,7 @@ fn analyze_maps_read_only_parity_flags() -> Result<(), String> {
     assert_eq!(cli[..4], ["decimate", "check", "--format", "json"]);
     assert_pair(&cli, "--root", "/repo");
     assert_pair(&cli, "--entry", "lib/main.dart");
+    assert_pair(&cli, "--dart-platform", "web");
     assert_pair(&cli, "--file", "lib/src/a.dart");
     assert_pair(&cli, "--changed-workspaces", "origin/main");
     assert_pair(&cli, "--changed-since", "HEAD~1");

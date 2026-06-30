@@ -122,14 +122,14 @@ fn analysis_commands() -> Value {
             "kind": "combined",
             "description": "Run all enabled graph, symbol, dependency, duplicate, health, flag, and security checks.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks", "--unused-files", "--unused-exports", "--unused-types", "--unused-deps", "--unlisted-deps", "--private-src-imports", "--duplicate-exports", "--circular-deps", "--re-export-cycles", "--boundary-violations", "--unused-enum-members", "--unused-class-members", "--unresolved-imports", "--stale-suppressions", "--unused-dependency-overrides", "--misconfigured-dependency-overrides"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks", "--unused-files", "--unused-exports", "--unused-types", "--unused-deps", "--unlisted-deps", "--private-src-imports", "--duplicate-exports", "--circular-deps", "--re-export-cycles", "--boundary-violations", "--unused-enum-members", "--unused-class-members", "--unresolved-imports", "--stale-suppressions", "--unused-dependency-overrides", "--misconfigured-dependency-overrides"]
         },
         {
             "name": "audit",
             "kind": "audit",
             "description": "Run changed-code graph checks scoped from a Git base ref.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--root", "--brief", "--base", "--dead-code-baseline", "--health-baseline", "--dupes-baseline", "--max-decisions", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks"]
+            "flags": ["--root", "--brief", "--base", "--dead-code-baseline", "--health-baseline", "--dupes-baseline", "--max-decisions", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--boundary", "--boundary-coverage", "--boundary-call", "--policy-pack", "--policy-violations", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports", "--include-entry-exports", "--private-type-leaks"]
         },
         {
             "name": "review",
@@ -150,42 +150,42 @@ fn analysis_commands() -> Value {
             "kind": "dead-code",
             "description": "Find unreachable Dart files and conservative symbol-level dead code.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--include-entry-exports", "--private-type-leaks", "--unused-files", "--unused-exports", "--unused-types", "--unused-deps", "--unlisted-deps", "--private-src-imports", "--duplicate-exports", "--unused-enum-members", "--unused-class-members", "--unresolved-imports", "--stale-suppressions", "--unused-dependency-overrides", "--misconfigured-dependency-overrides"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--include-entry-exports", "--private-type-leaks", "--unused-files", "--unused-exports", "--unused-types", "--unused-deps", "--unlisted-deps", "--private-src-imports", "--duplicate-exports", "--unused-enum-members", "--unused-class-members", "--unresolved-imports", "--stale-suppressions", "--unused-dependency-overrides", "--misconfigured-dependency-overrides"]
         },
         {
             "name": "cycles",
             "kind": "cycles",
             "description": "Find import/export/part/augment dependency cycles.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline"]
         },
         {
             "name": "dupes",
             "kind": "dupes",
             "description": "Find duplicated Dart code blocks.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports"]
         },
         {
             "name": "health",
             "kind": "health",
             "description": "Find complex functions, coverage gaps, hotspots, and refactoring targets.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--top"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--max-cyclomatic", "--max-cognitive", "--complexity-breakdown", "--coverage", "--coverage-gaps", "--max-crap", "--runtime-coverage", "--min-invocations-hot", "--min-observation-volume", "--low-traffic-threshold", "--file-scores", "--hotspots", "--targets", "--ownership", "--min-score", "--top"]
         },
         {
             "name": "flags",
             "kind": "flags",
             "description": "Inventory Dart and Flutter feature flag patterns.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--top"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--top"]
         },
         {
             "name": "security",
             "kind": "security",
             "description": "Surface local deterministic security review candidates.",
             "schema": SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--top", "--surface", "--sarif-file", "--ci", "--fail-on-issues", "--summary", "--gate", "--diff-file", "--diff-stdin", "--changed-since"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--regression-baseline", "--save-regression-baseline", "--fail-on-regression", "--tolerance", "--baseline", "--save-baseline", "--top", "--surface", "--sarif-file", "--ci", "--fail-on-issues", "--summary", "--gate", "--diff-file", "--diff-stdin", "--changed-since"]
         },
         {
             "name": "impact",
@@ -237,42 +237,42 @@ fn evidence_commands() -> Value {
             "kind": "inspect",
             "description": "Compose one evidence bundle for a Dart file or top-level symbol.",
             "schema": INSPECT_SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--symbol"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--symbol"]
         },
         {
             "name": "trace-file",
             "kind": "trace-file",
             "description": "Trace one Dart file's graph evidence.",
             "schema": TRACE_SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file"]
         },
         {
             "name": "trace",
             "kind": "trace-symbol",
             "description": "Trace one top-level symbol's declaration, references, and re-export chains.",
             "schema": TRACE_SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production"]
         },
         {
             "name": "trace-symbol",
             "kind": "trace-symbol",
             "description": "Trace one top-level symbol's declaration, references, and re-export chains.",
             "schema": TRACE_SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--symbol"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--symbol"]
         },
         {
             "name": "trace-dependency",
             "kind": "trace-dependency",
             "description": "Trace one pub dependency declaration and Dart import/export usage.",
             "schema": TRACE_SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--dependency"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--dependency"]
         },
         {
             "name": "trace-clone",
             "kind": "trace-clone",
             "description": "Trace one duplicate-code group by fingerprint or file line.",
             "schema": TRACE_SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports", "--fingerprint"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--mode", "--min-tokens", "--min-lines", "--min-occurrences", "--top", "--skip-local", "--ignore-imports", "--no-ignore-imports", "--fingerprint"]
         }
     ])
 }
@@ -284,14 +284,14 @@ fn support_commands() -> Value {
             "kind": "list",
             "description": "List Decimate project structure and active Dart/Flutter adapters.",
             "schema": PROJECT_LIST_SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--files", "--entry-points", "--workspaces", "--plugins", "--boundaries", "--file", "--workspace", "--changed-workspaces"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--files", "--entry-points", "--workspaces", "--plugins", "--boundaries", "--file", "--workspace", "--changed-workspaces"]
         },
         {
             "name": "workspaces",
             "kind": "list",
             "description": "List discovered local pub packages.",
             "schema": PROJECT_LIST_SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces"]
         },
         {
             "name": "explain",
@@ -305,7 +305,7 @@ fn support_commands() -> Value {
             "kind": "fix",
             "description": "Plan or apply safe auto-fixes.",
             "schema": FIX_SCHEMA_VERSION,
-            "flags": ["--root", "--format", "--config", "--entry", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--action", "--dry-run", "--apply", "--yes", "--confirm"]
+            "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--file", "--workspace", "--changed-workspaces", "--changed-since", "--action", "--dry-run", "--apply", "--yes", "--confirm"]
         },
         {
             "name": "init",

@@ -11,6 +11,24 @@ It analyzes repositories as module graphs, not as a linter or type checker.
 - Keep outputs deterministic and agent-readable.
 - Prefer fast structural parsing over semantic analysis.
 
+## AI Drift Goal
+
+Decimate exists for the same product problem Fallow targets: AI can create code
+quickly, but teams still need deterministic evidence to review it, clean it up,
+and keep architecture from drifting. For Dart and Flutter, that means:
+
+- finding dead files, unused symbols, duplicate implementation patterns, and
+  stale suppressions before they become permanent;
+- showing dependency, re-export, boundary, and route-graph risks with paths and
+  line numbers;
+- ranking hotspots and PR risk so reviewers spend attention where change is most
+  likely to matter;
+- producing structured JSON, traces, schemas, and MCP tools that agents can use
+  before proposing safe cleanup.
+
+Decimate must stay objective and graph/intelligence-focused. It must not enforce
+team-specific Flutter style preferences such as generated Riverpod ownership.
+
 ## Phase Scope
 
 Phase 1 extracts syntax facts from one `.dart` file:
@@ -21,7 +39,8 @@ Phase 1 extracts syntax facts from one `.dart` file:
 - import prefixes and deferred import markers
 - `part` directives
 - `library augment` directives
-- all branch URIs from conditional imports and exports
+- all branch URIs from conditional imports and exports, including
+  `dart.library.*` branch guards
 - top-level class, mixin, extension, and extension type declarations
 - top-level enum declarations
 - top-level typedef declarations
@@ -41,6 +60,8 @@ Phase 2 builds a directed module graph:
   combinators for later symbol visibility propagation
 - `part` and `library augment` directives are modeled as file dependencies
 - conditional import/export branches are modeled as possible file dependencies
+  by default, and `--dart-platform vm|web` can select the target-specific
+  compile graph
 - relative URIs resolve from the importing file's directory
 - `package:` URIs prefer Pub's `.dart_tool/package_config.json` when present,
   including `rootUri` and `packageUri`
@@ -154,8 +175,9 @@ semantics from the official Dart docs:
   private to the library.
 - `import`, `export`, `part`, and `library augment` directives define the
   module graph.
-- `show`, `hide`, prefixes, deferred imports, conditional imports/exports, and
-  `part` files affect symbol visibility and reachability.
+- `show`, `hide`, prefixes, deferred imports, conditional imports/exports,
+  target platform selection, and `part` files affect symbol visibility and
+  reachability.
 - `pubspec.yaml` owns package dependencies, `dev_dependencies`, and
   `dependency_overrides`.
 - Pub workspaces can share dependency resolution across multiple packages.
@@ -171,8 +193,7 @@ Parity areas:
   exports, and architecture boundary violations.
 - Flutter framework checks: typed and raw GoRouter route path and name
   collisions, private widget classes, top-level widget helper boundaries,
-  unused widget constructor parameters, unrendered widget classes, and manual
-  Riverpod provider wiring.
+  unused widget constructor parameters, and unrendered widget classes.
 - Duplication: strict, mild, weak, and semantic clone detection with traceable
   fingerprints, top-N filtering, and clone tracing.
 - Health: cyclomatic/cognitive/CRAP complexity, file scores, hotspots,
@@ -208,7 +229,8 @@ Current implemented parity:
 - `decimate/part-of-violation` findings for resolved `part` files whose
   `part of` directive is missing, orphaned, or points at a different library
 - Dart `part` files, `library augment` directives with base-to-augment
-  reachability, and conditional import/export branches in the module graph
+  reachability, and platform-aware conditional import/export branches in the
+  module graph
 - Pub `.dart_tool/package_config.json` resolution for local package graph edges
 - import/export visibility metadata for `show`, `hide`, prefixes, and deferred imports
 - import/export visibility metadata preserved on graph dependency edges
@@ -240,8 +262,7 @@ Current implemented parity:
   reachable production object construction, ignoring generated/test/dead files
   and explicit package export chains
 - Flutter widget hygiene findings for private widget classes, top-level widget
-  helper boundaries, unused widget constructor parameters, and manual Riverpod
-  provider declarations
+  helper boundaries, and unused widget constructor parameters
 - separate `decimate/re-export-cycle` findings for barrel export loops
 - read-only file, symbol, dependency, clone, and Fallow-compatible `trace`
   symbol-trace JSON envelopes for deletion review, using `kind` discriminators
