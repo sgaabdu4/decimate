@@ -1,9 +1,9 @@
 use std::fmt::Write as FmtWrite;
-use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
+
+use tempfile::Builder;
 
 use crate::output::{JsonReport, render_html_report};
 
@@ -13,7 +13,7 @@ pub(super) fn write_and_open_html_report<W: Write>(
 ) -> io::Result<()> {
     write_and_open_html_document_with(
         report.command.as_str(),
-        render_html_report(report),
+        &render_html_report(report),
         &mut writer,
         open_url,
     )
@@ -21,7 +21,7 @@ pub(super) fn write_and_open_html_report<W: Write>(
 
 pub(super) fn write_and_open_html_document_with<W, F>(
     command: &str,
-    html: String,
+    html: &str,
     writer: &mut W,
     opener: F,
 ) -> io::Result<()>
@@ -29,23 +29,23 @@ where
     W: Write,
     F: FnOnce(&str) -> io::Result<()>,
 {
-    let path = temp_report_path(command);
-    fs::write(&path, html)?;
+    let path = write_temp_html_document(command, html)?;
     let url = file_url(&path);
     opener(&url)?;
     writeln!(writer, "Opened HTML report: {url}")?;
     Ok(())
 }
 
-fn temp_report_path(command: &str) -> PathBuf {
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |duration| duration.as_millis());
-    let command = safe_filename_part(command);
-    std::env::temp_dir().join(format!(
-        "dart-decimate-{command}-{}-{timestamp}.html",
-        std::process::id(),
-    ))
+fn write_temp_html_document(command: &str, html: &str) -> io::Result<PathBuf> {
+    let prefix = format!("dart-decimate-{}-", safe_filename_part(command));
+    let mut file = Builder::new()
+        .prefix(&prefix)
+        .suffix(".html")
+        .tempfile_in(std::env::temp_dir())?;
+    file.write_all(html.as_bytes())?;
+    file.as_file_mut().flush()?;
+    let (_file, path) = file.keep().map_err(|error| error.error)?;
+    Ok(path)
 }
 
 fn safe_filename_part(value: &str) -> String {
@@ -107,6 +107,7 @@ pub(super) fn open_url(url: &str) -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use std::cell::RefCell;
+    use std::fs;
 
     use crate::output::{ReportCommand, ReportSummary, Verdict};
 
@@ -117,6 +118,33 @@ mod tests {
         let url = file_url(Path::new("/tmp/dart-decimate/report <1>.html"));
 
         assert_eq!(url, "file:///tmp/dart-decimate/report%20%3C1%3E.html");
+    }
+
+    #[test]
+    fn temp_html_documents_use_random_unique_names() -> Result<(), Box<dyn std::error::Error>> {
+        let first = write_temp_html_document("audit --brief", "<!doctype html>first")?;
+        let second = write_temp_html_document("audit --brief", "<!doctype html>second")?;
+
+        assert_ne!(first, second);
+        assert_eq!(fs::read_to_string(&first)?, "<!doctype html>first");
+        assert_eq!(fs::read_to_string(&second)?, "<!doctype html>second");
+        assert!(first.file_name().is_some_and(|name| {
+            let name = name.to_string_lossy();
+            name.starts_with("dart-decimate-audit---brief-") && name.ends_with(".html")
+        }));
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn temp_html_documents_are_private() -> Result<(), Box<dyn std::error::Error>> {
+        use std::os::unix::fs::PermissionsExt;
+
+        let path = write_temp_html_document("check", "<!doctype html>private")?;
+        let mode = fs::metadata(path)?.permissions().mode() & 0o777;
+
+        assert_eq!(mode, 0o600);
+        Ok(())
     }
 
     #[test]
@@ -149,7 +177,7 @@ mod tests {
 
         let result = write_and_open_html_document_with(
             report.command.as_str(),
-            render_html_report(&report),
+            &render_html_report(&report),
             &mut output,
             |url| {
                 opened.replace(url.to_owned());

@@ -97,7 +97,7 @@ where
         ReportOutputFormat::HtmlOpen => {
             html_open::write_and_open_html_document_with(
                 &report.command,
-                render_decision_surface_html_report(&report),
+                &render_decision_surface_html_report(&report),
                 writer,
                 opener,
             )?;
