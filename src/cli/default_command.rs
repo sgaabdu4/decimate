@@ -1,5 +1,7 @@
 use std::ffi::OsString;
 
+use super::common_args::REPORT_FORMAT_VALUES;
+
 const COMMANDS: &[&str] = &[
     "audit",
     "check",
@@ -80,15 +82,21 @@ fn args_with_output_alias(args: &[OsString]) -> Option<Vec<OsString>> {
         }
         if arg == "--format" {
             let value = iter.next()?;
-            if value.to_str().is_none_or(|value| value.starts_with('-')) {
+            let Some(value) = value.to_str().filter(|value| !value.starts_with('-')) else {
+                return None;
+            };
+            if !is_report_format(value) {
                 return None;
             }
             continue;
         }
-        if arg
+        if let Some(value) = arg
             .to_str()
-            .is_some_and(|value| value.starts_with("--format="))
+            .and_then(|value| value.strip_prefix("--format="))
         {
+            if !is_report_format(value) {
+                return None;
+            }
             continue;
         }
         expanded.push(arg.clone());
@@ -101,7 +109,16 @@ fn args_with_output_alias(args: &[OsString]) -> Option<Vec<OsString>> {
     Some(expanded)
 }
 
-fn is_help_arg(arg: &OsString) -> bool {
+pub(super) fn json_output_alias_requested(args: &[OsString]) -> bool {
+    args.get(1).and_then(|arg| arg.to_str()) == Some("json")
+        && !args.iter().skip(2).any(is_help_arg)
+}
+
+fn is_report_format(value: &str) -> bool {
+    REPORT_FORMAT_VALUES.contains(&value)
+}
+
+pub(super) fn is_help_arg(arg: &OsString) -> bool {
     arg.to_str()
         .is_some_and(|value| matches!(value, "-h" | "--help"))
 }
@@ -146,6 +163,20 @@ mod tests {
             args_with_default_check(["dart-decimate", "json", "app", "--format", "--quiet"]),
             values(&["dart-decimate", "json", "app", "--format", "--quiet"])
         );
+    }
+
+    #[test]
+    fn output_aliases_preserve_invalid_explicit_format_errors() {
+        for alias in ["human", "json", "html"] {
+            assert_eq!(
+                args_with_default_check(["dart-decimate", alias, "app", "--format", "xml"]),
+                values(&["dart-decimate", alias, "app", "--format", "xml"])
+            );
+            assert_eq!(
+                args_with_default_check(["dart-decimate", alias, "app", "--format=xml"]),
+                values(&["dart-decimate", alias, "app", "--format=xml"])
+            );
+        }
     }
 
     #[test]

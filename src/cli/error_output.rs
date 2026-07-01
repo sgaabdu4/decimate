@@ -36,6 +36,10 @@ pub fn run_from_env() -> i32 {
 }
 
 fn format_json_requested(args: &[OsString]) -> bool {
+    if default_command::json_output_alias_requested(args) {
+        return true;
+    }
+
     let expanded_args = default_command::args_with_default_check(args.iter().cloned());
     let mut args = expanded_args.iter().skip(1).filter_map(|arg| arg.to_str());
     while let Some(arg) = args.next() {

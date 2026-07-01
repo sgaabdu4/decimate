@@ -342,6 +342,13 @@ fn output_shortcut_command(name: &'static str, about: &'static str) -> Command {
         .about(about)
         .after_help("All check flags can also be passed to this shortcut.")
         .arg(common_args::root_arg())
+        .arg(
+            Arg::new("format")
+                .long("format")
+                .value_name("FORMAT")
+                .value_parser(common_args::REPORT_FORMAT_VALUES)
+                .hide(true),
+        )
 }
 
 fn report_subcommands(command: Command) -> Command {

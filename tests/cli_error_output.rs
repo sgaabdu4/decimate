@@ -128,6 +128,51 @@ fn binary_emits_json_error_for_json_shortcut_clap_errors() -> Result<(), Box<dyn
     Ok(())
 }
 
+#[test]
+fn json_shortcut_missing_format_value_is_json_error() -> Result<(), Box<dyn std::error::Error>> {
+    let output = Command::new(env!("CARGO_BIN_EXE_dart-decimate"))
+        .args(["json", ".", "--format"])
+        .output()?;
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stderr.is_empty());
+    let json = serde_json::from_slice::<Value>(&output.stdout)?;
+    assert_eq!(json["error"], true);
+    assert_eq!(json["exit_code"], 2);
+    assert!(
+        json["message"]
+            .as_str()
+            .is_some_and(|message| message.contains("--format") && message.contains("required"))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn json_shortcut_invalid_format_value_is_json_error() -> Result<(), Box<dyn std::error::Error>> {
+    let cases: &[&[&str]] = &[
+        &["json", ".", "--format", "xml"],
+        &["json", ".", "--format=xml"],
+    ];
+
+    for args in cases {
+        let output = Command::new(env!("CARGO_BIN_EXE_dart-decimate"))
+            .args(*args)
+            .output()?;
+
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stderr.is_empty());
+        let json = serde_json::from_slice::<Value>(&output.stdout)?;
+        assert_eq!(json["error"], true);
+        assert_eq!(json["exit_code"], 2);
+        assert!(json["message"].as_str().is_some_and(|message| {
+            message.contains("invalid value") && message.contains("xml")
+        }));
+    }
+
+    Ok(())
+}
+
 fn write(fixture: &TempDir, path: &str, source: &str) -> Result<(), std::io::Error> {
     let path = fixture.path().join(path);
     if let Some(parent) = path.parent() {

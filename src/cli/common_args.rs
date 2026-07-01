@@ -5,6 +5,9 @@ use clap::{Arg, ArgAction, ArgMatches, Command, value_parser};
 
 use super::regression_args::regression_command;
 
+pub(super) const FORMAT_VALUES: [&str; 2] = ["human", "json"];
+pub(super) const REPORT_FORMAT_VALUES: [&str; 4] = ["human", "html", "json", "sarif"];
+
 pub(super) fn scan_command(command: Command) -> Command {
     scan_command_with_format(command, format_arg())
 }
@@ -71,11 +74,11 @@ pub(super) fn format_arg() -> Arg {
         .value_name("FORMAT")
         .help("Output format")
         .default_value("human")
-        .value_parser(["human", "json"])
+        .value_parser(FORMAT_VALUES)
 }
 
 fn report_format_arg() -> Arg {
-    format_arg().value_parser(["human", "html", "json", "sarif"])
+    format_arg().value_parser(REPORT_FORMAT_VALUES)
 }
 
 fn open_arg() -> Arg {
