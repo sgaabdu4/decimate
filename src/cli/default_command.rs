@@ -110,14 +110,7 @@ fn should_insert_check(args: &[OsString]) -> bool {
     if matches!(first, "-h" | "--help" | "-V" | "--version") {
         return false;
     }
-    first_non_flag(args).is_none_or(|candidate| !COMMANDS.contains(&candidate))
-}
-
-fn first_non_flag(args: &[OsString]) -> Option<&str> {
-    args.iter()
-        .skip(1)
-        .filter_map(|arg| arg.to_str())
-        .find(|arg| !arg.starts_with('-'))
+    !COMMANDS.contains(&first)
 }
 
 #[cfg(test)]
@@ -156,6 +149,22 @@ mod tests {
         assert_eq!(
             args_with_default_check(["dart-decimate", "html", "app", "--stdout"]),
             values(&["dart-decimate", "check", "app", "--format", "html"])
+        );
+    }
+
+    #[test]
+    fn leading_format_values_do_not_block_default_check() {
+        assert_eq!(
+            args_with_default_check(["dart-decimate", "--format", "json"]),
+            values(&["dart-decimate", "check", "--format", "json"])
+        );
+        assert_eq!(
+            args_with_default_check(["dart-decimate", "--format", "html", "app"]),
+            values(&["dart-decimate", "check", "--format", "html", "app"])
+        );
+        assert_eq!(
+            args_with_default_check(["dart-decimate", "--format=json", "app"]),
+            values(&["dart-decimate", "check", "--format=json", "app"])
         );
     }
 }
