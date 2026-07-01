@@ -14,9 +14,6 @@ permissions:
   actions: read
   id-token: write
 
-env:
-  RUST_TOOLCHAIN: stable
-
 concurrency:
   group: security-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -33,8 +30,8 @@ jobs:
 
       - name: Install Rust
         run: |
-          rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
-          rustup default "$RUST_TOOLCHAIN"
+          rustup toolchain install stable --profile minimal
+          rustup default stable
 
       - name: Cargo audit
         run: |
