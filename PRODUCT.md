@@ -426,11 +426,14 @@ Current implemented parity:
 - CLI JSON output for `check`, `audit`, `dead-code`, `cycles`, `dupes`,
   `health`, `flags`, `security`, `list`, `workspaces`, `explain`, `fix`,
   `config`, `config-schema`, and `report-schema`
+- concise human report details plus browser-ready HTML report output for report
+  commands via `--format html`, `--open`, and `dart-decimate human|json|html`
+  shortcuts
 - SARIF 2.1.0 output for report commands via `--format sarif`, suitable for
   code-scanning upload after the same suppression, rule, baseline, and `--top`
   filtering used by JSON reports; security `--sarif-file PATH` writes SARIF
-  while keeping stdout on the selected human or JSON format; `--gate new` with
+  while keeping stdout on the selected report format; `--gate new` with
   `--changed-since`, `--diff-file`, or `--diff-stdin` narrows both JSON and
   SARIF to candidates introduced by added diff lines; security `--ci` emits
   SARIF and fails on candidates, while `--summary` keeps counts without item
-  arrays for human and JSON output
+  arrays for human, HTML, and JSON output

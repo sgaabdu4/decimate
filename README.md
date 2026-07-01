@@ -145,7 +145,11 @@ Open the HTML report in your browser:
 npx --yes dart-decimate html .
 ```
 
-Save the HTML report instead:
+The `html` shortcut opens the report by default. On report commands, use
+`--format html` to print static HTML or `--open` to write a private temporary
+file and open it in the default browser.
+
+Print the HTML report instead:
 
 ```bash
 npx --yes dart-decimate html . --stdout > dart-decimate-report.html
