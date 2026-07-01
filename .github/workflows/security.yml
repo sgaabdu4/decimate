@@ -10,9 +10,7 @@ on:
 
 permissions:
   contents: read
-  security-events: write
   actions: read
-  id-token: write
 
 concurrency:
   group: security-${{ github.workflow }}-${{ github.ref }}
@@ -53,6 +51,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+      id-token: write
 
     steps:
       - name: Checkout
