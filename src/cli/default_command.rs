@@ -79,10 +79,11 @@ fn args_with_output_alias(args: &[OsString]) -> Option<Vec<OsString>> {
     expanded.push(args[0].clone());
     expanded.push(OsString::from("check"));
     let mut stdout_html = false;
+    let mut open_html = false;
     let mut iter = args.iter().skip(2);
     while let Some(arg) = iter.next() {
         if is_delimiter(arg) {
-            push_output_alias_flags(&mut expanded, alias, format, stdout_html);
+            push_output_alias_flags(&mut expanded, alias, format, stdout_html, open_html);
             expanded.push(arg.clone());
             expanded.extend(iter.cloned());
             return Some(expanded);
@@ -90,6 +91,9 @@ fn args_with_output_alias(args: &[OsString]) -> Option<Vec<OsString>> {
         if alias == "html" && arg == "--stdout" {
             stdout_html = true;
             continue;
+        }
+        if alias == "html" && arg == "--open" {
+            open_html = true;
         }
         if arg == "--format" {
             let value = iter.next()?;
@@ -112,7 +116,7 @@ fn args_with_output_alias(args: &[OsString]) -> Option<Vec<OsString>> {
         }
         expanded.push(arg.clone());
     }
-    push_output_alias_flags(&mut expanded, alias, format, stdout_html);
+    push_output_alias_flags(&mut expanded, alias, format, stdout_html, open_html);
     Some(expanded)
 }
 
@@ -121,12 +125,24 @@ fn push_output_alias_flags(
     alias: &str,
     format: &str,
     stdout_html: bool,
+    open_html: bool,
 ) {
     expanded.push(OsString::from("--format"));
     expanded.push(OsString::from(format));
-    if alias == "html" && !stdout_html {
+    if alias == "html" && !stdout_html && !open_html {
         expanded.push(OsString::from("--open"));
     }
+}
+
+pub(super) fn output_alias_help_requested(args: &[OsString]) -> bool {
+    matches!(
+        args.get(1).and_then(|arg| arg.to_str()),
+        Some("human" | "json" | "html")
+    ) && args
+        .iter()
+        .skip(2)
+        .take_while(|arg| !is_delimiter(arg))
+        .any(is_help_arg)
 }
 
 pub(super) fn json_output_alias_requested(args: &[OsString]) -> bool {
@@ -255,6 +271,33 @@ mod tests {
         assert_eq!(
             args_with_default_check(["dart-decimate", "html", "app", "--stdout"]),
             values(&["dart-decimate", "check", "app", "--format", "html"])
+        );
+    }
+
+    #[test]
+    fn html_alias_does_not_duplicate_explicit_open() {
+        assert_eq!(
+            args_with_default_check(["dart-decimate", "html", "app", "--open"]),
+            values(&[
+                "dart-decimate",
+                "check",
+                "app",
+                "--open",
+                "--format",
+                "html",
+            ])
+        );
+        assert_eq!(
+            args_with_default_check(["dart-decimate", "html", "--open", "--", "app"]),
+            values(&[
+                "dart-decimate",
+                "check",
+                "--open",
+                "--format",
+                "html",
+                "--",
+                "app",
+            ])
         );
     }
 

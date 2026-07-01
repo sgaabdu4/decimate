@@ -36,6 +36,9 @@ pub fn run_from_env() -> i32 {
 }
 
 fn format_json_requested(args: &[OsString]) -> bool {
+    if default_command::output_alias_help_requested(args) {
+        return false;
+    }
     if default_command::json_output_alias_requested(args) {
         return true;
     }

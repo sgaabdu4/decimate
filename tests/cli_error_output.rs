@@ -129,6 +129,22 @@ fn binary_emits_json_error_for_json_shortcut_clap_errors() -> Result<(), Box<dyn
 }
 
 #[test]
+fn json_shortcut_help_with_format_stays_human() -> Result<(), Box<dyn std::error::Error>> {
+    let output = Command::new(env!("CARGO_BIN_EXE_dart-decimate"))
+        .args(["json", "--format", "json", "--help"])
+        .output()?;
+
+    assert_eq!(output.status.code(), Some(0));
+    assert!(output.stderr.is_empty());
+    assert!(serde_json::from_slice::<Value>(&output.stdout).is_err());
+    let stdout = String::from_utf8(output.stdout)?;
+    assert!(stdout.contains("Shortcut for check with JSON output"));
+    assert!(stdout.contains("Usage: dart-decimate json [ROOT]"));
+
+    Ok(())
+}
+
+#[test]
 fn json_shortcut_missing_format_value_is_json_error() -> Result<(), Box<dyn std::error::Error>> {
     let output = Command::new(env!("CARGO_BIN_EXE_dart-decimate"))
         .args(["json", ".", "--format"])
