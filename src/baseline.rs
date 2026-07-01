@@ -509,6 +509,7 @@ fn next_step_live(id: &str, remaining: &[(FindingKind, String, Option<String>)])
             .any(|(kind, _, _)| is_dependency_hygiene_kind(*kind)),
         "trace-code-duplication" => has_kind(remaining, FindingKind::CodeDuplication),
         "complexity-breakdown" => remaining.iter().any(|(kind, _, _)| complexity_kind(*kind)),
+        "review-security-surface" => has_kind(remaining, FindingKind::SecurityCandidate),
         _ => true,
     }
 }

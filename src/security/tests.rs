@@ -279,6 +279,29 @@ fn skips_javascript_password_autofill_when_assignment_is_not_literal()
 }
 
 #[test]
+fn skips_javascript_password_autofill_when_value_target_is_unrelated()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(
+        &fixture,
+        "lib/main.dart",
+        "const loginJs = '''
+  if (input.type === 'password') email.value = 'alice@company.invalid';
+''';
+",
+    )?;
+
+    let project = scan_project(fixture.path())?;
+    let report = analyze_security(&project, &SecurityOptions::default(), None)?;
+
+    assert!(report.candidates.is_empty());
+    assert_eq!(report.total_occurrences, 0);
+
+    Ok(())
+}
+
+#[test]
 fn skips_flutter_commands_logs_and_interpolated_bearer_headers()
 -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;

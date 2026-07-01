@@ -639,38 +639,66 @@ fn trailing_identifier(text: &str) -> Option<&str> {
 
 fn javascript_password_autofill_index(value: &str) -> Option<usize> {
     let lower = value.to_ascii_lowercase();
-    if !lower.contains("password") || !lower.contains(".value") {
+    if !lower.contains(".value") {
         return None;
     }
     let mut offset = 0;
+    let mut previous_non_empty = None;
     for raw_line in value.split_inclusive('\n') {
         let line = raw_line.strip_suffix('\n').unwrap_or(raw_line);
         let line_lower = line.to_ascii_lowercase();
         if !line_lower.contains(".value") {
+            if !line.trim().is_empty() {
+                previous_non_empty = Some(line);
+            }
             offset += raw_line.len();
             continue;
         }
-        let Some(quote_index) = value_assignment_literal_index(line, &line_lower) else {
+        let Some(quote_index) =
+            value_assignment_literal_index(line, &line_lower, previous_non_empty)
+        else {
+            if !line.trim().is_empty() {
+                previous_non_empty = Some(line);
+            }
             offset += raw_line.len();
             continue;
         };
         let Some((assigned, _, _)) = read_string(line, quote_index) else {
+            if !line.trim().is_empty() {
+                previous_non_empty = Some(line);
+            }
             offset += raw_line.len();
             continue;
         };
         if assigned.len() >= 8 && !is_placeholder(&assigned) {
             return Some(offset + quote_index);
         }
+        if !line.trim().is_empty() {
+            previous_non_empty = Some(line);
+        }
         offset += raw_line.len();
     }
     None
 }
 
-fn value_assignment_literal_index(line: &str, line_lower: &str) -> Option<usize> {
+struct ValueAssignmentTarget<'a> {
+    start: usize,
+    text: &'a str,
+}
+
+fn value_assignment_literal_index(
+    line: &str,
+    line_lower: &str,
+    previous_non_empty: Option<&str>,
+) -> Option<usize> {
     let bytes = line.as_bytes();
     let mut search_start = 0;
     while let Some(relative_index) = line_lower[search_start..].find(".value") {
         let value_index = search_start + relative_index;
+        let Some(target) = value_assignment_target(line, value_index) else {
+            search_start = value_index + ".value".len();
+            continue;
+        };
         let mut cursor = value_index + ".value".len();
         while cursor < bytes.len() && bytes[cursor].is_ascii_whitespace() {
             cursor += 1;
@@ -687,12 +715,115 @@ fn value_assignment_literal_index(line: &str, line_lower: &str) -> Option<usize>
         while cursor < bytes.len() && bytes[cursor].is_ascii_whitespace() {
             cursor += 1;
         }
-        if matches!(bytes.get(cursor), Some(b'\'' | b'"')) {
+        if matches!(bytes.get(cursor), Some(b'\'' | b'"'))
+            && password_autofill_assignment_context(line_lower, previous_non_empty, &target)
+        {
             return Some(cursor);
         }
         search_start = cursor;
     }
     None
+}
+
+fn value_assignment_target(line: &str, value_index: usize) -> Option<ValueAssignmentTarget<'_>> {
+    let bytes = line.as_bytes();
+    let mut cursor = value_index;
+    let mut paren_depth = 0usize;
+    let mut bracket_depth = 0usize;
+    while cursor > 0 {
+        let byte = bytes[cursor - 1];
+        if paren_depth > 0 {
+            match byte {
+                b')' => paren_depth += 1,
+                b'(' => paren_depth -= 1,
+                _ => {}
+            }
+            cursor -= 1;
+            continue;
+        }
+        if bracket_depth > 0 {
+            match byte {
+                b']' => bracket_depth += 1,
+                b'[' => bracket_depth -= 1,
+                _ => {}
+            }
+            cursor -= 1;
+            continue;
+        }
+        match byte {
+            b')' => {
+                paren_depth = 1;
+                cursor -= 1;
+            }
+            b']' => {
+                bracket_depth = 1;
+                cursor -= 1;
+            }
+            byte if is_value_target_byte(byte) => cursor -= 1,
+            _ => break,
+        }
+    }
+    line.get(cursor..value_index)
+        .map(str::trim)
+        .filter(|text| !text.is_empty())
+        .map(|text| ValueAssignmentTarget {
+            start: value_index - text.len(),
+            text,
+        })
+}
+
+fn is_value_target_byte(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'$' | b'.' | b'?')
+}
+
+fn password_autofill_assignment_context(
+    line_lower: &str,
+    previous_non_empty: Option<&str>,
+    target: &ValueAssignmentTarget<'_>,
+) -> bool {
+    let target_lower = target.text.to_ascii_lowercase();
+    if target_lower.contains("password") {
+        return true;
+    }
+    if line_lower
+        .get(..target.start)
+        .is_some_and(|context| context_ties_password_to_target(context, &target_lower))
+    {
+        return true;
+    }
+    previous_non_empty.is_some_and(|line| {
+        let context = line.to_ascii_lowercase();
+        context_ties_password_to_target(&context, &target_lower)
+    })
+}
+
+fn context_ties_password_to_target(context_lower: &str, target_lower: &str) -> bool {
+    context_lower.contains("password") && context_references_target(context_lower, target_lower)
+}
+
+fn context_references_target(context_lower: &str, target_lower: &str) -> bool {
+    if target_lower.bytes().all(is_identifier_byte) {
+        let mut search_start = 0;
+        while let Some(relative_index) = context_lower[search_start..].find(target_lower) {
+            let start = search_start + relative_index;
+            let end = start + target_lower.len();
+            let before_boundary =
+                start == 0 || !is_identifier_byte(context_lower.as_bytes()[start - 1]);
+            let after_boundary =
+                end == context_lower.len() || !is_identifier_byte(context_lower.as_bytes()[end]);
+            if before_boundary && after_boundary {
+                return true;
+            }
+            search_start = end;
+        }
+        false
+    } else {
+        context_lower.contains(target_lower)
+    }
+}
+
+fn is_identifier_byte(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'$')
 }
 
 fn is_module_uri_directive_line(line: &str) -> bool {
