@@ -6,6 +6,7 @@ use crate::generated::is_generated_dart_path;
 
 pub(super) fn detect_in_source(path: &Path, source: &str) -> Vec<DetectedSecurityCandidate> {
     let mut candidates = Vec::new();
+    detect_firebase_api_keys(path, source, &mut candidates);
     detect_hardcoded_secrets(path, source, &mut candidates);
     detect_insecure_transport(path, source, &mut candidates);
     detect_tls_bypass(path, source, &mut candidates);
@@ -32,12 +33,30 @@ fn detect_hardcoded_secrets(
     candidates: &mut Vec<DetectedSecurityCandidate>,
 ) {
     for literal in string_literals(source) {
-        if is_comment_match(source, literal.index) || is_placeholder(&literal.value) {
+        if is_comment_match(source, literal.index) {
+            continue;
+        }
+        if let Some(relative_index) = javascript_password_autofill_index(&literal.value) {
+            candidates.push(detected(
+                path,
+                source,
+                literal.value_index + relative_index,
+                SecurityCategory::HardcodedSecret,
+                "javascript-password-autofill",
+                SecurityConfidence::High,
+                "password-autofill-literal",
+            ));
+            continue;
+        }
+        if is_placeholder(&literal.value) {
             continue;
         }
         let line = line_at(source, literal.index);
         let secret_value = has_secret_shape(&literal.value);
-        if line.contains("FirebaseOptions")
+        if is_module_uri_directive_line(line)
+            || firebase_api_key_context(source, literal.index)
+            || (!secret_value && benign_secret_named_literal(&literal.value))
+            || line.contains("FirebaseOptions")
             || line.contains("googleAppId")
             || (!secret_value && literal_looks_like_storage_key(&literal.value))
             || (!secret_value && diagnostic_context(source, literal.index))
@@ -61,6 +80,30 @@ fn detect_hardcoded_secrets(
                 "string-literal",
             ));
         }
+    }
+}
+
+fn detect_firebase_api_keys(
+    path: &Path,
+    source: &str,
+    candidates: &mut Vec<DetectedSecurityCandidate>,
+) {
+    for literal in string_literals(source) {
+        if is_comment_match(source, literal.index)
+            || is_placeholder(&literal.value)
+            || !firebase_api_key_context(source, literal.index)
+        {
+            continue;
+        }
+        candidates.push(detected(
+            path,
+            source,
+            literal.index,
+            SecurityCategory::FirebaseApiKey,
+            "firebase-api-key",
+            SecurityConfidence::Medium,
+            "FirebaseOptions.apiKey",
+        ));
     }
 }
 
@@ -303,6 +346,7 @@ fn detected(
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct StringLiteral {
     index: usize,
+    value_index: usize,
     value: String,
 }
 
@@ -312,8 +356,12 @@ fn string_literals(source: &str) -> Vec<StringLiteral> {
     let bytes = source.as_bytes();
     while index < bytes.len() {
         if matches!(bytes[index], b'\'' | b'"') && !is_comment_match(source, index) {
-            if let Some((value, end)) = read_string(source, index) {
-                literals.push(StringLiteral { index, value });
+            if let Some((value, value_index, end)) = read_string(source, index) {
+                literals.push(StringLiteral {
+                    index,
+                    value_index,
+                    value,
+                });
                 index = end;
                 continue;
             }
@@ -323,9 +371,24 @@ fn string_literals(source: &str) -> Vec<StringLiteral> {
     literals
 }
 
-fn read_string(source: &str, start: usize) -> Option<(String, usize)> {
+fn read_string(source: &str, start: usize) -> Option<(String, usize, usize)> {
     let bytes = source.as_bytes();
     let quote = *bytes.get(start)?;
+    if bytes.get(start..start + 3) == Some([quote, quote, quote].as_slice()) {
+        let mut index = start + 3;
+        let value_start = index;
+        while index + 2 < bytes.len() {
+            if bytes.get(index..index + 3) == Some([quote, quote, quote].as_slice()) {
+                return Some((
+                    source[value_start..index].to_owned(),
+                    value_start,
+                    index + 3,
+                ));
+            }
+            index += 1;
+        }
+        return None;
+    }
     let mut index = start + 1;
     let value_start = index;
     while index < bytes.len() {
@@ -334,7 +397,11 @@ fn read_string(source: &str, start: usize) -> Option<(String, usize)> {
             continue;
         }
         if bytes[index] == quote {
-            return Some((source[value_start..index].to_owned(), index + 1));
+            return Some((
+                source[value_start..index].to_owned(),
+                value_start,
+                index + 1,
+            ));
         }
         index += 1;
     }
@@ -361,7 +428,7 @@ fn call_inside_after(source: &str, start: usize) -> Option<String> {
     while index < bytes.len() {
         match bytes[index] {
             b'\'' | b'"' => {
-                index = read_string(source, index)?.1;
+                index = read_string(source, index)?.2;
                 continue;
             }
             b'(' => depth += 1,
@@ -383,7 +450,7 @@ fn first_call_arg_is_fixed_literal(call: &str) -> bool {
     if !matches!(trimmed.as_bytes().first(), Some(b'\'' | b'"')) {
         return false;
     }
-    let Some((_, end)) = read_string(trimmed, 0) else {
+    let Some((_, _, end)) = read_string(trimmed, 0) else {
         return false;
     };
     let rest = trimmed[end..].trim_start();
@@ -448,6 +515,121 @@ fn has_secret_like_name(text: &str) -> bool {
     ]
     .iter()
     .any(|needle| lower.contains(needle))
+}
+
+fn firebase_api_key_context(source: &str, index: usize) -> bool {
+    let line = line_at(source, index);
+    line.contains("apiKey")
+        && line.contains(':')
+        && preceding_window(source, index, 8).contains("FirebaseOptions")
+}
+
+fn javascript_password_autofill_index(value: &str) -> Option<usize> {
+    let lower = value.to_ascii_lowercase();
+    if !lower.contains("password") || !lower.contains(".value") {
+        return None;
+    }
+    let mut offset = 0;
+    for raw_line in value.split_inclusive('\n') {
+        let line = raw_line.strip_suffix('\n').unwrap_or(raw_line);
+        let line_lower = line.to_ascii_lowercase();
+        if !line_lower.contains(".value") {
+            offset += raw_line.len();
+            continue;
+        }
+        let Some(equal_index) = line.find('=') else {
+            offset += raw_line.len();
+            continue;
+        };
+        let Some(quote_offset) = line[equal_index + 1..].find(['\'', '"']) else {
+            offset += raw_line.len();
+            continue;
+        };
+        let quote_index = equal_index + 1 + quote_offset;
+        let Some((assigned, _, _)) = read_string(line, quote_index) else {
+            offset += raw_line.len();
+            continue;
+        };
+        if assigned.len() >= 8 && !is_placeholder(&assigned) {
+            return Some(offset + quote_index);
+        }
+        offset += raw_line.len();
+    }
+    None
+}
+
+fn is_module_uri_directive_line(line: &str) -> bool {
+    let trimmed = line.trim_start();
+    ["import ", "export ", "part ", "part of "]
+        .iter()
+        .any(|prefix| trimmed.starts_with(prefix))
+}
+
+fn benign_secret_named_literal(value: &str) -> bool {
+    literal_looks_like_route_path(value)
+        || literal_looks_like_reset_or_recovery_url(value)
+        || literal_looks_like_user_facing_copy(value)
+}
+
+fn literal_looks_like_route_path(value: &str) -> bool {
+    let trimmed = value.trim();
+    trimmed.starts_with('/')
+        && trimmed.len() <= 128
+        && !trimmed.contains(char::is_whitespace)
+        && trimmed.bytes().all(|byte| {
+            byte.is_ascii_alphanumeric()
+                || matches!(
+                    byte,
+                    b'/' | b'-' | b'_' | b'.' | b':' | b'?' | b'&' | b'=' | b'#'
+                )
+        })
+}
+
+fn literal_looks_like_reset_or_recovery_url(value: &str) -> bool {
+    let lower = value.to_ascii_lowercase();
+    (lower.starts_with("https://") || lower.starts_with("http://"))
+        && [
+            "forgot-password",
+            "reset-password",
+            "passwordreset",
+            "password-reset",
+            "password-recovery",
+            "recover-password",
+        ]
+        .iter()
+        .any(|needle| lower.contains(needle))
+}
+
+fn literal_looks_like_user_facing_copy(value: &str) -> bool {
+    let trimmed = value.trim();
+    let lower = trimmed.to_ascii_lowercase();
+    trimmed.len() <= 120
+        && trimmed.contains(char::is_whitespace)
+        && ["password", "secret", "token", "credential"]
+            .iter()
+            .any(|word| lower.contains(word))
+        && [
+            "change password",
+            "invalid email or password",
+            "forgot password",
+            "reset password",
+            "enter password",
+            "confirm password",
+            "password must",
+            "password is",
+            "token expired",
+            "invalid token",
+        ]
+        .iter()
+        .any(|phrase| lower.contains(phrase))
+        && trimmed.chars().all(|character| {
+            character.is_ascii_alphanumeric()
+                || character.is_ascii_whitespace()
+                || matches!(
+                    character,
+                    '.' | ',' | '!' | '?' | ':' | ';' | '\'' | '"' | '-' | '/' | '(' | ')'
+                )
+        })
 }
 
 fn has_secret_shape(value: &str) -> bool {
@@ -582,6 +764,19 @@ fn following_window(source: &str, index: usize, lines: usize) -> &str {
     &source[index..end]
 }
 
+fn preceding_window(source: &str, index: usize, lines: usize) -> &str {
+    let mut start = index;
+    for _ in 0..lines {
+        if start == 0 {
+            break;
+        }
+        start = source[..start - 1]
+            .rfind('\n')
+            .map_or(0, |position| position + 1);
+    }
+    &source[start..index]
+}
+
 fn line_at(source: &str, index: usize) -> &str {
     let start = source[..index]
         .rfind('\n')
@@ -602,7 +797,7 @@ fn redact_line(line: &str) -> String {
             redacted.push(quote);
             redacted.push_str("<redacted>");
             redacted.push(quote);
-            if let Some((_, end)) = read_string(line, index) {
+            if let Some((_, _, end)) = read_string(line, index) {
                 index = end;
                 continue;
             }

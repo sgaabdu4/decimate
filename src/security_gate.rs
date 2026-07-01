@@ -33,7 +33,7 @@ pub(crate) enum SecurityDiffSource {
 pub enum SecurityGateError {
     /// Security gates need an explicit diff.
     #[error(
-        "security --gate new or newly-reachable requires --diff-file PATH, --diff-stdin, or --changed-since REF"
+        "security --gate new or newly-reachable requires --diff-file PATH, --diff-stdin, --changed-since REF, or --compare REF"
     )]
     MissingDiffFile,
     /// Diff file could not be read.

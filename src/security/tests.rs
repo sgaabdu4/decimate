@@ -77,7 +77,7 @@ fn skips_comments_generated_tests_and_placeholders() -> Result<(), Box<dyn std::
         "lib/main.dart",
         "// const accessToken = 'dart_decimate_fixture_value_1234567890';
 const apiKey = 'YOUR_API_KEY';
-const firebase = FirebaseOptions(apiKey: 'AIzaPublicMobileConfigValue');
+const firebase = FirebaseOptions(apiKey: 'REDACTED_FIREBASE_API_KEY');
 final uri = Uri.parse('http://localhost:8080');
 Future<void> run() => Process.run('git', ['status']);
 Future<void> query(dynamic db, String id) => db.rawQuery('SELECT * FROM users WHERE id = ?', [id]);
@@ -99,6 +99,97 @@ Future<void> query(dynamic db, String id) => db.rawQuery('SELECT * FROM users WH
 
     assert!(report.candidates.is_empty());
     assert_eq!(report.total_occurrences, 0);
+
+    Ok(())
+}
+
+#[test]
+fn skips_password_named_non_secret_literals() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(
+        &fixture,
+        "lib/main.dart",
+        "import 'package:example/features/auth/password_form_field.dart';
+
+class Routes {
+  static const String forgotPassword = '/forgot-password';
+  static const String resetPassword = '/reset-password';
+  static const String passwordRecoveryRedirectUrl = 'https://example.invalid/reset-password';
+}
+
+class Copy {
+  String get settingsSecurityChangePassword => 'Change Password';
+  static const String invalidCredentials = 'Invalid email or password';
+}
+",
+    )?;
+
+    let project = scan_project(fixture.path())?;
+    let report = analyze_security(&project, &SecurityOptions::default(), None)?;
+
+    assert!(report.candidates.is_empty());
+    assert_eq!(report.total_occurrences, 0);
+
+    Ok(())
+}
+
+#[test]
+fn classifies_firebase_options_api_key_separately() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(
+        &fixture,
+        "lib/firebase_options.dart",
+        "const options = FirebaseOptions(
+  apiKey: 'DartDecimateFirebaseKeyValue123456789',
+  appId: '1:123:web:abc',
+  messagingSenderId: '123',
+  projectId: 'example-project',
+);
+",
+    )?;
+
+    let project = scan_project(fixture.path())?;
+    let report = analyze_security(&project, &SecurityOptions::default(), None)?;
+
+    assert_eq!(report.total_occurrences, 1);
+    assert_eq!(
+        report.candidates[0].rule_id,
+        "dart-decimate/security-firebase-api-key"
+    );
+    assert_eq!(report.candidates[0].sink, "firebase-api-key");
+
+    Ok(())
+}
+
+#[test]
+fn locates_javascript_password_autofill_at_assignment_literal()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(
+        &fixture,
+        "lib/main.dart",
+        "const loginJs = '''
+  var inputs = document.querySelectorAll('input');
+  for (var i = 0; i < inputs.length; i++) {
+    if (inputs[i].type === 'password')
+      inputs[i].value = 'dart_decimate_fixture_password_value_12345';
+  }
+''';
+",
+    )?;
+
+    let project = scan_project(fixture.path())?;
+    let report = analyze_security(&project, &SecurityOptions::default(), None)?;
+
+    assert_eq!(report.total_occurrences, 1);
+    assert_eq!(
+        report.candidates[0].rule_id,
+        "dart-decimate/security-hardcoded-secret"
+    );
+    assert_eq!(report.candidates[0].occurrences[0].location.line, 5);
 
     Ok(())
 }

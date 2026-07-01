@@ -76,7 +76,7 @@ Add this to `package.json` if you want a short project command:
     "dart-decimate": "dart-decimate json ."
   },
   "devDependencies": {
-    "dart-decimate": "^0.0.6"
+    "dart-decimate": "^0.0.7"
   }
 }
 ```
@@ -157,6 +157,9 @@ Print the HTML report instead:
 ```bash
 npx --yes dart-decimate html . --stdout > dart-decimate-report.html
 ```
+
+Changed files only: `npx --yes dart-decimate html . --compare origin/main`.
+`--compare REF` aliases `--changed-since REF` and suggests similar branches when the ref is not found.
 
 To run the GitHub version directly:
 
@@ -321,6 +324,7 @@ Dart Decimate finds candidates for:
 - risky WebView settings
 - process execution
 - raw SQL
+- Firebase client API keys in `FirebaseOptions`
 - plain local storage of secret-like material
 
 Useful commands:
@@ -526,7 +530,7 @@ rules = ["lib/domain:lib/ui"]
 
 [security]
 surface = true
-categories = ["hardcoded-secret", "insecure-transport", "tls-bypass"]
+categories = ["hardcoded-secret", "firebase-api-key", "insecure-transport", "tls-bypass"]
 
 [rules]
 unused-files = "error"
@@ -675,7 +679,7 @@ This repository forbids `unsafe_code`.
 
 ## Release Flow
 
-Current version: `0.0.6`.
+Current version: `0.0.7`.
 
 After the first public release, changes should go through pull requests.
 

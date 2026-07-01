@@ -246,6 +246,7 @@ fn complexity_kind(rule_id: &str) -> FindingKind {
 fn security_surface_enabled(entry: &JsonAttackSurfaceEntry, rules: &RuleMatcher) -> bool {
     let rule_id = match entry.category {
         SecurityCategory::HardcodedSecret => "dart-decimate/security-hardcoded-secret",
+        SecurityCategory::FirebaseApiKey => "dart-decimate/security-firebase-api-key",
         SecurityCategory::InsecureTransport => "dart-decimate/security-insecure-transport",
         SecurityCategory::TlsBypass => "dart-decimate/security-tls-bypass",
         SecurityCategory::WebViewRisk => "dart-decimate/security-webview-risk",
