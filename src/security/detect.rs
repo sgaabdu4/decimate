@@ -650,15 +650,10 @@ fn javascript_password_autofill_index(value: &str) -> Option<usize> {
             offset += raw_line.len();
             continue;
         }
-        let Some(equal_index) = line.find('=') else {
+        let Some(quote_index) = value_assignment_literal_index(line, &line_lower) else {
             offset += raw_line.len();
             continue;
         };
-        let Some(quote_offset) = line[equal_index + 1..].find(['\'', '"']) else {
-            offset += raw_line.len();
-            continue;
-        };
-        let quote_index = equal_index + 1 + quote_offset;
         let Some((assigned, _, _)) = read_string(line, quote_index) else {
             offset += raw_line.len();
             continue;
@@ -667,6 +662,35 @@ fn javascript_password_autofill_index(value: &str) -> Option<usize> {
             return Some(offset + quote_index);
         }
         offset += raw_line.len();
+    }
+    None
+}
+
+fn value_assignment_literal_index(line: &str, line_lower: &str) -> Option<usize> {
+    let bytes = line.as_bytes();
+    let mut search_start = 0;
+    while let Some(relative_index) = line_lower[search_start..].find(".value") {
+        let value_index = search_start + relative_index;
+        let mut cursor = value_index + ".value".len();
+        while cursor < bytes.len() && bytes[cursor].is_ascii_whitespace() {
+            cursor += 1;
+        }
+        if bytes.get(cursor) != Some(&b'=') {
+            search_start = cursor.min(bytes.len());
+            continue;
+        }
+        cursor += 1;
+        if matches!(bytes.get(cursor), Some(b'=') | Some(b'>')) {
+            search_start = cursor;
+            continue;
+        }
+        while cursor < bytes.len() && bytes[cursor].is_ascii_whitespace() {
+            cursor += 1;
+        }
+        if matches!(bytes.get(cursor), Some(b'\'' | b'"')) {
+            return Some(cursor);
+        }
+        search_start = cursor;
     }
     None
 }

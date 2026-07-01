@@ -256,6 +256,29 @@ fn locates_javascript_password_autofill_at_assignment_literal()
 }
 
 #[test]
+fn skips_javascript_password_autofill_when_assignment_is_not_literal()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(
+        &fixture,
+        "lib/main.dart",
+        "const loginJs = '''
+  if (input.type === 'password') input.value = token || 'dart_decimate_fixture_password_value_12345';
+''';
+",
+    )?;
+
+    let project = scan_project(fixture.path())?;
+    let report = analyze_security(&project, &SecurityOptions::default(), None)?;
+
+    assert!(report.candidates.is_empty());
+    assert_eq!(report.total_occurrences, 0);
+
+    Ok(())
+}
+
+#[test]
 fn skips_flutter_commands_logs_and_interpolated_bearer_headers()
 -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
