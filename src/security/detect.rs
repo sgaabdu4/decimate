@@ -53,18 +53,23 @@ fn detect_hardcoded_secrets(
         }
         let line = line_at(source, literal.index);
         let secret_value = has_secret_shape(&literal.value);
+        let firebase_options_literal = firebase_options_context(source, literal.index);
+        let secret_name = if firebase_options_literal {
+            literal_context(source, literal.index).is_some_and(has_secret_like_name)
+        } else {
+            has_secret_like_name(line)
+        };
         if is_module_uri_directive_line(line)
             || firebase_api_key_context(source, literal.index)
             || (!secret_value && benign_secret_named_literal(&literal.value))
-            || line.contains("FirebaseOptions")
-            || line.contains("googleAppId")
+            || (!secret_value && firebase_options_literal && !secret_name)
+            || google_app_id_context(source, literal.index)
             || (!secret_value && literal_looks_like_storage_key(&literal.value))
             || (!secret_value && diagnostic_context(source, literal.index))
             || (!secret_value && literal.value.contains('$'))
         {
             continue;
         }
-        let secret_name = has_secret_like_name(line);
         if secret_name && literal.value.len() >= 12 || secret_value {
             candidates.push(detected(
                 path,
@@ -518,10 +523,118 @@ fn has_secret_like_name(text: &str) -> bool {
 }
 
 fn firebase_api_key_context(source: &str, index: usize) -> bool {
-    let line = line_at(source, index);
-    line.contains("apiKey")
-        && line.contains(':')
-        && preceding_window(source, index, 8).contains("FirebaseOptions")
+    firebase_options_context(source, index) && named_argument_context(source, index, "apiKey")
+}
+
+fn firebase_options_context(source: &str, index: usize) -> bool {
+    enclosing_call_name(source, index).is_some_and(|name| name == "FirebaseOptions")
+}
+
+fn named_argument_context(source: &str, index: usize, name: &str) -> bool {
+    let Some(context) = literal_context(source, index) else {
+        return false;
+    };
+    let Some((candidate, rest)) = context.rsplit_once(':') else {
+        return false;
+    };
+    rest.trim().is_empty()
+        && trailing_identifier(candidate).is_some_and(|identifier| identifier == name)
+}
+
+fn google_app_id_context(source: &str, index: usize) -> bool {
+    named_argument_context(source, index, "googleAppId")
+        || assignment_context(source, index, "googleAppId")
+}
+
+fn assignment_context(source: &str, index: usize, name: &str) -> bool {
+    let Some(context) = literal_context(source, index) else {
+        return false;
+    };
+    let Some((candidate, rest)) = context.rsplit_once('=') else {
+        return false;
+    };
+    rest.trim().is_empty()
+        && trailing_identifier(candidate).is_some_and(|identifier| identifier == name)
+}
+
+fn literal_context(source: &str, index: usize) -> Option<&str> {
+    let bytes = source.as_bytes();
+    let mut depth = 0usize;
+    let mut cursor = index.min(bytes.len());
+    while cursor > 0 {
+        cursor -= 1;
+        match bytes[cursor] {
+            b')' | b']' | b'}' => depth += 1,
+            b'(' | b'[' | b'{' => {
+                if depth == 0 {
+                    return trimmed_context(source, cursor + 1, index);
+                }
+                depth -= 1;
+            }
+            b',' | b';' | b'\n' if depth == 0 => {
+                return trimmed_context(source, cursor + 1, index);
+            }
+            _ => {}
+        }
+    }
+    trimmed_context(source, 0, index)
+}
+
+fn trimmed_context(source: &str, start: usize, end: usize) -> Option<&str> {
+    source
+        .get(start..end)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+}
+
+fn enclosing_call_name(source: &str, index: usize) -> Option<&str> {
+    let bytes = source.as_bytes();
+    let mut depth = 0usize;
+    let mut cursor = index.min(bytes.len());
+    while cursor > 0 {
+        cursor -= 1;
+        match bytes[cursor] {
+            b')' => depth += 1,
+            b'(' => {
+                if depth == 0 {
+                    return preceding_identifier(source, cursor);
+                }
+                depth -= 1;
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn preceding_identifier(source: &str, index: usize) -> Option<&str> {
+    let bytes = source.as_bytes();
+    let mut end = index.min(bytes.len());
+    while end > 0 && bytes[end - 1].is_ascii_whitespace() {
+        end -= 1;
+    }
+    let mut start = end;
+    while start > 0
+        && (bytes[start - 1].is_ascii_alphanumeric()
+            || bytes[start - 1] == b'_'
+            || bytes[start - 1] == b'.')
+    {
+        start -= 1;
+    }
+    source
+        .get(start..end)
+        .and_then(|name| name.rsplit('.').next())
+        .filter(|name| !name.is_empty())
+}
+
+fn trailing_identifier(text: &str) -> Option<&str> {
+    let trimmed = text.trim_end();
+    let bytes = trimmed.as_bytes();
+    let mut start = trimmed.len();
+    while start > 0 && (bytes[start - 1].is_ascii_alphanumeric() || bytes[start - 1] == b'_') {
+        start -= 1;
+    }
+    trimmed.get(start..).filter(|name| !name.is_empty())
 }
 
 fn javascript_password_autofill_index(value: &str) -> Option<usize> {
@@ -762,19 +875,6 @@ fn following_window(source: &str, index: usize, lines: usize) -> &str {
         }
     }
     &source[index..end]
-}
-
-fn preceding_window(source: &str, index: usize, lines: usize) -> &str {
-    let mut start = index;
-    for _ in 0..lines {
-        if start == 0 {
-            break;
-        }
-        start = source[..start - 1]
-            .rfind('\n')
-            .map_or(0, |position| position + 1);
-    }
-    &source[start..index]
 }
 
 fn line_at(source: &str, index: usize) -> &str {
