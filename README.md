@@ -584,7 +584,7 @@ check in one pass.
 For PR-only regression checks, use:
 
 ```bash
-npx --yes dart-decimate audit . --base origin/main --format json --fail-on-regression
+npx --yes dart-decimate audit . --base origin/main --format json --summary --gate new-only
 ```
 
 You can also put the full check in a git hook:
