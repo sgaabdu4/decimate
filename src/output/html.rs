@@ -5,7 +5,9 @@ use crate::decision_surface::{
 };
 
 use super::{
-    human_details::{best_text, fallback_best, kind_label, summary_groups, why_text},
+    human_details::{
+        best_text, fallback_best, kind_label, omitted_findings_message, summary_groups, why_text,
+    },
     types::{Finding, FindingEdge, FindingKind, JsonReport, Severity, Verdict},
 };
 
@@ -267,10 +269,19 @@ fn render_findings(html: &mut String, report: &JsonReport) {
     let _ = writeln!(html, "<section>");
     let _ = writeln!(html, "<h2>Findings</h2>");
     if report.findings.is_empty() {
-        let _ = writeln!(
-            html,
-            "<article class=\"finding\"><p>No findings. The selected Dart graph checks passed.</p></article>"
-        );
+        if report.summary.findings == 0 && report.verdict == Verdict::Pass {
+            let _ = writeln!(
+                html,
+                "<article class=\"finding\"><p>No findings. The selected Dart graph checks passed.</p></article>"
+            );
+        } else {
+            let message = omitted_findings_message(&report.summary, report.verdict);
+            let _ = writeln!(
+                html,
+                "<article class=\"finding\"><p>{}</p></article>",
+                escape(&message)
+            );
+        }
         let _ = writeln!(html, "</section>");
         return;
     }
@@ -640,5 +651,41 @@ mod tests {
         assert!(!rendered.contains('\x07'));
         assert!(rendered.contains("lib/&#x1B;[31mbad.dart"));
         assert!(rendered.contains("&#x7;bell"));
+    }
+
+    #[test]
+    fn renders_omitted_details_for_summary_only_failures() {
+        let mut report = JsonReport {
+            schema_version: "dart-decimate.report.v1".to_owned(),
+            kind: "combined".to_owned(),
+            tool: "dart-decimate".to_owned(),
+            command: ReportCommand::Security,
+            verdict: Verdict::Fail,
+            summary: ReportSummary {
+                files: 1,
+                findings: 2,
+                security_candidates: 2,
+                ..ReportSummary::default()
+            },
+            findings: Vec::new(),
+            clone_groups: Vec::new(),
+            complexity: Vec::new(),
+            file_scores: Vec::new(),
+            hotspots: Vec::new(),
+            refactoring_targets: Vec::new(),
+            threshold_overrides: Vec::new(),
+            feature_flags: Vec::new(),
+            security_candidates: Vec::new(),
+            attack_surface: Vec::new(),
+            runtime_coverage: None,
+            next_steps: Vec::new(),
+        };
+        report.findings.clear();
+
+        let rendered = render_html_report(&report);
+
+        assert!(rendered.contains("<h1>security report</h1>"));
+        assert!(rendered.contains("2 findings were omitted from this summary output."));
+        assert!(!rendered.contains("No findings. The selected Dart graph checks passed."));
     }
 }

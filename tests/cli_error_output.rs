@@ -169,6 +169,8 @@ fn json_shortcut_invalid_format_value_is_json_error() -> Result<(), Box<dyn std:
     let cases: &[&[&str]] = &[
         &["json", ".", "--format", "xml"],
         &["json", ".", "--format=xml"],
+        &["json", ".", "--file", "lib/main.dart", "--format", "xml"],
+        &["json", ".", "--file", "lib/main.dart", "--format=xml"],
     ];
 
     for args in cases {
@@ -184,6 +186,46 @@ fn json_shortcut_invalid_format_value_is_json_error() -> Result<(), Box<dyn std:
         assert!(json["message"].as_str().is_some_and(|message| {
             message.contains("invalid value") && message.contains("xml")
         }));
+    }
+
+    Ok(())
+}
+
+#[test]
+fn json_shortcut_missing_format_with_check_flags_is_json_error()
+-> Result<(), Box<dyn std::error::Error>> {
+    let output = Command::new(env!("CARGO_BIN_EXE_dart-decimate"))
+        .args(["json", ".", "--file", "lib/main.dart", "--format"])
+        .output()?;
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stderr.is_empty());
+    let json = serde_json::from_slice::<Value>(&output.stdout)?;
+    assert_eq!(json["error"], true);
+    assert_eq!(json["exit_code"], 2);
+    assert!(
+        json["message"]
+            .as_str()
+            .is_some_and(|message| message.contains("--format") && message.contains("required"))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn output_shortcut_invalid_format_with_check_flags_reports_format_error()
+-> Result<(), Box<dyn std::error::Error>> {
+    for alias in ["human", "html"] {
+        let output = Command::new(env!("CARGO_BIN_EXE_dart-decimate"))
+            .args([alias, ".", "--file", "lib/main.dart", "--format", "xml"])
+            .output()?;
+
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        let stderr = String::from_utf8(output.stderr)?;
+        assert!(stderr.contains("invalid value"));
+        assert!(stderr.contains("xml"));
+        assert!(!stderr.contains("unexpected argument '--file'"));
     }
 
     Ok(())

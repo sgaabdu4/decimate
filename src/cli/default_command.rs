@@ -80,28 +80,47 @@ fn args_with_output_alias(args: &[OsString]) -> Option<Vec<OsString>> {
     expanded.push(OsString::from("check"));
     let mut stdout_html = false;
     let mut open_html = false;
-    let mut iter = args.iter().skip(2);
-    while let Some(arg) = iter.next() {
+    let mut explicit_format_error = false;
+    let mut index = 2;
+    while let Some(arg) = args.get(index) {
         if is_delimiter(arg) {
-            push_output_alias_flags(&mut expanded, alias, format, stdout_html, open_html);
+            if !explicit_format_error {
+                push_output_alias_flags(&mut expanded, alias, format, stdout_html, open_html);
+            }
             expanded.push(arg.clone());
-            expanded.extend(iter.cloned());
+            expanded.extend(args.iter().skip(index + 1).cloned());
             return Some(expanded);
         }
         if alias == "html" && arg == "--stdout" {
             stdout_html = true;
+            index += 1;
             continue;
         }
         if alias == "html" && arg == "--open" {
             open_html = true;
         }
         if arg == "--format" {
-            let value = iter.next()?;
-            let Some(value) = value.to_str().filter(|value| !value.starts_with('-')) else {
-                return None;
+            let Some(value) = args.get(index + 1) else {
+                expanded.push(arg.clone());
+                explicit_format_error = true;
+                index += 1;
+                continue;
             };
-            if !is_report_format(value) {
-                return None;
+            match value.to_str() {
+                Some(value) if value.starts_with('-') => {
+                    expanded.push(arg.clone());
+                    explicit_format_error = true;
+                    index += 1;
+                }
+                Some(value) if is_report_format(value) => {
+                    index += 2;
+                }
+                _ => {
+                    expanded.push(arg.clone());
+                    expanded.push(value.clone());
+                    explicit_format_error = true;
+                    index += 2;
+                }
             }
             continue;
         }
@@ -110,13 +129,18 @@ fn args_with_output_alias(args: &[OsString]) -> Option<Vec<OsString>> {
             .and_then(|value| value.strip_prefix("--format="))
         {
             if !is_report_format(value) {
-                return None;
+                expanded.push(arg.clone());
+                explicit_format_error = true;
             }
+            index += 1;
             continue;
         }
         expanded.push(arg.clone());
+        index += 1;
     }
-    push_output_alias_flags(&mut expanded, alias, format, stdout_html, open_html);
+    if !explicit_format_error {
+        push_output_alias_flags(&mut expanded, alias, format, stdout_html, open_html);
+    }
     Some(expanded)
 }
 
@@ -201,11 +225,11 @@ mod tests {
     fn output_aliases_preserve_malformed_explicit_format_errors() {
         assert_eq!(
             args_with_default_check(["dart-decimate", "json", "app", "--format"]),
-            values(&["dart-decimate", "json", "app", "--format"])
+            values(&["dart-decimate", "check", "app", "--format"])
         );
         assert_eq!(
             args_with_default_check(["dart-decimate", "json", "app", "--format", "--quiet"]),
-            values(&["dart-decimate", "json", "app", "--format", "--quiet"])
+            values(&["dart-decimate", "check", "app", "--format", "--quiet"])
         );
     }
 
@@ -214,13 +238,37 @@ mod tests {
         for alias in ["human", "json", "html"] {
             assert_eq!(
                 args_with_default_check(["dart-decimate", alias, "app", "--format", "xml"]),
-                values(&["dart-decimate", alias, "app", "--format", "xml"])
+                values(&["dart-decimate", "check", "app", "--format", "xml"])
             );
             assert_eq!(
                 args_with_default_check(["dart-decimate", alias, "app", "--format=xml"]),
-                values(&["dart-decimate", alias, "app", "--format=xml"])
+                values(&["dart-decimate", "check", "app", "--format=xml"])
             );
         }
+    }
+
+    #[test]
+    fn output_aliases_keep_check_flags_with_invalid_explicit_format_errors() {
+        assert_eq!(
+            args_with_default_check([
+                "dart-decimate",
+                "json",
+                "app",
+                "--file",
+                "lib/main.dart",
+                "--format",
+                "xml",
+            ]),
+            values(&[
+                "dart-decimate",
+                "check",
+                "app",
+                "--file",
+                "lib/main.dart",
+                "--format",
+                "xml",
+            ])
+        );
     }
 
     #[test]

@@ -1,4 +1,4 @@
-use super::types::{Finding, FindingAction, FindingKind, ReportSummary};
+use super::types::{Finding, FindingAction, FindingKind, ReportSummary, Verdict};
 
 pub(super) fn summary_groups(summary: &ReportSummary) -> [(&'static str, Vec<String>); 6] {
     [
@@ -9,6 +9,22 @@ pub(super) fn summary_groups(summary: &ReportSummary) -> [(&'static str, Vec<Str
         ("Flutter", flutter_items(summary)),
         ("Security", security_items(summary)),
     ]
+}
+
+pub(super) fn omitted_findings_message(summary: &ReportSummary, verdict: Verdict) -> String {
+    match summary.findings {
+        1 => "1 finding was omitted from this summary output. Re-run without --summary to inspect it."
+            .to_owned(),
+        count if count > 1 => format!(
+            "{count} findings were omitted from this summary output. Re-run without --summary to inspect them."
+        ),
+        _ if verdict == Verdict::Fail => {
+            "Finding details were omitted from this failing report. Re-run without --summary to inspect them."
+                .to_owned()
+        }
+        _ => "Finding details were omitted from this report. Re-run without --summary to inspect them."
+            .to_owned(),
+    }
 }
 
 fn architecture_items(summary: &ReportSummary) -> Vec<String> {

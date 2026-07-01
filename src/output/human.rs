@@ -2,7 +2,9 @@ use std::fmt::Write as _;
 use std::io::IsTerminal as _;
 
 use super::{
-    human_details::{best_text, fallback_best, kind_label, summary_groups, why_text},
+    human_details::{
+        best_text, fallback_best, kind_label, omitted_findings_message, summary_groups, why_text,
+    },
     types::{Finding, FindingEdge, FindingKind, JsonReport, ReportSummary, Severity, Verdict},
 };
 
@@ -82,11 +84,21 @@ fn render_human_report_with_style(report: &JsonReport, style: Style) -> String {
     render_issue_summary(&mut rendered, &report.summary, style);
 
     if report.findings.is_empty() {
-        let _ = writeln!(
-            rendered,
-            "\n{}",
-            style.green("No findings. The selected Dart graph checks passed.")
-        );
+        if report.summary.findings == 0 && report.verdict == Verdict::Pass {
+            let _ = writeln!(
+                rendered,
+                "\n{}",
+                style.green("No findings. The selected Dart graph checks passed.")
+            );
+        } else {
+            let message = omitted_findings_message(&report.summary, report.verdict);
+            let message = if report.verdict == Verdict::Fail {
+                style.red(&message)
+            } else {
+                style.cyan(&message)
+            };
+            let _ = writeln!(rendered, "\n{message}");
+        }
         return rendered;
     }
 
@@ -423,6 +435,19 @@ mod tests {
                 .any(|character| { character.is_control() && character != '\n' })
         );
         assert!(!rendered.contains('\x1b'));
+    }
+
+    #[test]
+    fn renders_omitted_details_for_summary_only_failures() {
+        let mut report = report_with_finding(cycle_finding(2));
+        report.findings.clear();
+
+        let rendered = render_human_report_with_style(&report, Style::plain());
+
+        assert!(rendered.contains("Dart Decimate check: FAIL"));
+        assert!(rendered.contains("Findings: 1"));
+        assert!(rendered.contains("1 finding was omitted from this summary output."));
+        assert!(!rendered.contains("No findings. The selected Dart graph checks passed."));
     }
 
     fn report_with_finding(finding: Finding) -> JsonReport {
