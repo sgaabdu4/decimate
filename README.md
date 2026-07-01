@@ -50,8 +50,8 @@ For JSON output that agents and CI can parse:
 npx --yes dart-decimate json .
 ```
 
-If the report says `"verdict": "fail"`, Dart Decimate worked. It means it found
-error-level issues. It does not mean the tool crashed.
+If the human report says `FAIL`, or JSON says `"verdict": "fail"`, Dart Decimate
+worked. It means it found error-level issues. It does not mean the tool crashed.
 
 Exit codes:
 
@@ -148,6 +148,9 @@ npx --yes dart-decimate html .
 The `html` shortcut opens the report by default. On report commands, use
 `--format html` to print static HTML or `--open` to write a private temporary
 file and open it in the default browser.
+
+Human terminal reports strip control characters from user-derived paths and
+messages; HTML reports escape user-derived content.
 
 Print the HTML report instead:
 
