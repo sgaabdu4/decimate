@@ -11,11 +11,17 @@ pub(super) fn write_and_open_html_report<W: Write>(
     report: &JsonReport,
     mut writer: W,
 ) -> io::Result<()> {
-    write_and_open_html_report_with(report, &mut writer, open_url)
+    write_and_open_html_document_with(
+        report.command.as_str(),
+        render_html_report(report),
+        &mut writer,
+        open_url,
+    )
 }
 
-fn write_and_open_html_report_with<W, F>(
-    report: &JsonReport,
+pub(super) fn write_and_open_html_document_with<W, F>(
+    command: &str,
+    html: String,
     writer: &mut W,
     opener: F,
 ) -> io::Result<()>
@@ -23,23 +29,36 @@ where
     W: Write,
     F: FnOnce(&str) -> io::Result<()>,
 {
-    let path = temp_report_path(report);
-    fs::write(&path, render_html_report(report))?;
+    let path = temp_report_path(command);
+    fs::write(&path, html)?;
     let url = file_url(&path);
     opener(&url)?;
     writeln!(writer, "Opened HTML report: {url}")?;
     Ok(())
 }
 
-fn temp_report_path(report: &JsonReport) -> PathBuf {
+fn temp_report_path(command: &str) -> PathBuf {
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |duration| duration.as_millis());
+    let command = safe_filename_part(command);
     std::env::temp_dir().join(format!(
-        "dart-decimate-{}-{}-{timestamp}.html",
-        report.command.as_str(),
-        std::process::id()
+        "dart-decimate-{command}-{}-{timestamp}.html",
+        std::process::id(),
     ))
+}
+
+fn safe_filename_part(value: &str) -> String {
+    value
+        .chars()
+        .map(|character| {
+            if character.is_ascii_alphanumeric() || character == '-' {
+                character
+            } else {
+                '-'
+            }
+        })
+        .collect()
 }
 
 fn file_url(path: &Path) -> String {
@@ -67,7 +86,7 @@ fn percent_encode_path(path: &str) -> String {
     encoded
 }
 
-fn open_url(url: &str) -> io::Result<()> {
+pub(super) fn open_url(url: &str) -> io::Result<()> {
     let status = if cfg!(target_os = "macos") {
         Command::new("open").arg(url).status()
     } else if cfg!(target_os = "windows") {
@@ -128,10 +147,15 @@ mod tests {
         let opened = RefCell::new(String::new());
         let mut output = Vec::new();
 
-        let result = write_and_open_html_report_with(&report, &mut output, |url| {
-            opened.replace(url.to_owned());
-            Ok(())
-        });
+        let result = write_and_open_html_document_with(
+            report.command.as_str(),
+            render_html_report(&report),
+            &mut output,
+            |url| {
+                opened.replace(url.to_owned());
+                Ok(())
+            },
+        );
         assert!(result.is_ok());
 
         let opened = opened.into_inner();

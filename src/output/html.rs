@@ -1,5 +1,9 @@
 use std::fmt::Write as _;
 
+use crate::decision_surface::{
+    DecisionSurfaceCategory, DecisionSurfaceDecision, DecisionSurfaceReport,
+};
+
 use super::{
     human_details::{best_text, fallback_best, kind_label, summary_groups, why_text},
     types::{Finding, FindingEdge, FindingKind, JsonReport, Severity, Verdict},
@@ -19,6 +23,17 @@ pub fn render_html_report(report: &JsonReport) -> String {
     html
 }
 
+/// Render a browser-ready static decision-surface report for humans.
+#[must_use]
+pub fn render_decision_surface_html_report(report: &DecisionSurfaceReport) -> String {
+    let mut html = String::new();
+    render_decision_surface_document_start(&mut html, report);
+    render_decision_surface_summary(&mut html, report);
+    render_decision_surface_decisions(&mut html, report);
+    render_document_end(&mut html);
+    html
+}
+
 fn render_document_start(html: &mut String, report: &JsonReport) {
     let _ = writeln!(html, "<!doctype html>");
     let _ = writeln!(html, "<html lang=\"en\">");
@@ -31,6 +46,25 @@ fn render_document_start(html: &mut String, report: &JsonReport) {
     let _ = writeln!(
         html,
         "<title>Dart Decimate {} report</title>",
+        escape(report.command.as_str())
+    );
+    render_style(html);
+    let _ = writeln!(html, "</head>");
+    let _ = writeln!(html, "<body>");
+}
+
+fn render_decision_surface_document_start(html: &mut String, report: &DecisionSurfaceReport) {
+    let _ = writeln!(html, "<!doctype html>");
+    let _ = writeln!(html, "<html lang=\"en\">");
+    let _ = writeln!(html, "<head>");
+    let _ = writeln!(html, "<meta charset=\"utf-8\">");
+    let _ = writeln!(
+        html,
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+    );
+    let _ = writeln!(
+        html,
+        "<title>Dart Decimate {} decision surface</title>",
         escape(report.command.as_str())
     );
     render_style(html);
@@ -141,6 +175,91 @@ fn render_summary(html: &mut String, report: &JsonReport) {
         }
         let _ = writeln!(html, "</div>");
         let _ = writeln!(html, "</section>");
+    }
+}
+
+fn render_decision_surface_summary(html: &mut String, report: &DecisionSurfaceReport) {
+    let _ = writeln!(html, "<main>");
+    let _ = writeln!(html, "<section class=\"hero\">");
+    let _ = writeln!(html, "<p class=\"topline\">Dart Decimate</p>");
+    let _ = writeln!(
+        html,
+        "<h1>{} decision surface</h1>",
+        escape(report.command.as_str())
+    );
+    let _ = writeln!(html, "<div class=\"metrics\">");
+    metric_text(html, "Base", &report.base);
+    metric(html, "Changed files", report.summary.changed_files);
+    metric(html, "Decisions", report.summary.decisions);
+    let _ = writeln!(html, "</div>");
+    let _ = writeln!(html, "</section>");
+}
+
+fn render_decision_surface_decisions(html: &mut String, report: &DecisionSurfaceReport) {
+    let _ = writeln!(html, "<section>");
+    let _ = writeln!(html, "<h2>Decisions</h2>");
+    if report.decisions.is_empty() {
+        let _ = writeln!(
+            html,
+            "<article class=\"finding\"><p>No structural decisions surfaced for the selected changes.</p></article>"
+        );
+        let _ = writeln!(html, "</section>");
+        return;
+    }
+
+    let _ = writeln!(html, "<div class=\"findings\">");
+    for (index, decision) in report.decisions.iter().enumerate() {
+        render_decision_surface_decision(html, index + 1, decision);
+    }
+    let _ = writeln!(html, "</div>");
+    let _ = writeln!(html, "</section>");
+}
+
+fn render_decision_surface_decision(
+    html: &mut String,
+    index: usize,
+    decision: &DecisionSurfaceDecision,
+) {
+    let _ = writeln!(html, "<article class=\"finding\">");
+    let _ = writeln!(html, "<header>");
+    let _ = writeln!(
+        html,
+        "<div><h3>{}. {}</h3><p class=\"rule\">{}</p></div>",
+        index,
+        escape(&decision.question),
+        decision_category_value(decision.category)
+    );
+    let _ = writeln!(html, "<p class=\"location\">{}</p>", escape(&decision.path));
+    let _ = writeln!(html, "</header>");
+    section(html, "Expert", &decision.recommended_expert, "");
+    render_string_list(html, "Evidence", &decision.evidence);
+    render_string_list(html, "Files", &decision.files);
+    for command in &decision.suggested_commands {
+        section(html, "Command", command, "command mono");
+    }
+    let _ = writeln!(html, "</article>");
+}
+
+fn render_string_list(html: &mut String, label: &str, values: &[String]) {
+    if values.is_empty() {
+        return;
+    }
+    let _ = writeln!(
+        html,
+        "<div class=\"section\"><span class=\"label\">{}</span><ul class=\"evidence\">",
+        escape(label)
+    );
+    for value in values {
+        let _ = writeln!(html, "<li>{}</li>", escape(value));
+    }
+    let _ = writeln!(html, "</ul></div>");
+}
+
+const fn decision_category_value(category: DecisionSurfaceCategory) -> &'static str {
+    match category {
+        DecisionSurfaceCategory::CouplingBoundary => "coupling-boundary",
+        DecisionSurfaceCategory::PublicApiContract => "public-api-contract",
+        DecisionSurfaceCategory::Dependency => "dependency",
     }
 }
 
@@ -269,11 +388,15 @@ fn render_document_end(html: &mut String) {
 }
 
 fn metric(html: &mut String, label: &str, value: usize) {
+    metric_text(html, label, &value.to_string());
+}
+
+fn metric_text(html: &mut String, label: &str, value: &str) {
     let _ = writeln!(
         html,
         "<div class=\"metric\"><span>{}</span><strong>{}</strong></div>",
         escape(label),
-        value
+        escape(value)
     );
 }
 
