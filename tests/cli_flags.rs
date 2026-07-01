@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -13,7 +13,7 @@ fn flags_command_emits_json_contract() -> Result<(), Box<dyn std::error::Error>>
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "flags",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -24,7 +24,7 @@ fn flags_command_emits_json_contract() -> Result<(), Box<dyn std::error::Error>>
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 1);
-    assert_eq!(json["schema_version"], "decimate.report.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.report.v1");
     assert_eq!(json["command"], "flags");
     assert_eq!(json["verdict"], "fail");
     assert_eq!(json["summary"]["feature_flags"], 5);
@@ -34,7 +34,7 @@ fn flags_command_emits_json_contract() -> Result<(), Box<dyn std::error::Error>>
         json["feature_flags"][0]["occurrences"][0]["path"],
         "lib/main.dart"
     );
-    assert_eq!(json["findings"][0]["rule_id"], "decimate/feature-flag");
+    assert_eq!(json["findings"][0]["rule_id"], "dart-decimate/feature-flag");
     assert_eq!(json["findings"][0]["kind"], "feature-flag");
     assert_eq!(json["findings"][0]["safe_to_delete"], false);
     assert_eq!(
@@ -58,7 +58,7 @@ fn check_command_includes_feature_flag_findings() -> Result<(), Box<dyn std::err
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -76,7 +76,7 @@ fn check_command_includes_feature_flag_findings() -> Result<(), Box<dyn std::err
     assert!(json["findings"].as_array().is_some_and(|findings| {
         findings
             .iter()
-            .any(|finding| finding["rule_id"] == "decimate/feature-flag")
+            .any(|finding| finding["rule_id"] == "dart-decimate/feature-flag")
     }));
 
     Ok(())
@@ -91,7 +91,7 @@ fn flags_top_limits_grouped_flags() -> Result<(), Box<dyn std::error::Error>> {
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "flags",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -127,7 +127,7 @@ fn flags_command_passes_when_no_flags() -> Result<(), Box<dyn std::error::Error>
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "flags",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -160,7 +160,7 @@ fn flags_findings_respect_inline_suppression() -> Result<(), Box<dyn std::error:
     write(
         &fixture,
         "lib/main.dart",
-        "// fallow-ignore-next-line feature-flag
+        "// dart-decimate-ignore-next-line feature-flag
 const beta = bool.fromEnvironment('FEATURE_BETA');
 ",
     )?;
@@ -168,7 +168,7 @@ const beta = bool.fromEnvironment('FEATURE_BETA');
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "flags",
             fixture.path().to_str().unwrap_or("."),
             "--format",

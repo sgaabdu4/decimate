@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -66,7 +66,7 @@ final counterProvider = Object();
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -144,7 +144,7 @@ final urlCacheProvider = Object();
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",

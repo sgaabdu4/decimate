@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -9,7 +9,7 @@ fn private_type_leak_is_opt_in_and_agent_actionable() -> Result<(), Box<dyn std:
     let fixture = private_leak_fixture()?;
 
     let (default_code, default_json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -21,7 +21,7 @@ fn private_type_leak_is_opt_in_and_agent_actionable() -> Result<(), Box<dyn std:
     assert_eq!(default_json["summary"]["private_type_leaks"], 0);
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -34,7 +34,7 @@ fn private_type_leak_is_opt_in_and_agent_actionable() -> Result<(), Box<dyn std:
     let finding = &json["findings"][0];
     assert_eq!(code, 1);
     assert_eq!(json["summary"]["private_type_leaks"], 1);
-    assert_eq!(finding["rule_id"], "decimate/private-type-leak");
+    assert_eq!(finding["rule_id"], "dart-decimate/private-type-leak");
     assert_eq!(finding["kind"], "private-type-leak");
     assert_eq!(finding["path"], "lib/package.dart");
     assert_eq!(finding["safe_to_delete"], false);
@@ -42,7 +42,7 @@ fn private_type_leak_is_opt_in_and_agent_actionable() -> Result<(), Box<dyn std:
     assert_eq!(finding["actions"][0]["target_symbol"], "Api");
     assert_eq!(
         finding["actions"][0]["suppression_comment"],
-        "// decimate-ignore-next-line private-type-leak"
+        "// dart-decimate-ignore-next-line private-type-leak"
     );
 
     Ok(())
@@ -53,12 +53,12 @@ fn private_type_leak_can_be_enabled_by_config_rule() -> Result<(), Box<dyn std::
     let fixture = private_leak_fixture()?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         "{\"rules\":{\"private-type-leak\":\"warn\"}}\n",
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -82,14 +82,14 @@ fn private_type_leak_respects_inline_suppression() -> Result<(), Box<dyn std::er
         &fixture,
         "lib/package.dart",
         "\
-// decimate-ignore-next-line private-type-leak
+// dart-decimate-ignore-next-line private-type-leak
 class Api extends _Hidden {}
 class _Hidden {}
 ",
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",

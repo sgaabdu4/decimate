@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -12,7 +12,7 @@ fn workspaces_command_emits_workspace_inventory_json() -> Result<(), Box<dyn std
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "workspaces",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -34,7 +34,7 @@ fn workspaces_command_emits_workspace_inventory_json() -> Result<(), Box<dyn std
         .collect::<Vec<_>>();
 
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.list.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.list.v1");
     assert_eq!(json["command"], "workspaces");
     assert_eq!(json["summary"]["workspaces"], 2);
     assert!(workspace_names.contains(&"app"));
@@ -50,7 +50,7 @@ fn workspaces_command_emits_workspace_inventory_json() -> Result<(), Box<dyn std
 fn workspaces_command_is_listed_in_agent_manifest() -> Result<(), Box<dyn std::error::Error>> {
     let mut output = Vec::new();
 
-    let code = run_from(["decimate", "schema", "--format", "json"], &mut output)?;
+    let code = run_from(["dart-decimate", "schema", "--format", "json"], &mut output)?;
 
     let json = serde_json::from_slice::<Value>(&output)?;
     let commands = json["commands"].as_array().ok_or_else(|| {
@@ -76,7 +76,7 @@ fn workspaces_command_is_listed_in_agent_manifest() -> Result<(), Box<dyn std::e
     })?;
 
     assert_eq!(code, 0);
-    assert_eq!(command["schema"], "decimate.list.v1");
+    assert_eq!(command["schema"], "dart-decimate.list.v1");
     assert!(flags.iter().any(|flag| flag == "--workspace"));
     assert!(flags.iter().any(|flag| flag == "--changed-workspaces"));
     assert!(!flags.iter().any(|flag| flag == "--files"));

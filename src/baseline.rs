@@ -9,8 +9,8 @@ use crate::finding_identity::finding_identity;
 use crate::output::{Finding, FindingKind, JsonAttackSurfaceEntry, JsonReport, Severity, Verdict};
 use crate::{JsonCloneGroup, JsonComplexityFinding, JsonFeatureFlag, JsonSecurityCandidate};
 
-pub const BASELINE_SCHEMA_VERSION: &str = "decimate.baseline.v1";
-pub const REGRESSION_BASELINE_SCHEMA_VERSION: &str = "decimate.regression-baseline.v1";
+pub const BASELINE_SCHEMA_VERSION: &str = "dart-decimate.baseline.v1";
+pub const REGRESSION_BASELINE_SCHEMA_VERSION: &str = "dart-decimate.regression-baseline.v1";
 
 /// Identity-based finding baseline.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -173,7 +173,7 @@ pub fn baseline_from_report(report: &JsonReport) -> Baseline {
 
     Baseline {
         schema_version: BASELINE_SCHEMA_VERSION.to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         findings,
     }
 }
@@ -183,7 +183,7 @@ pub fn baseline_from_report(report: &JsonReport) -> Baseline {
 pub fn regression_baseline_from_report(report: &JsonReport) -> RegressionBaseline {
     RegressionBaseline {
         schema_version: REGRESSION_BASELINE_SCHEMA_VERSION.to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: report.command.as_str().to_owned(),
         counts: regression_counts(report),
     }

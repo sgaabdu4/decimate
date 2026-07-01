@@ -1,7 +1,7 @@
 use std::fs;
 use std::process::Command;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -26,7 +26,7 @@ fn audit_ignores_unchanged_existing_findings() -> Result<(), Box<dyn std::error:
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "audit",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -69,7 +69,7 @@ fn audit_reports_findings_on_changed_files() -> Result<(), Box<dyn std::error::E
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "audit",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -99,13 +99,13 @@ fn audit_reports_findings_on_changed_files() -> Result<(), Box<dyn std::error::E
     );
     assert_eq!(json["summary"]["dead_files"], 1);
     assert_eq!(json["summary"]["findings"], 1);
-    assert_eq!(json["findings"][0]["rule_id"], "decimate/dead-file");
+    assert_eq!(json["findings"][0]["rule_id"], "dart-decimate/dead-file");
     assert_eq!(json["findings"][0]["path"], "lib/new_dead.dart");
 
     let mut new_only_output = Vec::new();
     let new_only_code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "audit",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -139,7 +139,7 @@ fn audit_attributes_existing_changed_file_findings_as_pre_existing()
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "audit",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -175,7 +175,7 @@ fn audit_attributes_existing_changed_file_findings_as_pre_existing()
     let mut new_only_output = Vec::new();
     let new_only_code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "audit",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -214,7 +214,7 @@ fn audit_dead_code_baseline_suppresses_known_changed_findings()
 
     let baseline_code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -229,7 +229,7 @@ fn audit_dead_code_baseline_suppresses_known_changed_findings()
     let mut output = Vec::new();
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "audit",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -277,7 +277,7 @@ fn audit_keeps_related_findings_when_changed_file_participates()
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "audit",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -302,7 +302,7 @@ fn audit_keeps_related_findings_when_changed_file_participates()
     );
     assert_eq!(
         json["findings"][0]["rule_id"],
-        "decimate/circular-dependency"
+        "dart-decimate/circular-dependency"
     );
     assert_eq!(json["findings"][0]["files"][0], "lib/a.dart");
     assert_eq!(json["findings"][0]["files"][1], "lib/b.dart");
@@ -335,7 +335,7 @@ fn audit_expands_scope_to_one_hop_related_files() -> Result<(), Box<dyn std::err
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "audit",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -366,14 +366,14 @@ fn audit_expands_scope_to_one_hop_related_files() -> Result<(), Box<dyn std::err
     );
     assert_eq!(
         json["findings"][0]["rule_id"],
-        "decimate/high-cyclomatic-complexity"
+        "dart-decimate/high-cyclomatic-complexity"
     );
     assert_eq!(json["findings"][0]["path"], "lib/b.dart");
 
     let mut new_only_output = Vec::new();
     let new_only_code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "audit",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -421,7 +421,7 @@ fn audit_expands_scope_through_augment_edges() -> Result<(), Box<dyn std::error:
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "audit",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -454,7 +454,7 @@ fn audit_errors_for_invalid_base() -> Result<(), Box<dyn std::error::Error>> {
 
     let error = match run_from(
         [
-            "decimate",
+            "dart-decimate",
             "audit",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -476,8 +476,11 @@ fn audit_errors_for_invalid_base() -> Result<(), Box<dyn std::error::Error>> {
 fn git_fixture() -> Result<TempDir, Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     git(&fixture, ["init", "-q"])?;
-    git(&fixture, ["config", "user.email", "decimate@example.com"])?;
-    git(&fixture, ["config", "user.name", "Decimate Tests"])?;
+    git(
+        &fixture,
+        ["config", "user.email", "dart-decimate@example.com"],
+    )?;
+    git(&fixture, ["config", "user.name", "Dart Decimate Tests"])?;
     Ok(fixture)
 }
 

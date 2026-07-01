@@ -62,7 +62,7 @@ fn unused_dependency_finding(root: &Path, dependency: &UnusedPackageDependency) 
             .with_target_path(path.clone())
             .with_target_dependency(dependency.dependency.clone())
             .with_config_key(unused_action_config_key(dependency))
-            .with_decimate_args([
+            .with_dart_decimate_args([
                 "trace-dependency",
                 "--format",
                 "json",
@@ -84,10 +84,10 @@ const fn finding_kind(issue: DependencyIssue) -> FindingKind {
 
 fn rule_id(issue: DependencyIssue) -> &'static str {
     match issue {
-        DependencyIssue::UnusedRuntimeDependency => "decimate/unused-dependency",
-        DependencyIssue::UnusedDevDependency => "decimate/unused-dev-dependency",
-        DependencyIssue::TestOnlyDependency => "decimate/test-only-dependency",
-        DependencyIssue::UnusedDependencyOverride => "decimate/unused-dependency-override",
+        DependencyIssue::UnusedRuntimeDependency => "dart-decimate/unused-dependency",
+        DependencyIssue::UnusedDevDependency => "dart-decimate/unused-dev-dependency",
+        DependencyIssue::TestOnlyDependency => "dart-decimate/test-only-dependency",
+        DependencyIssue::UnusedDependencyOverride => "dart-decimate/unused-dependency-override",
     }
 }
 
@@ -159,7 +159,7 @@ fn misconfigured_override_finding(
 ) -> Finding {
     let path = display_path(root, &dependency.pubspec_path);
     Finding {
-        rule_id: "decimate/misconfigured-dependency-override".to_owned(),
+        rule_id: "dart-decimate/misconfigured-dependency-override".to_owned(),
         fingerprint: None,
         kind: FindingKind::MisconfiguredDependencyOverride,
         severity: Severity::Error,
@@ -203,7 +203,7 @@ fn unlisted_dependency_finding(root: &Path, dependency: &UnlistedPackageDependen
     let path = display_path(root, &dependency.path);
     let pubspec_path = display_path(root, &dependency.pubspec_path);
     Finding {
-        rule_id: "decimate/unlisted-dependency".to_owned(),
+        rule_id: "dart-decimate/unlisted-dependency".to_owned(),
         fingerprint: None,
         kind: FindingKind::UnlistedDependency,
         severity: Severity::Error,
@@ -228,7 +228,7 @@ fn unlisted_dependency_finding(root: &Path, dependency: &UnlistedPackageDependen
             .with_target_path(pubspec_path)
             .with_target_dependency(dependency.dependency.clone())
             .with_config_key("dependencies")
-            .with_decimate_args([
+            .with_dart_decimate_args([
                 "trace-dependency",
                 "--format",
                 "json",
@@ -294,7 +294,7 @@ fn unlisted_action_description(dependency: &UnlistedPackageDependency) -> &'stat
 fn private_src_import_finding(root: &Path, dependency: &PrivateSrcImport) -> Finding {
     let path = display_path(root, &dependency.path);
     Finding {
-        rule_id: "decimate/private-src-import".to_owned(),
+        rule_id: "dart-decimate/private-src-import".to_owned(),
         fingerprint: None,
         kind: FindingKind::PrivateSrcImport,
         severity: Severity::Error,
@@ -321,7 +321,7 @@ fn private_src_import_finding(root: &Path, dependency: &PrivateSrcImport) -> Fin
             )
             .with_target_path(path)
             .with_target_dependency(dependency.dependency.clone())
-            .with_suppression_comment("// decimate-ignore-next-line private-src-import"),
+            .with_suppression_comment("// dart-decimate-ignore-next-line private-src-import"),
         ],
     }
 }

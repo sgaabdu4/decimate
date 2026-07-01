@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -11,7 +11,7 @@ fn security_candidates_include_honest_module_level_reachability()
     write_reachability_fixture(&fixture)?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "security",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -45,7 +45,7 @@ fn security_sarif_includes_security_reachability_when_available()
     write_reachability_fixture(&fixture)?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "security",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -59,11 +59,11 @@ fn security_sarif_includes_security_reachability_when_available()
     };
     let secret = results
         .iter()
-        .find(|result| result["ruleId"] == "decimate/security-hardcoded-secret")
+        .find(|result| result["ruleId"] == "dart-decimate/security-hardcoded-secret")
         .unwrap_or_else(|| panic!("hardcoded secret result"));
     let insecure = results
         .iter()
-        .find(|result| result["ruleId"] == "decimate/security-insecure-transport")
+        .find(|result| result["ruleId"] == "dart-decimate/security-insecure-transport")
         .unwrap_or_else(|| panic!("insecure transport result"));
 
     assert_eq!(code, 1);
@@ -86,7 +86,7 @@ fn write_reachability_fixture(fixture: &TempDir) -> Result<(), std::io::Error> {
     write(
         fixture,
         "lib/live.dart",
-        "const accessToken = 'decimate_fixture_value_1234567890';\n",
+        "const accessToken = 'dart_decimate_fixture_value_1234567890';\n",
     )?;
     write(
         fixture,

@@ -73,8 +73,8 @@ pub use types::{
 use widget_findings::add_widget_findings;
 
 /// Stable JSON schema version for agent consumers.
-pub const SCHEMA_VERSION: &str = "decimate.report.v1";
-pub const TRACE_SCHEMA_VERSION: &str = "decimate.trace.v1";
+pub const SCHEMA_VERSION: &str = "dart-decimate.report.v1";
+pub const TRACE_SCHEMA_VERSION: &str = "dart-decimate.trace.v1";
 
 /// Analysis values to serialize.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -197,7 +197,7 @@ pub fn build_json_report(project: &ScannedProject, results: &AnalysisResults) ->
     JsonReport {
         schema_version: SCHEMA_VERSION.to_owned(),
         kind: results.command.kind().to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: results.command,
         verdict: report_verdict(&findings),
         summary,

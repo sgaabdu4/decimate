@@ -1,4 +1,4 @@
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 
 #[test]
@@ -120,7 +120,7 @@ fn assert_summary_schema(json: &Value) {
 fn report_schema_json() -> Result<Value, Box<dyn std::error::Error>> {
     let mut output = Vec::new();
     let code = run_from(
-        ["decimate", "report-schema", "--format", "json"],
+        ["dart-decimate", "report-schema", "--format", "json"],
         &mut output,
     )?;
     assert_eq!(code, 0);

@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::{Value, json};
 use tempfile::TempDir;
 
@@ -11,7 +11,7 @@ fn check_reports_unused_widget_field_formal() -> Result<(), Box<dyn std::error::
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -43,7 +43,7 @@ fn check_reports_unused_widget_field_formal() -> Result<(), Box<dyn std::error::
     );
     assert_eq!(
         finding["actions"][0]["suppression_comment"],
-        "// decimate-ignore-next-line unused-widget-param"
+        "// dart-decimate-ignore-next-line unused-widget-param"
     );
     assert_no_widget_param_for(&json, "title");
     assert_no_widget_param_for(&json, "count");
@@ -79,7 +79,7 @@ class GeneratedWidget extends StatelessWidget {
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -103,14 +103,14 @@ fn unused_widget_param_rule_can_error_or_turn_off() -> Result<(), Box<dyn std::e
     let fixture = widget_fixture()?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         r#"{ "rules": { "unused-component-prop": "error" } }"#,
     )?;
     let mut output = Vec::new();
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -128,14 +128,14 @@ fn unused_widget_param_rule_can_error_or_turn_off() -> Result<(), Box<dyn std::e
 
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         r#"{ "rules": { "unused-widget-param": "off" } }"#,
     )?;
     output.clear();
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -232,7 +232,7 @@ fn unused_widget_param_finding(json: &Value) -> &Value {
     let Some(finding) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|finding| finding["rule_id"] == "decimate/unused-widget-param")
+            .find(|finding| finding["rule_id"] == "dart-decimate/unused-widget-param")
     }) else {
         panic!("unused widget param finding");
     };
@@ -242,7 +242,7 @@ fn unused_widget_param_finding(json: &Value) -> &Value {
 fn assert_no_widget_param_for(json: &Value, param: &str) {
     assert!(json["findings"].as_array().is_some_and(|findings| {
         findings.iter().all(|finding| {
-            finding["rule_id"] != "decimate/unused-widget-param"
+            finding["rule_id"] != "dart-decimate/unused-widget-param"
                 || finding["actions"][0]["target_symbol"]
                     .as_str()
                     .is_none_or(|symbol| !symbol.ends_with(&format!(".{param}")))
@@ -253,7 +253,7 @@ fn assert_no_widget_param_for(json: &Value, param: &str) {
 fn assert_widget_param_for(json: &Value, target_symbol: &str) {
     assert!(json["findings"].as_array().is_some_and(|findings| {
         findings.iter().any(|finding| {
-            finding["rule_id"] == "decimate/unused-widget-param"
+            finding["rule_id"] == "dart-decimate/unused-widget-param"
                 && finding["actions"][0]["target_symbol"] == target_symbol
         })
     }));

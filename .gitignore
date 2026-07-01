@@ -1,7 +1,7 @@
 /target/
 /.cargo-home/
 /.rustup-home/
-/.decimate/
+/.dart-decimate/
 /npm/bin-cache/
 .DS_Store
 *.log

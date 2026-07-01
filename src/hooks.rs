@@ -11,15 +11,16 @@ use agent_settings::{claude_settings_status, install_claude_settings, uninstall_
 use templates::{agent_hook_script, agents_block};
 
 /// Stable schema version for hook management output.
-pub const HOOKS_SCHEMA_VERSION: &str = "decimate.hooks.v1";
+pub const HOOKS_SCHEMA_VERSION: &str = "dart-decimate.hooks.v1";
 
-pub(super) const HOOK_MARKER: &str = "decimate-managed-hook";
-const AGENT_SCRIPT_PATH: &str = ".claude/hooks/decimate-gate.sh";
+pub(super) const HOOK_MARKER: &str = "dart-decimate-managed-hook";
+const AGENT_SCRIPT_PATH: &str = ".claude/hooks/dart-decimate-gate.sh";
 const CLAUDE_SETTINGS_PATH: &str = ".claude/settings.json";
 const AGENTS_PATH: &str = "AGENTS.md";
-pub(super) const AGENT_COMMAND: &str = "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/decimate-gate.sh";
-pub(super) const AGENTS_BLOCK_START: &str = "<!-- decimate-managed-hook:start -->";
-pub(super) const AGENTS_BLOCK_END: &str = "<!-- decimate-managed-hook:end -->";
+pub(super) const AGENT_COMMAND: &str =
+    "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/dart-decimate-gate.sh";
+pub(super) const AGENTS_BLOCK_START: &str = "<!-- dart-decimate-managed-hook:start -->";
+pub(super) const AGENTS_BLOCK_END: &str = "<!-- dart-decimate-managed-hook:end -->";
 
 /// Hook installation target.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -81,7 +82,7 @@ pub struct HookFile {
     pub path: String,
     /// Whether the hook file exists.
     pub installed: bool,
-    /// Whether Decimate owns the hook file content.
+    /// Whether Dart Decimate owns the hook file content.
     pub managed: bool,
     /// Action performed.
     pub action: HookAction,
@@ -112,7 +113,7 @@ pub enum HooksError {
         /// Missing `.git` directory.
         path: PathBuf,
     },
-    /// Existing hook is not Decimate-managed and `force` was not set.
+    /// Existing hook is not Dart Decimate-managed and `force` was not set.
     #[error("refusing to overwrite unmanaged hook {path}; pass --force")]
     UnmanagedHook {
         /// Existing hook path.
@@ -183,7 +184,7 @@ pub fn hooks_status(
     Ok(report("hooks status", root, options, files))
 }
 
-/// Install a Decimate hook.
+/// Install a Dart Decimate hook.
 ///
 /// # Errors
 ///
@@ -206,7 +207,7 @@ pub fn install_hooks(
     Ok(report("hooks install", root, options, files))
 }
 
-/// Uninstall a Decimate-managed hook.
+/// Uninstall a Dart Decimate-managed hook.
 ///
 /// # Errors
 ///
@@ -256,7 +257,7 @@ fn report(command: &str, root: &Path, options: &HookOptions, files: Vec<HookFile
     HooksReport {
         schema_version: HOOKS_SCHEMA_VERSION.to_owned(),
         kind: "hooks".to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: command.to_owned(),
         root: root.to_path_buf(),
         target: options.target,
@@ -550,12 +551,12 @@ fn git_hook_script(branch: &str) -> String {
         r#"#!/bin/sh
 # {HOOK_MARKER}
 set -eu
-BASE="${{DECIMATE_BASE:-{branch}}}"
-if ! command -v decimate >/dev/null 2>&1; then
-  echo "decimate hook: decimate binary not found" >&2
+BASE="${{DART_DECIMATE_BASE:-{branch}}}"
+if ! command -v dart-decimate >/dev/null 2>&1; then
+  echo "dart-decimate hook: dart-decimate binary not found" >&2
   exit 2
 fi
-decimate audit . --base "$BASE" --format json --summary
+dart-decimate audit . --base "$BASE" --format json --summary
 "#
     )
 }

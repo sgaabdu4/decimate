@@ -15,7 +15,7 @@ use crate::{
 
 pub(super) fn list_command() -> Command {
     Command::new("list")
-        .about("List Decimate project structure")
+        .about("List Dart Decimate project structure")
         .arg(root_arg())
         .arg(root_flag_arg())
         .arg(format_arg())
@@ -33,7 +33,10 @@ pub(super) fn list_command() -> Command {
             "workspaces",
             "Include discovered local pub packages",
         ))
-        .arg(section_arg("plugins", "Include active Decimate adapters"))
+        .arg(section_arg(
+            "plugins",
+            "Include active Dart Decimate adapters",
+        ))
         .arg(section_arg(
             "boundaries",
             "Include configured architecture boundaries",

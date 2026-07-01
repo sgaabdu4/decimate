@@ -8,7 +8,7 @@ use crate::graph::normalize_against;
 use crate::{DependencyKind, ScannedProject};
 
 /// Stable decision-surface schema version.
-pub const DECISION_SURFACE_SCHEMA_VERSION: &str = "decimate.decision-surface.v1";
+pub const DECISION_SURFACE_SCHEMA_VERSION: &str = "dart-decimate.decision-surface.v1";
 
 /// Advisory review surface for changed Dart/Flutter code.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -131,7 +131,7 @@ pub fn decision_surface_report_for_command(
     DecisionSurfaceReport {
         schema_version: DECISION_SURFACE_SCHEMA_VERSION.to_owned(),
         kind: "decision-surface".to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: command.to_owned(),
         base: base.to_owned(),
         summary: DecisionSurfaceSummary {
@@ -206,7 +206,9 @@ fn add_coupling_decisions(
                     dependency.specifier
                 )],
                 recommended_expert: "architecture".to_owned(),
-                suggested_commands: vec![format!("decimate inspect --format json --file {from}")],
+                suggested_commands: vec![format!(
+                    "dart-decimate inspect --format json --file {from}"
+                )],
             });
     }
 }
@@ -236,7 +238,7 @@ fn add_public_api_decisions(
                 )],
                 recommended_expert: "api-owner".to_owned(),
                 suggested_commands: vec![format!(
-                    "decimate inspect --format json --file {display}"
+                    "dart-decimate inspect --format json --file {display}"
                 )],
             });
     }
@@ -271,7 +273,9 @@ fn add_public_api_decisions(
                     dependency.specifier
                 )],
                 recommended_expert: "api-owner".to_owned(),
-                suggested_commands: vec![format!("decimate inspect --format json --file {target}")],
+                suggested_commands: vec![format!(
+                    "dart-decimate inspect --format json --file {target}"
+                )],
             });
     }
 }
@@ -302,7 +306,9 @@ fn add_dependency_decisions(
                     "{display} changed and owns Pub dependency declarations"
                 )],
                 recommended_expert: "pub-dependency-owner".to_owned(),
-                suggested_commands: vec![format!("decimate check --format json --file {display}")],
+                suggested_commands: vec![format!(
+                    "dart-decimate check --format json --file {display}"
+                )],
             });
     }
 
@@ -328,7 +334,7 @@ fn add_dependency_decisions(
                     evidence: vec![format!("{display} imports package:{package}/...")],
                     recommended_expert: "pub-dependency-owner".to_owned(),
                     suggested_commands: vec![format!(
-                        "decimate trace-dependency --format json --dependency {package}"
+                        "dart-decimate trace-dependency --format json --dependency {package}"
                     )],
                 });
         }

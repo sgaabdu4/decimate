@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// Stable inspect schema version for composed evidence bundles.
-pub const INSPECT_SCHEMA_VERSION: &str = "decimate.inspect.v1";
+pub const INSPECT_SCHEMA_VERSION: &str = "dart-decimate.inspect.v1";
 
 /// A targeted evidence bundle for one file or top-level symbol.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -60,7 +60,7 @@ pub fn inspect_file(
     InspectReport {
         schema_version: INSPECT_SCHEMA_VERSION.to_owned(),
         kind: "inspect".to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: "inspect".to_owned(),
         target: InspectTarget {
             kind: "file".to_owned(),
@@ -90,7 +90,7 @@ pub fn inspect_symbol(
     InspectReport {
         schema_version: INSPECT_SCHEMA_VERSION.to_owned(),
         kind: "inspect".to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: "inspect".to_owned(),
         target: InspectTarget {
             kind: "symbol".to_owned(),

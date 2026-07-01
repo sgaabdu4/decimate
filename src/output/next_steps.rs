@@ -16,7 +16,7 @@ pub(super) fn next_steps(root: &Path, results: &AnalysisResults) -> Vec<NextStep
         steps.push(NextStep {
             id: "trace-unused-export".to_owned(),
             command: format!(
-                "decimate trace-symbol --format json --symbol {}:{}",
+                "dart-decimate trace-symbol --format json --symbol {}:{}",
                 display_path(root, &unused.path),
                 unused.name
             ),
@@ -33,7 +33,7 @@ pub(super) fn next_steps(root: &Path, results: &AnalysisResults) -> Vec<NextStep
         steps.push(NextStep {
             id: "trace-unused-type".to_owned(),
             command: format!(
-                "decimate trace-symbol --format json --symbol {}:{}",
+                "dart-decimate trace-symbol --format json --symbol {}:{}",
                 display_path(root, &unused.path),
                 unused.name
             ),
@@ -50,7 +50,7 @@ pub(super) fn next_steps(root: &Path, results: &AnalysisResults) -> Vec<NextStep
         steps.push(NextStep {
             id: "trace-unused-dependency".to_owned(),
             command: format!(
-                "decimate trace-dependency --format json --dependency {}",
+                "dart-decimate trace-dependency --format json --dependency {}",
                 unused.dependency
             ),
             reason: "Trace the first unused dependency before editing pubspec.yaml".to_owned(),
@@ -65,7 +65,7 @@ pub(super) fn next_steps(root: &Path, results: &AnalysisResults) -> Vec<NextStep
         steps.push(NextStep {
             id: "trace-code-duplication".to_owned(),
             command: format!(
-                "decimate trace-clone --format json --fingerprint {}",
+                "dart-decimate trace-clone --format json --fingerprint {}",
                 clone.fingerprint
             ),
             reason: "Trace the first duplicate code group before extracting shared code".to_owned(),
@@ -78,7 +78,7 @@ pub(super) fn next_steps(root: &Path, results: &AnalysisResults) -> Vec<NextStep
         steps.push(NextStep {
             id: "complexity-breakdown".to_owned(),
             command: format!(
-                "decimate health --format json --complexity-breakdown --top 1 --max-cyclomatic {} --max-cognitive {}",
+                "dart-decimate health --format json --complexity-breakdown --top 1 --max-cyclomatic {} --max-cognitive {}",
                 health.options.max_cyclomatic, health.options.max_cognitive
             ),
             reason: format!(

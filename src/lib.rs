@@ -1,4 +1,4 @@
-//! Decimate analyzes Dart and Flutter repositories as module graphs.
+//! Dart Decimate analyzes Dart and Flutter repositories as module graphs.
 //!
 //! Phase 1 exposes a fast Tree-Sitter based extractor for imports, exports, and
 //! top-level declarations. Phase 2 builds a directed module graph from those
@@ -63,9 +63,9 @@ pub use ci_template::{
     CiTemplateReport, ci_template_report, render_ci_template, vendor_ci_template,
 };
 pub use config::{
-    CONFIG_SCHEMA_VERSION, CacheConfig, ConfigError, ConfigOutputFormat, DecimateConfig,
+    CONFIG_SCHEMA_VERSION, CacheConfig, ConfigError, ConfigOutputFormat, DartDecimateConfig,
     DuplicateConfig, FeatureFlagConfig, HealthConfig, IgnoreDependencyOverrideRule, SecurityConfig,
-    config_schema, load_decimate_config, missing_suppression_reasons_enabled,
+    config_schema, load_dart_decimate_config, missing_suppression_reasons_enabled,
 };
 pub use coverage::{
     COVERAGE_ANALYSIS_SCHEMA_VERSION, CoverageAnalysisReport, CoverageSetupConfigSummary,
@@ -145,7 +145,7 @@ pub use intelligence::{
     BoundaryRule, BoundaryViolation, DeadCodeReport, DeadFile, DependencyCycle, ReExportCycle,
     check_architecture_boundaries, detect_cycles, detect_re_export_cycles, find_dead_code,
 };
-pub use manifest::{MANIFEST_SCHEMA_VERSION, decimate_schema};
+pub use manifest::{MANIFEST_SCHEMA_VERSION, dart_decimate_schema};
 pub use output::{
     AuditAttribution, AuditAttributionCounts, AuditRiskLevel, Finding, JsonAttackSurfaceEntry,
     JsonCloneGroup, JsonCloneInstance, JsonComplexityContribution, JsonComplexityFinding,

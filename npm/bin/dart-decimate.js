@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "../..");
-const exeName = process.platform === "win32" ? "decimate.exe" : "decimate";
+const exeName = process.platform === "win32" ? "dart-decimate.exe" : "dart-decimate";
 const cachedBinary = path.join(root, "npm", "bin-cache", exeName);
 const releaseBinary = path.join(root, "target", "release", exeName);
 const debugBinary = path.join(root, "target", "debug", exeName);
@@ -18,7 +18,7 @@ for (const candidate of [cachedBinary, releaseBinary, debugBinary]) {
 }
 
 const cargo = process.env.CARGO || "cargo";
-run(cargo, ["run", "--release", "--locked", "--", ...args], root);
+run(cargo, ["run", "--release", "--locked", "--bin", "dart-decimate", "--", ...args], root);
 
 function run(command, commandArgs, cwd = undefined) {
   const result = spawnSync(command, commandArgs, {
@@ -30,12 +30,12 @@ function run(command, commandArgs, cwd = undefined) {
   if (result.error) {
     if (result.error.code === "ENOENT") {
       console.error(
-        "decimate: Rust/Cargo is required to build the npm source package. " +
+        "dart-decimate: Rust/Cargo is required to build the npm source package. " +
           "Install Rust from https://rustup.rs or use a release package with a prebuilt binary."
       );
       process.exit(127);
     }
-    console.error(`decimate: failed to execute ${command}: ${result.error.message}`);
+    console.error(`dart-decimate: failed to execute ${command}: ${result.error.message}`);
     process.exit(1);
   }
 

@@ -1,7 +1,7 @@
 use std::fs;
 use std::process::Command;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -16,7 +16,7 @@ fn changed_since_scopes_dead_code_to_changed_files() -> Result<(), Box<dyn std::
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -47,7 +47,7 @@ fn changed_since_errors_for_invalid_base() -> Result<(), Box<dyn std::error::Err
 
     let error = match run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -71,7 +71,7 @@ fn changed_since_errors_for_invalid_base() -> Result<(), Box<dyn std::error::Err
 fn changed_since_is_listed_for_report_commands() -> Result<(), Box<dyn std::error::Error>> {
     let mut output = Vec::new();
 
-    let code = run_from(["decimate", "schema", "--format", "json"], &mut output)?;
+    let code = run_from(["dart-decimate", "schema", "--format", "json"], &mut output)?;
 
     let json = serde_json::from_slice::<Value>(&output)?;
     for name in [
@@ -135,8 +135,11 @@ fn command_flags<'json>(
 fn git_fixture() -> Result<TempDir, Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     git(&fixture, ["init", "-q"])?;
-    git(&fixture, ["config", "user.email", "decimate@example.com"])?;
-    git(&fixture, ["config", "user.name", "Decimate Tests"])?;
+    git(
+        &fixture,
+        ["config", "user.email", "dart-decimate@example.com"],
+    )?;
+    git(&fixture, ["config", "user.name", "Dart Decimate Tests"])?;
     Ok(fixture)
 }
 

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::ArgMatches;
 
 use crate::output::ReportCommand;
-use crate::{BoundaryCallRule, BoundaryRule, DecimateConfig};
+use crate::{BoundaryCallRule, BoundaryRule, DartDecimateConfig};
 
 use super::{CliError, TraceSymbolSpec};
 
@@ -33,7 +33,7 @@ pub(super) fn boundary_rules(
 pub(super) fn boundary_call_rules(
     command: ReportCommand,
     subcommand: &ArgMatches,
-    config: &DecimateConfig,
+    config: &DartDecimateConfig,
 ) -> Result<Vec<BoundaryCallRule>, CliError> {
     let mut rules = config.boundary_calls.clone();
     if !matches!(command, ReportCommand::Check | ReportCommand::Audit) {
@@ -47,7 +47,7 @@ pub(super) fn boundary_call_rules(
 pub(super) fn policy_pack_paths(
     command: ReportCommand,
     subcommand: &ArgMatches,
-    config: &DecimateConfig,
+    config: &DartDecimateConfig,
 ) -> Vec<PathBuf> {
     let mut paths = config.policy_packs.clone();
     if matches!(command, ReportCommand::Check | ReportCommand::Audit)

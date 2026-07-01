@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -18,7 +18,10 @@ fn check_uses_nested_non_src_library_files_as_default_entries()
     write(&fixture, "lib/src/theme.dart", "class ThemeToken {}\n")?;
     write(&fixture, "lib/src/internal.dart", "class InternalOnly {}\n")?;
 
-    let (code, json) = run_json(&fixture, ["decimate", "check", "$ROOT", "--format", "json"])?;
+    let (code, json) = run_json(
+        &fixture,
+        ["dart-decimate", "check", "$ROOT", "--format", "json"],
+    )?;
 
     assert_eq!(code, 1);
     assert_eq!(json["summary"]["dead_files"], 1);
@@ -52,7 +55,7 @@ fn dead_file_paths(json: &Value) -> Vec<&str> {
         .as_array()
         .into_iter()
         .flatten()
-        .filter(|finding| finding["rule_id"] == "decimate/dead-file")
+        .filter(|finding| finding["rule_id"] == "dart-decimate/dead-file")
         .map(|finding| finding["path"].as_str().unwrap_or_default())
         .collect()
 }

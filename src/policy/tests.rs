@@ -84,10 +84,11 @@ fn detects_policy_banned_imports_and_calls() -> Result<(), Box<dyn std::error::E
 
     assert_eq!(violations.len(), 2);
     assert!(violations.iter().any(|violation| {
-        violation.rule_id == "decimate/policy/mobile/no-dart-io" && violation.target == "dart:io"
+        violation.rule_id == "dart-decimate/policy/mobile/no-dart-io"
+            && violation.target == "dart:io"
     }));
     assert!(violations.iter().any(|violation| {
-        violation.rule_id == "decimate/policy/mobile/no-process"
+        violation.rule_id == "dart-decimate/policy/mobile/no-process"
             && violation.target == "Process.runSync"
     }));
 

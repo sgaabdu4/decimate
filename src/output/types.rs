@@ -506,14 +506,14 @@ impl FindingAction {
         }
     }
 
-    /// Attach a Decimate command with both shell-safe text and argv forms.
+    /// Attach a Dart Decimate command with both shell-safe text and argv forms.
     #[must_use]
-    pub fn with_decimate_args<I, S>(mut self, args: I) -> Self
+    pub fn with_dart_decimate_args<I, S>(mut self, args: I) -> Self
     where
         I: IntoIterator<Item = S>,
         S: Into<String>,
     {
-        self.argv = std::iter::once("decimate".to_owned())
+        self.argv = std::iter::once("dart-decimate".to_owned())
             .chain(args.into_iter().map(Into::into))
             .collect();
         self.command = Some(shell_command(&self.argv));

@@ -7,7 +7,7 @@ use crate::output::ReportCommand;
 
 use super::CliError;
 
-pub(super) const DEFAULT_REGRESSION_BASELINE: &str = ".decimate/regression-baseline.json";
+pub(super) const DEFAULT_REGRESSION_BASELINE: &str = ".dart-decimate/regression-baseline.json";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct RegressionRequestArgs {

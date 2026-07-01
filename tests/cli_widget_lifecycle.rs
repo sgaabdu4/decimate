@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::{Value, json};
 use tempfile::TempDir;
 
@@ -9,7 +9,7 @@ fn check_reports_widget_lifecycle_findings() -> Result<(), Box<dyn std::error::E
     let fixture = lifecycle_fixture()?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         r#"{ "rules": { "missing-context-mounted-after-await": "warn" } }"#,
     )?;
     let mut output = Vec::new();
@@ -24,7 +24,7 @@ fn check_reports_widget_lifecycle_findings() -> Result<(), Box<dyn std::error::E
     let context = finding(&json, "missing-context-mounted-after-await")?;
     assert_eq!(
         context["rule_id"],
-        "decimate/missing-context-mounted-after-await"
+        "dart-decimate/missing-context-mounted-after-await"
     );
     assert_eq!(context["severity"], "warning");
     assert_eq!(context["path"], "lib/lifecycle.dart");
@@ -40,7 +40,7 @@ fn check_reports_widget_lifecycle_findings() -> Result<(), Box<dyn std::error::E
     );
     assert_eq!(
         context["actions"][0]["suppression_comment"],
-        "// decimate-ignore-next-line missing-context-mounted-after-await"
+        "// dart-decimate-ignore-next-line missing-context-mounted-after-await"
     );
 
     Ok(())
@@ -51,7 +51,7 @@ fn widget_lifecycle_rules_can_error_or_turn_off() -> Result<(), Box<dyn std::err
     let fixture = lifecycle_fixture()?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         r#"{ "rules": { "use-build-context-synchronously": "error" } }"#,
     )?;
     let mut output = Vec::new();
@@ -67,7 +67,7 @@ fn widget_lifecycle_rules_can_error_or_turn_off() -> Result<(), Box<dyn std::err
 
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         r#"{ "rules": { "missing-context-mounted-after-await": "off" } }"#,
     )?;
     output.clear();
@@ -115,10 +115,13 @@ class CounterNotifier extends _$CounterNotifier {
     Ok(fixture)
 }
 
-fn run_check(fixture: &TempDir, output: &mut Vec<u8>) -> Result<i32, Box<decimate::cli::CliError>> {
+fn run_check(
+    fixture: &TempDir,
+    output: &mut Vec<u8>,
+) -> Result<i32, Box<dart_decimate::cli::CliError>> {
     run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",

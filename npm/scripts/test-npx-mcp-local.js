@@ -6,7 +6,7 @@ const { join } = require("path");
 const { spawnSync } = require("child_process");
 
 const root = join(__dirname, "..", "..");
-const tempDir = mkdtempSync(join(tmpdir(), "decimate-npx-mcp-"));
+const tempDir = mkdtempSync(join(tmpdir(), "dart-decimate-npx-mcp-"));
 
 try {
   const pack = spawnSync(
@@ -30,7 +30,7 @@ try {
     '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25"}}\n';
   const result = spawnSync(
     "npx",
-    ["--yes", "--package", tarball, "--", "decimate-mcp"],
+    ["--yes", "--package", tarball, "--", "dart-decimate-mcp"],
     { input: initialize, encoding: "utf8" },
   );
   if (result.stdout) {
@@ -48,7 +48,7 @@ try {
   }
   const response = JSON.parse(result.stdout.trim());
   if (response.result?.protocolVersion !== "2025-11-25") {
-    process.stderr.write("decimate-mcp did not negotiate MCP 2025-11-25\n");
+    process.stderr.write("dart-decimate-mcp did not negotiate MCP 2025-11-25\n");
     process.exit(1);
   }
 } finally {

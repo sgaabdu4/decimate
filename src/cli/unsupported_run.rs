@@ -20,7 +20,7 @@ pub(super) fn migrate_command() -> Command {
 
 pub(super) fn telemetry_command() -> Command {
     Command::new("telemetry")
-        .about("Report Decimate telemetry support status")
+        .about("Report Dart Decimate telemetry support status")
         .subcommand_required(false)
         .arg_required_else_help(false)
         .arg(format_arg())
@@ -31,7 +31,7 @@ pub(super) fn telemetry_command() -> Command {
 
 pub(super) fn license_command() -> Command {
     Command::new("license")
-        .about("Report Decimate license support status")
+        .about("Report Dart Decimate license support status")
         .subcommand_required(false)
         .arg_required_else_help(false)
         .arg(format_arg())
@@ -43,10 +43,10 @@ pub(super) fn run_migrate<W: Write>(subcommand: &ArgMatches, writer: W) -> Resul
     let report = unsupported_report(
         "migrate",
         "not-applicable",
-        "Fallow migrate imports JS/TS tool configuration; Decimate has no Dart migration source to convert.",
+        "Fallow migrate imports JS/TS tool configuration; Dart Decimate has no Dart migration source to convert.",
         vec![
-            "Use decimate init --format json to create Dart-native defaults.".to_owned(),
-            "Use decimate config --format json to inspect the resolved local configuration."
+            "Use dart-decimate init --format json to create Dart-native defaults.".to_owned(),
+            "Use dart-decimate config --format json to inspect the resolved local configuration."
                 .to_owned(),
         ],
     );
@@ -59,7 +59,7 @@ pub(super) fn run_telemetry<W: Write>(subcommand: &ArgMatches, writer: W) -> Res
     let report = unsupported_report(
         format!("telemetry {action}"),
         "disabled",
-        "Decimate does not collect telemetry and has no hosted telemetry backend.",
+        "Dart Decimate does not collect telemetry and has no hosted telemetry backend.",
         vec!["No action is required; local analysis runs without telemetry.".to_owned()],
     );
     write_report(subcommand, writer, &report)?;
@@ -71,7 +71,7 @@ pub(super) fn run_license<W: Write>(subcommand: &ArgMatches, writer: W) -> Resul
     let report = unsupported_report(
         format!("license {action}"),
         "not-required",
-        "This Decimate build has no hosted license service; local Dart analysis is available without activation.",
+        "This Dart Decimate build has no hosted license service; local Dart analysis is available without activation.",
         vec![
             "Use cargo install or the npm wrapper once published for local installation."
                 .to_owned(),

@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::{Value, json};
 use tempfile::TempDir;
 
@@ -22,7 +22,7 @@ fn check_command_reports_typed_route_collisions() -> Result<(), Box<dyn std::err
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -33,7 +33,7 @@ fn check_command_reports_typed_route_collisions() -> Result<(), Box<dyn std::err
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 1);
-    assert_eq!(json["schema_version"], "decimate.report.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.report.v1");
     assert_eq!(json["command"], "check");
     assert_eq!(json["verdict"], "fail");
     assert_eq!(json["summary"]["route_collisions"], 1);
@@ -41,7 +41,7 @@ fn check_command_reports_typed_route_collisions() -> Result<(), Box<dyn std::err
     let Some(finding) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|finding| finding["rule_id"] == "decimate/route-collision")
+            .find(|finding| finding["rule_id"] == "dart-decimate/route-collision")
     }) else {
         panic!("route collision finding");
     };
@@ -61,7 +61,7 @@ fn check_command_reports_typed_route_collisions() -> Result<(), Box<dyn std::err
     assert_eq!(finding["actions"][0]["target_symbol"], "SettingsBRoute");
     assert_eq!(
         finding["actions"][0]["suppression_comment"],
-        "// decimate-ignore-next-line route-collision"
+        "// dart-decimate-ignore-next-line route-collision"
     );
 
     Ok(())
@@ -73,7 +73,7 @@ fn route_collision_rule_can_warn_or_turn_off() -> Result<(), Box<dyn std::error:
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         r#"{ "rules": { "route-collision": "warn" } }"#,
     )?;
     write(
@@ -90,7 +90,7 @@ fn route_collision_rule_can_warn_or_turn_off() -> Result<(), Box<dyn std::error:
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -132,7 +132,7 @@ final router = GoRouter(
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -146,7 +146,7 @@ final router = GoRouter(
     assert_eq!(json["summary"]["route_collisions"], 1);
     assert!(json["findings"].as_array().is_some_and(|findings| {
         findings.iter().any(|finding| {
-            finding["rule_id"] == "decimate/route-collision"
+            finding["rule_id"] == "dart-decimate/route-collision"
                 && finding["message"]
                     .as_str()
                     .is_some_and(|message| message.contains("GoRouter route path /settings"))

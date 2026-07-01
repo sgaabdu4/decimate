@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -18,7 +18,7 @@ class _Hidden {}
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -31,7 +31,7 @@ class _Hidden {}
     let Some(finding) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|finding| finding["rule_id"] == "decimate/private-type-leak")
+            .find(|finding| finding["rule_id"] == "dart-decimate/private-type-leak")
     }) else {
         panic!("primary constructor private type leak finding");
     };

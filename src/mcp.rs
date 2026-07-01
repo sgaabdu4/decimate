@@ -16,7 +16,7 @@ use tools::tools;
 
 const PROTOCOL_VERSION: &str = "2025-11-25";
 
-/// Run Decimate's MCP stdio server.
+/// Run Dart Decimate's MCP stdio server.
 ///
 /// # Errors
 ///
@@ -81,8 +81,8 @@ fn initialize_result(message: &Value) -> Value {
             "tools": { "listChanged": false }
         },
         "serverInfo": {
-            "name": "decimate-mcp",
-            "title": "Decimate MCP",
+            "name": "dart-decimate-mcp",
+            "title": "Dart Decimate MCP",
             "version": env!("CARGO_PKG_VERSION")
         },
         "instructions": "Dart and Flutter codebase intelligence. Mutating fix_apply is available only with explicit yes: true confirmation."

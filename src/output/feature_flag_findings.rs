@@ -83,7 +83,7 @@ fn feature_flag_finding(root: &Path, flag: &FeatureFlag) -> Finding {
         .collect::<Vec<_>>();
 
     Finding {
-        rule_id: "decimate/feature-flag".to_owned(),
+        rule_id: "dart-decimate/feature-flag".to_owned(),
         fingerprint: Some(feature_flag_fingerprint(flag)),
         kind: FindingKind::FeatureFlag,
         severity: Severity::Error,
@@ -105,8 +105,8 @@ fn feature_flag_finding(root: &Path, flag: &FeatureFlag) -> Finding {
             )
             .with_target_path(path.clone())
             .with_target_symbol(flag.name.clone())
-            .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
-            .with_suppression_comment("// decimate-ignore-next-line feature-flag"),
+            .with_dart_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
+            .with_suppression_comment("// dart-decimate-ignore-next-line feature-flag"),
         ],
     }
 }

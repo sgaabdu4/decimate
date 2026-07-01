@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::{Value, json};
 use tempfile::TempDir;
 
@@ -9,7 +9,7 @@ fn check_reports_widget_top_level_function_boundary() -> Result<(), Box<dyn std:
     let fixture = widget_helper_fixture()?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         r#"{ "rules": { "widget-top-level-function-boundary": "warn" } }"#,
     )?;
     let mut output = Vec::new();
@@ -34,7 +34,7 @@ fn check_reports_widget_top_level_function_boundary() -> Result<(), Box<dyn std:
     assert_eq!(finding["actions"][0]["target_symbol"], "_buildHeader");
     assert_eq!(
         finding["actions"][0]["suppression_comment"],
-        "// decimate-ignore-next-line widget-top-level-function-boundary"
+        "// dart-decimate-ignore-next-line widget-top-level-function-boundary"
     );
 
     Ok(())
@@ -46,7 +46,7 @@ fn widget_top_level_function_rule_can_error_or_turn_off() -> Result<(), Box<dyn 
     let fixture = widget_helper_fixture()?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         r#"{ "rules": { "top-level-widget-helper": "error" } }"#,
     )?;
     let mut output = Vec::new();
@@ -59,8 +59,8 @@ fn widget_top_level_function_rule_can_error_or_turn_off() -> Result<(), Box<dyn 
 
     write(
         &fixture,
-        ".decimaterc.json",
-        r#"{ "rules": { "decimate/widget-top-level-function-boundary": "off" } }"#,
+        ".dart-decimaterc.json",
+        r#"{ "rules": { "dart-decimate/widget-top-level-function-boundary": "off" } }"#,
     )?;
     output.clear();
 
@@ -81,7 +81,7 @@ fn check_ignores_generated_test_and_dead_widget_helpers() -> Result<(), Box<dyn 
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         r#"{ "rules": { "dead-file": "off" } }"#,
     )?;
     write(&fixture, "lib/main.dart", "void main() {}\n")?;
@@ -139,7 +139,7 @@ Widget _buildHeader(BuildContext context) => const SizedBox();
 fn run_check(fixture: &TempDir, output: &mut Vec<u8>) -> Result<i32, Box<dyn std::error::Error>> {
     Ok(run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -153,9 +153,9 @@ fn run_check(fixture: &TempDir, output: &mut Vec<u8>) -> Result<i32, Box<dyn std
 
 fn widget_helper_finding(json: &Value) -> &Value {
     let Some(finding) = json["findings"].as_array().and_then(|findings| {
-        findings
-            .iter()
-            .find(|finding| finding["rule_id"] == "decimate/widget-top-level-function-boundary")
+        findings.iter().find(|finding| {
+            finding["rule_id"] == "dart-decimate/widget-top-level-function-boundary"
+        })
     }) else {
         panic!("widget top-level function boundary finding");
     };
@@ -165,7 +165,7 @@ fn widget_helper_finding(json: &Value) -> &Value {
 fn assert_no_widget_helper_for(json: &Value, function_name: &str) {
     assert!(json["findings"].as_array().is_some_and(|findings| {
         findings.iter().all(|finding| {
-            finding["rule_id"] != "decimate/widget-top-level-function-boundary"
+            finding["rule_id"] != "dart-decimate/widget-top-level-function-boundary"
                 || finding["actions"][0]["target_symbol"] != function_name
         })
     }));

@@ -48,7 +48,9 @@ pub enum CliError {
     #[error("dupes --cross-language is not supported for Dart-only analysis")]
     UnsupportedCrossLanguageDupes,
     /// User-level agent hook installation is intentionally not supported.
-    #[error("setup-hooks --user is not supported; Decimate only manages repo-local agent hooks")]
+    #[error(
+        "setup-hooks --user is not supported; Dart Decimate only manages repo-local agent hooks"
+    )]
     UnsupportedSetupHooksUser,
     /// Mutating `.gitignore` from setup-hooks is intentionally not supported.
     #[error("setup-hooks --gitignore-claude is not supported; update .gitignore explicitly")]
@@ -62,10 +64,10 @@ pub enum CliError {
     /// Workspace scope could not be computed.
     #[error(transparent)]
     WorkspaceScope(#[from] WorkspaceScopeError),
-    /// Decimate config could not be loaded.
+    /// Dart Decimate config could not be loaded.
     #[error(transparent)]
     Config(#[from] ConfigError),
-    /// Decimate rule config could not be applied.
+    /// Dart Decimate rule config could not be applied.
     #[error(transparent)]
     Rule(#[from] crate::config::RuleError),
     /// Finding baseline could not be loaded or saved.
@@ -142,6 +144,6 @@ pub enum CliError {
     #[error(transparent)]
     Hooks(#[from] crate::HooksError),
     /// SARIF output is not available for this command.
-    #[error("--format sarif is not supported by decimate {command}")]
+    #[error("--format sarif is not supported by dart-decimate {command}")]
     UnsupportedSarifFormat { command: &'static str },
 }

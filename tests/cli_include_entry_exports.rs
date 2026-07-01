@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -13,7 +13,7 @@ fn dead_code_include_entry_exports_reports_entry_declarations()
     let (_, default_json) = run_json(
         &fixture,
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             "$ROOT",
             "--format",
@@ -27,7 +27,7 @@ fn dead_code_include_entry_exports_reports_entry_declarations()
     let (code, json) = run_json(
         &fixture,
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             "$ROOT",
             "--format",
@@ -57,7 +57,7 @@ fn check_include_entry_exports_reports_entry_declarations() -> Result<(), Box<dy
     let (code, json) = run_json(
         &fixture,
         [
-            "decimate",
+            "dart-decimate",
             "check",
             "$ROOT",
             "--format",
@@ -102,7 +102,7 @@ fn unused_export_messages(json: &Value) -> Vec<&str> {
         .as_array()
         .into_iter()
         .flatten()
-        .filter(|finding| finding["rule_id"] == "decimate/unused-export")
+        .filter(|finding| finding["rule_id"] == "dart-decimate/unused-export")
         .map(|finding| finding["message"].as_str().unwrap_or_default())
         .collect()
 }

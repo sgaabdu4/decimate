@@ -14,7 +14,7 @@ fn detects_dart_and_flutter_security_candidate_patterns() -> Result<(), Box<dyn 
         "lib/main.dart",
         "import 'dart:io';
 
-const accessToken = 'decimate_fixture_value_1234567890';
+const accessToken = 'dart_decimate_fixture_value_1234567890';
 
 Future<void> main(dynamic db, dynamic prefs, dynamic controller, String command, String id, String token) async {
   final uri = Uri.parse('http://api.example.com/login');
@@ -48,13 +48,13 @@ Future<void> main(dynamic db, dynamic prefs, dynamic controller, String command,
     assert_eq!(report.analyzed_files, 1);
     assert_eq!(report.total_occurrences, 7);
     assert_eq!(report.attack_surface.len(), 7);
-    assert!(rules.contains(&"decimate/security-hardcoded-secret"));
-    assert!(rules.contains(&"decimate/security-insecure-transport"));
-    assert!(rules.contains(&"decimate/security-tls-bypass"));
-    assert!(rules.contains(&"decimate/security-webview-risk"));
-    assert!(rules.contains(&"decimate/security-process-execution"));
-    assert!(rules.contains(&"decimate/security-raw-sql"));
-    assert!(rules.contains(&"decimate/security-plain-secret-storage"));
+    assert!(rules.contains(&"dart-decimate/security-hardcoded-secret"));
+    assert!(rules.contains(&"dart-decimate/security-insecure-transport"));
+    assert!(rules.contains(&"dart-decimate/security-tls-bypass"));
+    assert!(rules.contains(&"dart-decimate/security-webview-risk"));
+    assert!(rules.contains(&"dart-decimate/security-process-execution"));
+    assert!(rules.contains(&"dart-decimate/security-raw-sql"));
+    assert!(rules.contains(&"dart-decimate/security-plain-secret-storage"));
     assert!(
         report
             .candidates
@@ -62,7 +62,7 @@ Future<void> main(dynamic db, dynamic prefs, dynamic controller, String command,
             .flat_map(|candidate| &candidate.occurrences)
             .all(|occurrence| !occurrence
                 .evidence
-                .contains("decimate_fixture_value_1234567890"))
+                .contains("dart_decimate_fixture_value_1234567890"))
     );
 
     Ok(())
@@ -75,7 +75,7 @@ fn skips_comments_generated_tests_and_placeholders() -> Result<(), Box<dyn std::
     write(
         &fixture,
         "lib/main.dart",
-        "// const accessToken = 'decimate_fixture_value_1234567890';
+        "// const accessToken = 'dart_decimate_fixture_value_1234567890';
 const apiKey = 'YOUR_API_KEY';
 const firebase = FirebaseOptions(apiKey: 'AIzaPublicMobileConfigValue');
 final uri = Uri.parse('http://localhost:8080');
@@ -86,12 +86,12 @@ Future<void> query(dynamic db, String id) => db.rawQuery('SELECT * FROM users WH
     write(
         &fixture,
         "lib/generated.g.dart",
-        "const accessToken = 'decimate_fixture_value_1234567890';\n",
+        "const accessToken = 'dart_decimate_fixture_value_1234567890';\n",
     )?;
     write(
         &fixture,
         "test/security_test.dart",
-        "const accessToken = 'decimate_fixture_value_1234567890';\n",
+        "const accessToken = 'dart_decimate_fixture_value_1234567890';\n",
     )?;
 
     let project = scan_project(fixture.path())?;
@@ -133,7 +133,7 @@ Future<void> main(dynamic viewModel, dynamic prefs, String token) async {
     assert_eq!(report.total_occurrences, 1);
     assert_eq!(
         report.candidates[0].rule_id,
-        "decimate/security-plain-secret-storage"
+        "dart-decimate/security-plain-secret-storage"
     );
 
     Ok(())
@@ -147,7 +147,7 @@ fn top_limits_grouped_candidates_but_preserves_total_occurrences()
     write(
         &fixture,
         "lib/main.dart",
-        "const accessToken = 'decimate_fixture_value_1234567890';
+        "const accessToken = 'dart_decimate_fixture_value_1234567890';
 final uri = Uri.parse('http://api.example.com/login');
 ",
     )?;

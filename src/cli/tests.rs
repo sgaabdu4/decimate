@@ -20,7 +20,7 @@ fn dead_code_command_emits_json_contract() -> Result<(), Box<dyn std::error::Err
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -33,12 +33,12 @@ fn dead_code_command_emits_json_contract() -> Result<(), Box<dyn std::error::Err
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 1);
-    assert_eq!(json["schema_version"], "decimate.report.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.report.v1");
     assert_eq!(json["kind"], "dead-code");
     assert_eq!(json["command"], "dead-code");
     assert_eq!(json["verdict"], "fail");
     assert_eq!(json["summary"]["dead_files"], 1);
-    assert_eq!(json["findings"][0]["rule_id"], "decimate/dead-file");
+    assert_eq!(json["findings"][0]["rule_id"], "dart-decimate/dead-file");
     assert_eq!(json["findings"][0]["path"], "lib/dead.dart");
     assert_eq!(json["findings"][0]["safe_to_delete"], true);
     assert_eq!(json["findings"][0]["actions"][0]["type"], "delete-file");
@@ -48,7 +48,7 @@ fn dead_code_command_emits_json_contract() -> Result<(), Box<dyn std::error::Err
     );
     assert_eq!(
         json["findings"][0]["actions"][0]["command"],
-        "decimate inspect --format json --file lib/dead.dart"
+        "dart-decimate inspect --format json --file lib/dead.dart"
     );
     assert_eq!(json["findings"][0]["actions"][0]["auto_fixable"], true);
 
@@ -65,7 +65,7 @@ fn cycles_command_reports_circular_dependencies() -> Result<(), Box<dyn std::err
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "cycles",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -80,7 +80,7 @@ fn cycles_command_reports_circular_dependencies() -> Result<(), Box<dyn std::err
     assert_eq!(json["summary"]["cycles"], 1);
     assert_eq!(
         json["findings"][0]["rule_id"],
-        "decimate/circular-dependency"
+        "dart-decimate/circular-dependency"
     );
     assert_eq!(json["findings"][0]["files"][0], "lib/a.dart");
     assert_eq!(json["findings"][0]["files"][1], "lib/b.dart");
@@ -98,7 +98,7 @@ fn cycles_command_reports_re_export_cycles_separately() -> Result<(), Box<dyn st
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "cycles",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -117,8 +117,8 @@ fn cycles_command_reports_re_export_cycles_separately() -> Result<(), Box<dyn st
         .collect::<Vec<_>>();
     assert_eq!(code, 1);
     assert_eq!(json["summary"]["re_export_cycles"], 1);
-    assert!(rule_ids.contains(&"decimate/circular-dependency"));
-    assert!(rule_ids.contains(&"decimate/re-export-cycle"));
+    assert!(rule_ids.contains(&"dart-decimate/circular-dependency"));
+    assert!(rule_ids.contains(&"dart-decimate/re-export-cycle"));
 
     Ok(())
 }
@@ -142,7 +142,7 @@ fn dead_code_command_reports_unused_exports_with_safe_fix_action()
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -157,7 +157,7 @@ fn dead_code_command_reports_unused_exports_with_safe_fix_action()
     let Some(finding) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|finding| finding["rule_id"] == "decimate/unused-export")
+            .find(|finding| finding["rule_id"] == "dart-decimate/unused-export")
     }) else {
         panic!("unused export finding");
     };
@@ -178,17 +178,17 @@ fn dead_code_command_reports_unused_exports_with_safe_fix_action()
     assert_eq!(finding["actions"][1]["target_symbol"], "Unused");
     assert_eq!(
         finding["actions"][1]["command"],
-        "decimate inspect --format json --symbol lib/src/live.dart:Unused"
+        "dart-decimate inspect --format json --symbol lib/src/live.dart:Unused"
     );
     assert_eq!(
         finding["actions"][1]["suppression_comment"],
-        "// decimate-ignore-next-line unused-export"
+        "// dart-decimate-ignore-next-line unused-export"
     );
     assert_eq!(finding["actions"][1]["auto_fixable"], false);
     assert_eq!(json["next_steps"][0]["id"], "trace-unused-export");
     assert_eq!(
         json["next_steps"][0]["command"],
-        "decimate trace-symbol --format json --symbol lib/src/live.dart:Unused"
+        "dart-decimate trace-symbol --format json --symbol lib/src/live.dart:Unused"
     );
 
     Ok(())
@@ -209,7 +209,7 @@ fn check_command_reports_duplicate_exports() -> Result<(), Box<dyn std::error::E
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -221,7 +221,10 @@ fn check_command_reports_duplicate_exports() -> Result<(), Box<dyn std::error::E
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 1);
     assert_eq!(json["summary"]["duplicate_exports"], 1);
-    assert_eq!(json["findings"][0]["rule_id"], "decimate/duplicate-export");
+    assert_eq!(
+        json["findings"][0]["rule_id"],
+        "dart-decimate/duplicate-export"
+    );
     assert_eq!(json["findings"][0]["kind"], "duplicate-export");
     assert_eq!(json["findings"][0]["path"], "lib/package.dart");
     assert_eq!(json["findings"][0]["safe_to_delete"], false);
@@ -256,7 +259,7 @@ fn check_command_reports_boundaries_and_unresolved_imports()
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -276,8 +279,8 @@ fn check_command_reports_boundaries_and_unresolved_imports()
         .map(|finding| finding["rule_id"].as_str().unwrap_or_default())
         .collect::<Vec<_>>();
     assert_eq!(code, 1);
-    assert!(rule_ids.contains(&"decimate/boundary-violation"));
-    assert!(rule_ids.contains(&"decimate/unresolved-dependency"));
+    assert!(rule_ids.contains(&"dart-decimate/boundary-violation"));
+    assert!(rule_ids.contains(&"dart-decimate/unresolved-dependency"));
     assert_eq!(json["summary"]["boundary_violations"], 1);
     assert_eq!(json["summary"]["unresolved_dependencies"], 1);
 
@@ -304,7 +307,7 @@ void main() {}\n",
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -324,8 +327,8 @@ void main() {}\n",
         .map(|finding| finding["rule_id"].as_str().unwrap_or_default())
         .collect::<Vec<_>>();
     assert_eq!(code, 1);
-    assert!(rule_ids.contains(&"decimate/unused-dependency"));
-    assert!(rule_ids.contains(&"decimate/unlisted-dependency"));
+    assert!(rule_ids.contains(&"dart-decimate/unused-dependency"));
+    assert!(rule_ids.contains(&"dart-decimate/unlisted-dependency"));
     assert_eq!(json["summary"]["unused_dependencies"], 1);
     assert_eq!(json["summary"]["unlisted_dependencies"], 1);
     let Some(next_steps) = json["next_steps"].as_array() else {
@@ -333,7 +336,7 @@ void main() {}\n",
     };
     assert!(next_steps.iter().any(|step| {
         step["id"] == "trace-unused-dependency"
-            && step["command"] == "decimate trace-dependency --format json --dependency path"
+            && step["command"] == "dart-decimate trace-dependency --format json --dependency path"
     }));
 
     Ok(())
@@ -352,7 +355,7 @@ fn unlisted_dependency_json_edge_kind_preserves_export() -> Result<(), Box<dyn s
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -367,7 +370,7 @@ fn unlisted_dependency_json_edge_kind_preserves_export() -> Result<(), Box<dyn s
     let Some(finding) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|finding| finding["rule_id"] == "decimate/unlisted-dependency")
+            .find(|finding| finding["rule_id"] == "dart-decimate/unlisted-dependency")
     }) else {
         panic!("unlisted dependency finding");
     };
@@ -408,7 +411,7 @@ dependencies:\n  shared:\n    path: ../shared\n",
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().join("app").to_str().unwrap_or("."),
             "--format",
@@ -451,7 +454,7 @@ fn check_command_treats_tests_as_default_entry_points() -> Result<(), Box<dyn st
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -484,7 +487,7 @@ fn check_command_treats_public_library_files_as_default_entry_points()
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",

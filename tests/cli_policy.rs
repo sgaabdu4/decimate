@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -14,7 +14,7 @@ fn check_reports_boundary_call_violations() -> Result<(), Box<dyn std::error::Er
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -26,12 +26,12 @@ fn check_reports_boundary_call_violations() -> Result<(), Box<dyn std::error::Er
     assert_eq!(code, 1);
     assert_eq!(json["summary"]["boundary_call_violations"], 1);
     let finding = &json["findings"][0];
-    assert_eq!(finding["rule_id"], "decimate/boundary-violation");
+    assert_eq!(finding["rule_id"], "dart-decimate/boundary-violation");
     assert_eq!(finding["kind"], "boundary-call-violation");
     assert_eq!(finding["path"], "lib/ui/page.dart");
     assert_eq!(
         finding["actions"][0]["suppression_comment"],
-        "// decimate-ignore-next-line boundary-call-violation"
+        "// dart-decimate-ignore-next-line boundary-call-violation"
     );
 
     Ok(())
@@ -49,7 +49,7 @@ fn policy_pack_reports_banned_imports_and_calls_as_warnings()
     write_policy_pack(&fixture)?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -70,7 +70,7 @@ fn policy_pack_reports_banned_imports_and_calls_as_warnings()
     assert!(json["findings"].as_array().is_some_and(|findings| {
         findings
             .iter()
-            .any(|finding| finding["rule_id"] == "decimate/policy/mobile/no-dart-io")
+            .any(|finding| finding["rule_id"] == "dart-decimate/policy/mobile/no-dart-io")
     }));
 
     Ok(())
@@ -82,12 +82,12 @@ fn policy_violations_can_be_promoted_and_suppressed() -> Result<(), Box<dyn std:
     write(
         &fixture,
         "lib/main.dart",
-        "// decimate-ignore-next-line decimate/policy/mobile/no-dart-io\nimport 'dart:io';\nvoid main() { Process.runSync('sh', []); }\n",
+        "// dart-decimate-ignore-next-line dart-decimate/policy/mobile/no-dart-io\nimport 'dart:io';\nvoid main() { Process.runSync('sh', []); }\n",
     )?;
     write_policy_pack(&fixture)?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "\
 format = \"json\"
 rulePacks = [\"policy.jsonc\"]
@@ -97,14 +97,18 @@ policy-violation = \"error\"
 ",
     )?;
 
-    let (code, json) = run_json(["decimate", "check", fixture.path().to_str().unwrap_or(".")])?;
+    let (code, json) = run_json([
+        "dart-decimate",
+        "check",
+        fixture.path().to_str().unwrap_or("."),
+    ])?;
 
     assert_eq!(code, 1);
     assert_eq!(json["verdict"], "fail");
     assert_eq!(json["summary"]["policy_violations"], 1);
     assert_eq!(
         json["findings"][0]["rule_id"],
-        "decimate/policy/mobile/no-process"
+        "dart-decimate/policy/mobile/no-process"
     );
     assert_eq!(json["findings"][0]["severity"], "error");
 
@@ -137,7 +141,7 @@ fn policy_pack_rule_severity_can_fail_check() -> Result<(), Box<dyn std::error::
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -163,7 +167,7 @@ fn boundary_call_family_rule_can_disable_findings() -> Result<(), Box<dyn std::e
     )?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "\
 format = \"json\"
 boundaryCalls = [\"lib/ui:SystemChrome.*\"]
@@ -173,7 +177,11 @@ boundary-violation = \"off\"
 ",
     )?;
 
-    let (code, json) = run_json(["decimate", "check", fixture.path().to_str().unwrap_or(".")])?;
+    let (code, json) = run_json([
+        "dart-decimate",
+        "check",
+        fixture.path().to_str().unwrap_or("."),
+    ])?;
 
     assert_eq!(code, 0);
     assert_eq!(json["summary"]["boundary_call_violations"], 0);
@@ -184,10 +192,10 @@ boundary-violation = \"off\"
 
 #[test]
 fn rule_pack_schema_command_emits_json_schema() -> Result<(), Box<dyn std::error::Error>> {
-    let (code, json) = run_json(["decimate", "rule-pack-schema", "--format", "json"])?;
+    let (code, json) = run_json(["dart-decimate", "rule-pack-schema", "--format", "json"])?;
 
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.rule-pack.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.rule-pack.v1");
     assert_eq!(
         json["$defs"]["rule"]["properties"]["type"]["enum"][0],
         "banned-import"

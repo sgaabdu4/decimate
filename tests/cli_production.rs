@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -9,15 +9,17 @@ fn production_scope_uses_production_entries_only() -> Result<(), Box<dyn std::er
     let fixture = tempfile::tempdir()?;
     write_workspace(&fixture)?;
 
-    let (default_code, default_json) =
-        run_json(&fixture, ["decimate", "check", "$ROOT", "--format", "json"])?;
+    let (default_code, default_json) = run_json(
+        &fixture,
+        ["dart-decimate", "check", "$ROOT", "--format", "json"],
+    )?;
     assert_eq!(default_code, 0);
     assert!(!has_dead_file(&default_json, "lib/src/test_only.dart"));
 
     let (production_code, production_json) = run_json(
         &fixture,
         [
-            "decimate",
+            "dart-decimate",
             "check",
             "$ROOT",
             "--format",
@@ -42,7 +44,7 @@ fn dead_code_production_reports_production_unreachable_files()
     let (code, json) = run_json(
         &fixture,
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             "$ROOT",
             "--format",
@@ -67,7 +69,7 @@ fn trace_file_respects_production_reachability() -> Result<(), Box<dyn std::erro
     let (_, default_json) = run_json(
         &fixture,
         [
-            "decimate",
+            "dart-decimate",
             "trace-file",
             "$ROOT",
             "--format",
@@ -81,7 +83,7 @@ fn trace_file_respects_production_reachability() -> Result<(), Box<dyn std::erro
     let (_, production_json) = run_json(
         &fixture,
         [
-            "decimate",
+            "dart-decimate",
             "trace-file",
             "$ROOT",
             "--format",
@@ -105,7 +107,7 @@ fn trace_symbol_respects_production_reachability() -> Result<(), Box<dyn std::er
     let (_, default_json) = run_json(
         &fixture,
         [
-            "decimate",
+            "dart-decimate",
             "trace-symbol",
             "$ROOT",
             "--format",
@@ -121,7 +123,7 @@ fn trace_symbol_respects_production_reachability() -> Result<(), Box<dyn std::er
     let (_, production_json) = run_json(
         &fixture,
         [
-            "decimate",
+            "dart-decimate",
             "trace-symbol",
             "$ROOT",
             "--format",
@@ -147,7 +149,7 @@ fn list_production_entry_points_reports_source() -> Result<(), Box<dyn std::erro
     let (_, json) = run_json(
         &fixture,
         [
-            "decimate",
+            "dart-decimate",
             "list",
             "$ROOT",
             "--format",
@@ -172,7 +174,7 @@ fn fix_production_does_not_plan_dead_file_deletes() -> Result<(), Box<dyn std::e
     let (_, json) = run_json(
         &fixture,
         [
-            "decimate",
+            "dart-decimate",
             "fix",
             "$ROOT",
             "--format",
@@ -195,16 +197,19 @@ fn config_production_default_can_be_disabled_by_cli() -> Result<(), Box<dyn std:
     write_workspace(&fixture)?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "[cli]\nformat = \"json\"\nproduction = true\n",
     )?;
 
-    let (production_code, production_json) = run_json(&fixture, ["decimate", "check", "$ROOT"])?;
+    let (production_code, production_json) =
+        run_json(&fixture, ["dart-decimate", "check", "$ROOT"])?;
     assert_eq!(production_code, 1);
     assert!(has_dead_file(&production_json, "lib/src/test_only.dart"));
 
-    let (default_code, default_json) =
-        run_json(&fixture, ["decimate", "check", "$ROOT", "--no-production"])?;
+    let (default_code, default_json) = run_json(
+        &fixture,
+        ["dart-decimate", "check", "$ROOT", "--no-production"],
+    )?;
     assert_eq!(default_code, 0);
     assert!(!has_dead_file(&default_json, "lib/src/test_only.dart"));
 

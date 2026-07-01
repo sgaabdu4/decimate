@@ -9,7 +9,7 @@ use crate::graph::normalize_path;
 use crate::output::{Finding, FindingKind};
 
 /// Stable JSON schema version for fix reports.
-pub const FIX_SCHEMA_VERSION: &str = "decimate.fix.v1";
+pub const FIX_SCHEMA_VERSION: &str = "dart-decimate.fix.v1";
 
 /// Safe-fix execution mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -21,7 +21,7 @@ pub enum FixMode {
     Apply,
 }
 
-/// Report emitted by `decimate fix`.
+/// Report emitted by `dart-decimate fix`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FixReport {
     /// Schema identifier.
@@ -127,7 +127,7 @@ pub fn fix_findings(
 
     FixReport {
         schema_version: FIX_SCHEMA_VERSION.to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         kind: "fix".to_owned(),
         mode,
         summary: FixSummary {

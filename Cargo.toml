@@ -1,11 +1,17 @@
 [package]
-name = "decimate"
-version = "0.1.0"
+name = "dart-decimate"
+version = "0.0.1"
 edition = "2024"
 rust-version = "1.85"
 description = "Rust-native codebase intelligence for Dart and Flutter module graphs."
 license = "MIT"
+repository = "https://github.com/sgaabdu4/dart-decimate"
+homepage = "https://github.com/sgaabdu4/dart-decimate#readme"
+readme = "README.md"
+keywords = ["dart", "flutter", "static-analysis", "code-intelligence"]
+categories = ["command-line-utilities", "development-tools"]
 publish = false
+include = ["/Cargo.toml", "/Cargo.lock", "/README.md", "/LICENSE", "/src/**"]
 
 [dependencies]
 clap = { version = "4", default-features = false, features = ["std", "help", "usage", "error-context", "suggestions"] }

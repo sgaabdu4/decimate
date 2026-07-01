@@ -54,7 +54,7 @@ pub struct UnusedPackageDependency {
     pub issue: DependencyIssue,
     /// Best-effort location of the dependency key in `pubspec.yaml`.
     pub location: Location,
-    /// Whether Decimate can suggest removal from current evidence alone.
+    /// Whether Dart Decimate can suggest removal from current evidence alone.
     pub safe_to_delete: bool,
 }
 

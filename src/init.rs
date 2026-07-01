@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Stable schema version for project initialization output.
-pub const INIT_SCHEMA_VERSION: &str = "decimate.init.v1";
+pub const INIT_SCHEMA_VERSION: &str = "dart-decimate.init.v1";
 
 /// Project initialization options.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -36,7 +36,7 @@ pub struct InitReport {
     pub next_steps: Vec<String>,
 }
 
-/// File produced by `decimate init`.
+/// File produced by `dart-decimate init`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InitFile {
     /// Path relative to the initialized root.
@@ -51,7 +51,7 @@ pub struct InitFile {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum InitFileKind {
-    /// Decimate configuration.
+    /// Dart Decimate configuration.
     Config,
     /// Agent workflow guidance.
     Agents,
@@ -94,7 +94,7 @@ pub enum InitError {
     },
 }
 
-/// Initialize Decimate config and optional agent guidance under `root`.
+/// Initialize Dart Decimate config and optional agent guidance under `root`.
 ///
 /// # Errors
 ///
@@ -118,13 +118,13 @@ pub fn init_project(root: impl AsRef<Path>, options: InitOptions) -> Result<Init
     Ok(InitReport {
         schema_version: INIT_SCHEMA_VERSION.to_owned(),
         kind: "init".to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: "init".to_owned(),
         root: root.to_path_buf(),
         files: written,
         next_steps: vec![
-            "decimate check --format json".to_owned(),
-            "decimate audit --format json --base origin/main".to_owned(),
+            "dart-decimate check --format json".to_owned(),
+            "dart-decimate audit --format json --base origin/main".to_owned(),
         ],
     })
 }
@@ -132,7 +132,7 @@ pub fn init_project(root: impl AsRef<Path>, options: InitOptions) -> Result<Init
 /// Render a human-readable initialization report.
 #[must_use]
 pub fn render_init_report(report: &InitReport) -> String {
-    let mut output = format!("Initialized Decimate in {}\n", report.root.display());
+    let mut output = format!("Initialized Dart Decimate in {}\n", report.root.display());
     for file in &report.files {
         let action = match file.action {
             InitFileAction::Created => "created",
@@ -155,9 +155,9 @@ struct InitTemplate {
 
 fn init_files(agents: bool) -> Vec<InitTemplate> {
     let mut files = vec![InitTemplate {
-        path: ".decimaterc",
+        path: ".dart-decimaterc",
         kind: InitFileKind::Config,
-        content: DECIMATE_RC,
+        content: DART_DECIMATE_RC,
     }];
     if agents {
         files.push(InitTemplate {
@@ -194,7 +194,7 @@ fn write_init_file(path: &Path, content: &str, force: bool) -> Result<InitFileAc
     Ok(action)
 }
 
-const DECIMATE_RC: &str = r#"{
+const DART_DECIMATE_RC: &str = r#"{
   "cli": {
     "format": "json",
     "entry": ["lib/main.dart"],
@@ -219,19 +219,19 @@ const DECIMATE_RC: &str = r#"{
     "surface": true
   },
   "rules": {
-    "decimate/missing-suppression-reason": "warn"
+    "dart-decimate/missing-suppression-reason": "warn"
   }
 }
 "#;
 
-const AGENTS_MD: &str = r"# Decimate Agent Guide
+const AGENTS_MD: &str = r"# Dart Decimate Agent Guide
 
-Use Decimate as the first static codebase-intelligence pass for Dart and Flutter changes.
+Use Dart Decimate as the first static codebase-intelligence pass for Dart and Flutter changes.
 
-- Run `decimate check --format json` for cleanup, dependency, health, flag, security, and graph findings.
-- Run `decimate audit --format json --base origin/main` for changed-code review.
-- Inspect before editing with `decimate inspect --format json --file <path>` or `decimate inspect --format json --symbol <file>:<symbol>`.
+- Run `dart-decimate check --format json` for cleanup, dependency, health, flag, security, and graph findings.
+- Run `dart-decimate audit --format json --base origin/main` for changed-code review.
+- Inspect before editing with `dart-decimate inspect --format json --file <path>` or `dart-decimate inspect --format json --symbol <file>:<symbol>`.
 - Apply only actions with `safe_to_delete: true`, then rerun the same command that produced the finding.
 
-Decimate is graph-first. Treat unresolved dependencies, generated files, build outputs, and runtime-only entry points as evidence to verify before deleting code.
+Dart Decimate is graph-first. Treat unresolved dependencies, generated files, build outputs, and runtime-only entry points as evidence to verify before deleting code.
 ";

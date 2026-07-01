@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -17,7 +17,7 @@ fn watch_once_runs_check_and_exits() -> Result<(), Box<dyn std::error::Error>> {
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "watch",
             fixture.path().to_str().unwrap_or("."),
             "--once",
@@ -29,7 +29,7 @@ fn watch_once_runs_check_and_exits() -> Result<(), Box<dyn std::error::Error>> {
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 1);
-    assert_eq!(json["schema_version"], "decimate.report.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.report.v1");
     assert_eq!(json["command"], "check");
     assert_eq!(json["summary"]["unresolved_dependencies"], 1);
 

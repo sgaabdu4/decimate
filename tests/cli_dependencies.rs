@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -22,7 +22,7 @@ dev_dependencies:\n  mockito: ^5.0.0\n",
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -33,20 +33,20 @@ dev_dependencies:\n  mockito: ^5.0.0\n",
     let Some(test_only) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|finding| finding["rule_id"] == "decimate/test-only-dependency")
+            .find(|finding| finding["rule_id"] == "dart-decimate/test-only-dependency")
     }) else {
         panic!("test-only dependency finding");
     };
     let Some(unused_dev) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|finding| finding["rule_id"] == "decimate/unused-dev-dependency")
+            .find(|finding| finding["rule_id"] == "dart-decimate/unused-dev-dependency")
     }) else {
         panic!("unused dev dependency finding");
     };
     assert_eq!(code, 1);
-    assert!(rule_ids.contains(&"decimate/test-only-dependency"));
-    assert!(rule_ids.contains(&"decimate/unused-dev-dependency"));
+    assert!(rule_ids.contains(&"dart-decimate/test-only-dependency"));
+    assert!(rule_ids.contains(&"dart-decimate/unused-dev-dependency"));
     assert_eq!(json["summary"]["unused_dependencies"], 2);
     assert_eq!(json["summary"]["test_only_dependencies"], 1);
     assert_eq!(json["summary"]["unused_dev_dependencies"], 1);
@@ -81,7 +81,7 @@ dev_dependencies:\n  scalar_dev: ^2.0.0\n  sdk_dep:\n    sdk: flutter\n",
     write(&fixture, "lib/main.dart", "void main() {}\n")?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -115,7 +115,7 @@ dev_dependencies:\n  collection: ^1.0.0\n",
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -125,7 +125,7 @@ dev_dependencies:\n  collection: ^1.0.0\n",
     let Some(finding) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|finding| finding["rule_id"] == "decimate/unlisted-dependency")
+            .find(|finding| finding["rule_id"] == "dart-decimate/unlisted-dependency")
     }) else {
         panic!("unlisted dependency finding");
     };
@@ -168,14 +168,14 @@ dev_dependencies:\n  build_runner: ^2.0.0\n",
     write(&fixture, "lib/main.dart", "void main() {}\n")?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
         "json",
     ])?;
     let (trace_code, trace_json) = run_json([
-        "decimate",
+        "dart-decimate",
         "trace-dependency",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -242,7 +242,7 @@ Model _$ModelFromJson(Map<String, Object?> json) => _Model(name: json['name'] as
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -271,7 +271,7 @@ fn config_rules_disable_specific_dependency_placement_findings()
     let fixture = tempfile::tempdir()?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         "{\"rules\":{\"test-only-dependency\":\"off\",\"unused-dev-dependency\":\"off\"}}\n",
     )?;
     write(
@@ -289,7 +289,7 @@ dev_dependencies:\n  mockito: ^5.0.0\n",
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -330,7 +330,7 @@ dependency_overrides:\n  stale: ^1.0.0\n",
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -340,7 +340,7 @@ dependency_overrides:\n  stale: ^1.0.0\n",
     let Some(finding) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|finding| finding["rule_id"] == "decimate/unused-dependency-override")
+            .find(|finding| finding["rule_id"] == "dart-decimate/unused-dependency-override")
     }) else {
         panic!("dependency override finding");
     };
@@ -387,7 +387,7 @@ dependency_overrides:\n  stale: ^1.0.0\n",
     write(&fixture, "lib/main.dart", "void main() {}\n")?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -397,7 +397,7 @@ dependency_overrides:\n  stale: ^1.0.0\n",
     let Some(finding) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|finding| finding["rule_id"] == "decimate/unused-dependency-override")
+            .find(|finding| finding["rule_id"] == "dart-decimate/unused-dependency-override")
     }) else {
         panic!("dependency override finding");
     };
@@ -428,7 +428,7 @@ fn check_reports_misconfigured_dependency_override_from_pubspec_overrides_yaml()
     write(&fixture, "lib/main.dart", "void main() {}\n")?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -439,7 +439,7 @@ fn check_reports_misconfigured_dependency_override_from_pubspec_overrides_yaml()
         .as_array()
         .into_iter()
         .flatten()
-        .filter(|finding| finding["rule_id"] == "decimate/misconfigured-dependency-override")
+        .filter(|finding| finding["rule_id"] == "dart-decimate/misconfigured-dependency-override")
         .collect::<Vec<_>>();
     assert_eq!(code, 1);
     assert_eq!(override_findings.len(), 2);
@@ -467,7 +467,7 @@ dependencies:\n  local:\n    path: local\n  path: ^1.9.0\n",
     write(&fixture, "lib/main.dart", "void main() {}\n")?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -476,7 +476,7 @@ dependencies:\n  local:\n    path: local\n  path: ^1.9.0\n",
 
     let Some(finding) = json["findings"].as_array().and_then(|findings| {
         findings.iter().find(|finding| {
-            finding["rule_id"] == "decimate/unused-dependency"
+            finding["rule_id"] == "dart-decimate/unused-dependency"
                 && finding["actions"][0]["target_dependency"] == "path"
         })
     }) else {
@@ -503,7 +503,7 @@ dependency_overrides:\n  Bad-Name: ^1.0.0\n  stale:\n",
     write(&fixture, "lib/main.dart", "void main() {}\n")?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -515,7 +515,7 @@ dependency_overrides:\n  Bad-Name: ^1.0.0\n  stale:\n",
     };
     let override_findings = findings
         .iter()
-        .filter(|finding| finding["rule_id"] == "decimate/misconfigured-dependency-override")
+        .filter(|finding| finding["rule_id"] == "dart-decimate/misconfigured-dependency-override")
         .collect::<Vec<_>>();
     assert_eq!(code, 1);
     assert_eq!(override_findings.len(), 2);
@@ -542,7 +542,7 @@ fn config_rules_disable_dependency_override_findings() -> Result<(), Box<dyn std
     let fixture = tempfile::tempdir()?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         "{\"rules\":{\"dependency-override\":\"off\"}}\n",
     )?;
     write(
@@ -555,7 +555,7 @@ dependency_overrides:\n  stale: ^1.0.0\n  Bad-Name: ^1.0.0\n",
     write(&fixture, "lib/main.dart", "void main() {}\n")?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -579,7 +579,7 @@ fn config_ignores_dependency_override_findings() -> Result<(), Box<dyn std::erro
     let fixture = tempfile::tempdir()?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         "{\"ignoreDependencyOverrides\":[{\"package\":\"stale\"},{\"package\":\"Bad-Name\",\"source\":\"pubspec.yaml\"}]}\n",
     )?;
     write(
@@ -592,7 +592,7 @@ dependency_overrides:\n  stale: ^1.0.0\n  Bad-Name: ^1.0.0\n",
     write(&fixture, "lib/main.dart", "void main() {}\n")?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -614,7 +614,7 @@ fn config_ignores_dependency_findings() -> Result<(), Box<dyn std::error::Error>
     let fixture = tempfile::tempdir()?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         "{\"ignoreDependencies\":[\"http\",\"collection\"]}\n",
     )?;
     write(
@@ -630,7 +630,7 @@ dependencies:\n  http: ^1.0.0\n",
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -656,8 +656,8 @@ fn assert_unused_pub_action(json: &Value, dependency: &str, safe_to_delete: bool
     let Some(finding) = json["findings"].as_array().and_then(|findings| {
         findings.iter().find(|finding| {
             finding["actions"][0]["target_dependency"] == dependency
-                && (finding["rule_id"] == "decimate/unused-dependency"
-                    || finding["rule_id"] == "decimate/unused-dev-dependency")
+                && (finding["rule_id"] == "dart-decimate/unused-dependency"
+                    || finding["rule_id"] == "dart-decimate/unused-dev-dependency")
         })
     }) else {
         panic!("unused dependency finding for {dependency}");
@@ -672,7 +672,7 @@ fn assert_no_unused_dependency_for(json: &Value, dependency: &str) {
         findings.iter().all(|finding| {
             !matches!(
                 finding["rule_id"].as_str(),
-                Some("decimate/unused-dependency" | "decimate/unused-dev-dependency")
+                Some("dart-decimate/unused-dependency" | "dart-decimate/unused-dev-dependency")
             ) || finding["actions"][0]["target_dependency"] != dependency
         })
     }));

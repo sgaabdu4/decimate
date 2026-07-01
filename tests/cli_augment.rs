@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -17,7 +17,7 @@ fn check_reports_unresolved_library_augment_edges() -> Result<(), Box<dyn std::e
     let mut output = Vec::new();
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or_default(),
             "--format",
@@ -32,7 +32,7 @@ fn check_reports_unresolved_library_augment_edges() -> Result<(), Box<dyn std::e
     let Some(finding) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|finding| finding["rule_id"] == "decimate/unresolved-dependency")
+            .find(|finding| finding["rule_id"] == "dart-decimate/unresolved-dependency")
     }) else {
         panic!("unresolved augment finding");
     };
@@ -52,7 +52,7 @@ fn check_reports_unresolved_library_augment_edges() -> Result<(), Box<dyn std::e
 fn report_schema_allows_augment_finding_edges() -> Result<(), Box<dyn std::error::Error>> {
     let mut output = Vec::new();
     let code = run_from(
-        ["decimate", "report-schema", "--format", "json"],
+        ["dart-decimate", "report-schema", "--format", "json"],
         &mut output,
     )?;
 
@@ -81,7 +81,7 @@ fn trace_file_reports_library_augment_edges() -> Result<(), Box<dyn std::error::
     let mut output = Vec::new();
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "trace-file",
             fixture.path().to_str().unwrap_or_default(),
             "--format",
@@ -122,7 +122,7 @@ fn base_library_reachability_keeps_augment_file_live() -> Result<(), Box<dyn std
     let mut output = Vec::new();
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or_default(),
             "--format",
@@ -161,7 +161,7 @@ fn dart_platform_ignores_unselected_conditional_import_branches()
     let mut output = Vec::new();
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or_default(),
             "--format",

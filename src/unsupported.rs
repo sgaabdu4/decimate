@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub const UNSUPPORTED_SCHEMA_VERSION: &str = "decimate.unsupported.v1";
+pub const UNSUPPORTED_SCHEMA_VERSION: &str = "dart-decimate.unsupported.v1";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UnsupportedReport {
@@ -24,7 +24,7 @@ pub fn unsupported_report(
     UnsupportedReport {
         schema_version: UNSUPPORTED_SCHEMA_VERSION.to_owned(),
         kind: "unsupported".to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: command.into(),
         supported: false,
         status: status.into(),

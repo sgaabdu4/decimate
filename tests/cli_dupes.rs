@@ -1,7 +1,7 @@
 use std::fs;
 use std::process::Command;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -14,7 +14,7 @@ fn dupes_command_emits_json_contract() -> Result<(), Box<dyn std::error::Error>>
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dupes",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -29,7 +29,7 @@ fn dupes_command_emits_json_contract() -> Result<(), Box<dyn std::error::Error>>
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.report.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.report.v1");
     assert_eq!(json["command"], "dupes");
     assert_eq!(json["verdict"], "pass");
     assert_eq!(json["summary"]["code_duplications"], 1);
@@ -48,7 +48,10 @@ fn dupes_command_emits_json_contract() -> Result<(), Box<dyn std::error::Error>>
         json["clone_groups"][0]["instances"][1]["path"],
         "lib/b.dart"
     );
-    assert_eq!(json["findings"][0]["rule_id"], "decimate/code-duplication");
+    assert_eq!(
+        json["findings"][0]["rule_id"],
+        "dart-decimate/code-duplication"
+    );
     assert_eq!(json["findings"][0]["kind"], "code-duplication");
     assert_eq!(
         json["findings"][0]["fingerprint"],
@@ -66,14 +69,14 @@ fn dupes_command_emits_json_contract() -> Result<(), Box<dyn std::error::Error>>
         json["findings"][0]["actions"][0]["command"]
             .as_str()
             .is_some_and(|command| command
-                .starts_with("decimate trace-clone --format json --fingerprint dup:"))
+                .starts_with("dart-decimate trace-clone --format json --fingerprint dup:"))
     );
     assert_eq!(json["next_steps"][0]["id"], "trace-code-duplication");
     assert!(
         json["next_steps"][0]["command"]
             .as_str()
             .is_some_and(|command| command
-                .starts_with("decimate trace-clone --format json --fingerprint dup:"))
+                .starts_with("dart-decimate trace-clone --format json --fingerprint dup:"))
     );
 
     Ok(())
@@ -90,7 +93,7 @@ fn dupes_threshold_fails_only_when_percentage_is_exceeded() -> Result<(), Box<dy
 
     let passing_code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dupes",
             root,
             "--format",
@@ -119,7 +122,7 @@ fn dupes_threshold_fails_only_when_percentage_is_exceeded() -> Result<(), Box<dy
     let mut failing_output = Vec::new();
     let failing_code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dupes",
             root,
             "--format",
@@ -152,13 +155,13 @@ fn dupes_threshold_fails_only_when_percentage_is_exceeded() -> Result<(), Box<dy
 fn dupes_threshold_can_come_from_config() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     write(&fixture, "pubspec.yaml", "name: app\n")?;
-    write(&fixture, ".decimaterc", "[dupes]\nthreshold = 99\n")?;
+    write(&fixture, ".dart-decimaterc", "[dupes]\nthreshold = 99\n")?;
     write_duplicate_pair(&fixture)?;
     let mut output = Vec::new();
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dupes",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -189,7 +192,7 @@ fn dupes_cross_language_is_rejected_for_dart_only_analysis()
 
     let error = match run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dupes",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -214,14 +217,18 @@ fn dupes_command_accepts_ignore_imports_alias_as_positive_override()
 -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     write(&fixture, "pubspec.yaml", "name: app\n")?;
-    write(&fixture, ".decimaterc", "[dupes]\nignore_imports = false\n")?;
+    write(
+        &fixture,
+        ".dart-decimaterc",
+        "[dupes]\nignore_imports = false\n",
+    )?;
     write_import_only_duplicate_pair(&fixture)?;
     let root = fixture.path().to_str().unwrap_or(".");
     let mut counted_output = Vec::new();
 
     let counted_code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dupes",
             root,
             "--format",
@@ -240,7 +247,7 @@ fn dupes_command_accepts_ignore_imports_alias_as_positive_override()
     let mut ignored_output = Vec::new();
     let ignored_code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dupes",
             root,
             "--format",
@@ -274,7 +281,7 @@ fn check_command_includes_code_duplication_findings() -> Result<(), Box<dyn std:
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -296,7 +303,7 @@ fn check_command_includes_code_duplication_findings() -> Result<(), Box<dyn std:
     assert!(
         findings
             .iter()
-            .any(|finding| finding["rule_id"] == "decimate/code-duplication")
+            .any(|finding| finding["rule_id"] == "dart-decimate/code-duplication")
     );
 
     Ok(())
@@ -319,7 +326,7 @@ fn workspace_scope_prunes_clone_group_instances() -> Result<(), Box<dyn std::err
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dupes",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -371,7 +378,7 @@ fn changed_workspaces_scope_prunes_clone_group_instances() -> Result<(), Box<dyn
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dupes",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -411,7 +418,7 @@ fn trace_clone_command_reports_matching_group() -> Result<(), Box<dyn std::error
     let mut dupes_output = Vec::new();
     run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dupes",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -431,7 +438,7 @@ fn trace_clone_command_reports_matching_group() -> Result<(), Box<dyn std::error
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "trace-clone",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -448,7 +455,7 @@ fn trace_clone_command_reports_matching_group() -> Result<(), Box<dyn std::error
 
     let json = serde_json::from_slice::<Value>(&trace_output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.trace.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.trace.v1");
     assert_eq!(json["kind"], "trace-clone");
     assert_eq!(json["command"], "trace-clone");
     assert_eq!(json["found"], true);
@@ -480,8 +487,11 @@ fn write_import_only_duplicate_pair(fixture: &TempDir) -> Result<(), std::io::Er
 fn git_fixture() -> Result<TempDir, Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     git(&fixture, ["init", "-q"])?;
-    git(&fixture, ["config", "user.email", "decimate@example.com"])?;
-    git(&fixture, ["config", "user.name", "Decimate Tests"])?;
+    git(
+        &fixture,
+        ["config", "user.email", "dart-decimate@example.com"],
+    )?;
+    git(&fixture, ["config", "user.name", "Dart Decimate Tests"])?;
     Ok(fixture)
 }
 

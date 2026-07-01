@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+
+branch="$(git branch --show-current)"
+
+if [ "$branch" = "main" ] && [ "${DART_DECIMATE_ALLOW_MAIN_PUSH:-}" != "1" ]; then
+  echo "direct pushes to main are blocked; open a PR or set DART_DECIMATE_ALLOW_MAIN_PUSH=1 for bootstrap/release maintenance" >&2
+  exit 1
+fi
+

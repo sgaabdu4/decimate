@@ -81,7 +81,7 @@ pub(super) fn config_arg() -> Arg {
     Arg::new("config")
         .long("config")
         .value_name("PATH")
-        .help("Decimate config file")
+        .help("Dart Decimate config file")
         .value_parser(value_parser!(PathBuf))
 }
 
@@ -154,7 +154,7 @@ fn baseline_arg() -> Arg {
     Arg::new("baseline")
         .long("baseline")
         .value_name("PATH")
-        .help("Suppress findings already captured in a Decimate baseline")
+        .help("Suppress findings already captured in a Dart Decimate baseline")
         .value_parser(value_parser!(PathBuf))
 }
 
@@ -162,6 +162,6 @@ fn save_baseline_arg() -> Arg {
     Arg::new("save-baseline")
         .long("save-baseline")
         .value_name("PATH")
-        .help("Write current visible findings to a Decimate baseline")
+        .help("Write current visible findings to a Dart Decimate baseline")
         .value_parser(value_parser!(PathBuf))
 }

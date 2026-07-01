@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -12,7 +12,7 @@ fn file_scope_reports_only_named_file_findings() -> Result<(), Box<dyn std::erro
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -42,7 +42,7 @@ fn file_scope_suppresses_unselected_findings() -> Result<(), Box<dyn std::error:
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -82,7 +82,7 @@ fn file_scope_suppresses_project_wide_dependency_findings() -> Result<(), Box<dy
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -103,8 +103,8 @@ fn file_scope_suppresses_project_wide_dependency_findings() -> Result<(), Box<dy
         .filter_map(|finding| finding["rule_id"].as_str())
         .collect::<Vec<_>>();
     assert_eq!(code, 1);
-    assert!(rule_ids.contains(&"decimate/unlisted-dependency"));
-    assert!(!rule_ids.contains(&"decimate/unused-dependency"));
+    assert!(rule_ids.contains(&"dart-decimate/unlisted-dependency"));
+    assert!(!rule_ids.contains(&"dart-decimate/unused-dependency"));
     assert_eq!(json["summary"]["unused_dependencies"], 0);
     assert_eq!(json["summary"]["unlisted_dependencies"], 1);
 
@@ -122,7 +122,7 @@ fn file_scope_prunes_clone_group_instances() -> Result<(), Box<dyn std::error::E
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dupes",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -163,7 +163,7 @@ fn list_file_scope_filters_files_and_keeps_owner_workspace()
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "list",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -193,7 +193,7 @@ fn fix_file_scope_plans_only_selected_dead_file() -> Result<(), Box<dyn std::err
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "fix",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -223,7 +223,7 @@ fn health_file_scope_filters_inventory_arrays() -> Result<(), Box<dyn std::error
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "health",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -271,13 +271,13 @@ fn security_file_scope_filters_candidates_and_surface() -> Result<(), Box<dyn st
     write(
         &fixture,
         "lib/other.dart",
-        "const accessToken = 'decimate_fixture_value_1234567890';\n",
+        "const accessToken = 'dart_decimate_fixture_value_1234567890';\n",
     )?;
     let mut output = Vec::new();
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",

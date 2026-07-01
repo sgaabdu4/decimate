@@ -102,7 +102,7 @@ pub(super) fn cli_args_for_tool(
         "fix_apply" => fix_apply_args(args),
         "audit" => report_args("audit", args, audit_args),
         "decision_surface" => report_args("decision-surface", args, decision_surface_args),
-        "decimate_explain" | "fallow_explain" => explain_args(name, args),
+        "dart_decimate_explain" | "fallow_explain" => explain_args(name, args),
         _ => Err(format!("unknown tool {name}")),
     }
 }
@@ -144,7 +144,7 @@ fn allowed_args(name: &str) -> Result<Vec<&'static str>, String> {
         "fix_apply" => extend_fix_apply_allowed(&mut allowed),
         "audit" => extend_audit_allowed(&mut allowed),
         "decision_surface" => allowed.extend(["base", "max_decisions"]),
-        "decimate_explain" | "fallow_explain" => return Ok(vec!["issue_type", "rule_id"]),
+        "dart_decimate_explain" | "fallow_explain" => return Ok(vec!["issue_type", "rule_id"]),
         _ => return Err(format!("unknown tool {name}")),
     }
     allowed.sort_unstable();
@@ -271,7 +271,7 @@ where
 }
 
 fn json_command_args(command: &[&str]) -> Vec<String> {
-    let mut cli = vec!["decimate".to_owned()];
+    let mut cli = vec!["dart-decimate".to_owned()];
     cli.extend(command.iter().map(|part| (*part).to_owned()));
     cli.extend(["--format".to_owned(), "json".to_owned()]);
     cli
@@ -588,7 +588,7 @@ fn explain_args(name: &str, args: &Map<String, Value>) -> Result<Vec<String>, St
         .or(string_arg(args, "rule_id")?)
         .ok_or_else(|| format!("{name} requires issue_type"))?;
     Ok(vec![
-        "decimate".to_owned(),
+        "dart-decimate".to_owned(),
         "explain".to_owned(),
         issue_type,
         "--format".to_owned(),

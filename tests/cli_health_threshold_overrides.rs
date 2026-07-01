@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -68,7 +68,10 @@ fn health_threshold_override_marks_finding_threshold_source()
         json["complexity"][0]["effective_thresholds"]["max_cognitive"],
         4
     );
-    assert_eq!(json["complexity"][0]["rule_id"], "decimate/high-complexity");
+    assert_eq!(
+        json["complexity"][0]["rule_id"],
+        "dart-decimate/high-complexity"
+    );
 
     Ok(())
 }
@@ -79,7 +82,7 @@ fn health_threshold_override_file_only_applies_to_all_functions_in_file()
     let fixture = tempfile::tempdir()?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "[cli]
 format = \"json\"
 
@@ -120,7 +123,7 @@ fn health_threshold_override_reports_stale_and_no_match() -> Result<(), Box<dyn 
     let fixture = tempfile::tempdir()?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "[cli]
 format = \"json\"
 
@@ -155,7 +158,7 @@ fn health_threshold_override_applies_to_crap_threshold() -> Result<(), Box<dyn s
     let fixture = tempfile::tempdir()?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "[cli]
 format = \"json\"
 
@@ -179,7 +182,7 @@ reason = \"legacy coverage debt\"
     assert_eq!(json["verdict"], "pass");
     assert_eq!(json["summary"]["crap_functions"], 0);
     assert_eq!(json["summary"]["findings"], 0);
-    assert!(!has_rule(&json, "decimate/high-crap-score"));
+    assert!(!has_rule(&json, "dart-decimate/high-crap-score"));
     assert_eq!(json["threshold_overrides"][0]["active"], true);
 
     Ok(())
@@ -189,7 +192,7 @@ reason = \"legacy coverage debt\"
 fn config_schema_includes_health_threshold_overrides() -> Result<(), Box<dyn std::error::Error>> {
     let mut output = Vec::new();
     let code = run_from(
-        ["decimate", "config-schema", "--format", "json"],
+        ["dart-decimate", "config-schema", "--format", "json"],
         &mut output,
     )?;
 
@@ -216,7 +219,7 @@ fn config_schema_includes_health_threshold_overrides() -> Result<(), Box<dyn std
 fn report_schema_includes_threshold_override_contract() -> Result<(), Box<dyn std::error::Error>> {
     let mut output = Vec::new();
     let code = run_from(
-        ["decimate", "report-schema", "--format", "json"],
+        ["dart-decimate", "report-schema", "--format", "json"],
         &mut output,
     )?;
 
@@ -238,7 +241,7 @@ fn malformed_health_threshold_override_reports_config_error()
     let fixture = tempfile::tempdir()?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "[[health.thresholdOverrides]]
 files = []
 maxCyclomatic = 4
@@ -249,7 +252,11 @@ maxCyclomatic = 4
     let mut output = Vec::new();
 
     let error = match run_from(
-        ["decimate", "health", fixture.path().to_str().unwrap_or(".")],
+        [
+            "dart-decimate",
+            "health",
+            fixture.path().to_str().unwrap_or("."),
+        ],
         &mut output,
     ) {
         Ok(code) => panic!("expected config error, got exit code {code}"),
@@ -265,7 +272,11 @@ maxCyclomatic = 4
 fn run_health_json(fixture: &TempDir) -> Result<Value, Box<dyn std::error::Error>> {
     let mut output = Vec::new();
     let code = run_from(
-        ["decimate", "health", fixture.path().to_str().unwrap_or(".")],
+        [
+            "dart-decimate",
+            "health",
+            fixture.path().to_str().unwrap_or("."),
+        ],
         &mut output,
     )?;
     let json = serde_json::from_slice::<Value>(&output)?;
@@ -276,7 +287,7 @@ fn run_health_json(fixture: &TempDir) -> Result<Value, Box<dyn std::error::Error
 fn write_override_config(fixture: &TempDir, thresholds: &str) -> Result<(), std::io::Error> {
     write(
         fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         &format!(
             "[cli]
 format = \"json\"

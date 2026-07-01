@@ -412,7 +412,7 @@ pub fn trace_clone(
     CloneTraceReport {
         schema_version: TRACE_SCHEMA_VERSION.to_owned(),
         kind: "trace-clone".to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: "trace-clone".to_owned(),
         trace: trace.to_owned(),
         found,

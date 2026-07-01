@@ -207,7 +207,7 @@ where
             }
             if action.command.is_some() || !action.argv.is_empty() {
                 action.argv = vec![
-                    "decimate".to_owned(),
+                    "dart-decimate".to_owned(),
                     "inspect".to_owned(),
                     "--format".to_owned(),
                     "json".to_owned(),

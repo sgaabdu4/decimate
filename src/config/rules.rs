@@ -26,7 +26,7 @@ pub type RuleConfig = BTreeMap<String, RuleLevel>;
 ///
 /// # Errors
 ///
-/// Returns [`RuleError`] when a rule key is not supported by Decimate.
+/// Returns [`RuleError`] when a rule key is not supported by Dart Decimate.
 pub fn validate_rules(rules: &RuleConfig) -> Result<(), RuleError> {
     let _ = RuleMatcher::new(rules)?;
     Ok(())
@@ -58,7 +58,7 @@ pub fn missing_suppression_reasons_enabled(rules: &RuleConfig) -> bool {
 ///
 /// # Errors
 ///
-/// Returns [`RuleError`] when a rule key is not supported by Decimate.
+/// Returns [`RuleError`] when a rule key is not supported by Dart Decimate.
 pub fn apply_rules_to_report(report: &mut JsonReport, rules: &RuleConfig) -> Result<(), RuleError> {
     let rules = RuleMatcher::new(rules)?;
     if rules.is_empty() {
@@ -73,22 +73,25 @@ pub fn apply_rules_to_report(report: &mut JsonReport, rules: &RuleConfig) -> Res
         .findings
         .retain_mut(|finding| apply_finding_level(finding, &rules) != RuleLevel::Off);
     report.clone_groups.retain(|_| {
-        rules.level("decimate/code-duplication", FindingKind::CodeDuplication) != RuleLevel::Off
+        rules.level(
+            "dart-decimate/code-duplication",
+            FindingKind::CodeDuplication,
+        ) != RuleLevel::Off
     });
     report.complexity.retain(|finding| {
         rules.level(&finding.rule_id, complexity_kind(&finding.rule_id)) != RuleLevel::Off
     });
     report.hotspots.retain(|_| {
-        rules.level("decimate/health-hotspot", FindingKind::HealthHotspot) != RuleLevel::Off
+        rules.level("dart-decimate/health-hotspot", FindingKind::HealthHotspot) != RuleLevel::Off
     });
     report.refactoring_targets.retain(|_| {
         rules.level(
-            "decimate/refactoring-target",
+            "dart-decimate/refactoring-target",
             FindingKind::RefactoringTarget,
         ) != RuleLevel::Off
     });
     report.feature_flags.retain(|_| {
-        rules.level("decimate/feature-flag", FindingKind::FeatureFlag) != RuleLevel::Off
+        rules.level("dart-decimate/feature-flag", FindingKind::FeatureFlag) != RuleLevel::Off
     });
     report.security_candidates.retain(|candidate| {
         rules.level(&candidate.rule_id, FindingKind::SecurityCandidate) != RuleLevel::Off
@@ -242,13 +245,13 @@ fn complexity_kind(rule_id: &str) -> FindingKind {
 
 fn security_surface_enabled(entry: &JsonAttackSurfaceEntry, rules: &RuleMatcher) -> bool {
     let rule_id = match entry.category {
-        SecurityCategory::HardcodedSecret => "decimate/security-hardcoded-secret",
-        SecurityCategory::InsecureTransport => "decimate/security-insecure-transport",
-        SecurityCategory::TlsBypass => "decimate/security-tls-bypass",
-        SecurityCategory::WebViewRisk => "decimate/security-webview-risk",
-        SecurityCategory::ProcessExecution => "decimate/security-process-execution",
-        SecurityCategory::RawSql => "decimate/security-raw-sql",
-        SecurityCategory::PlainSecretStorage => "decimate/security-plain-secret-storage",
+        SecurityCategory::HardcodedSecret => "dart-decimate/security-hardcoded-secret",
+        SecurityCategory::InsecureTransport => "dart-decimate/security-insecure-transport",
+        SecurityCategory::TlsBypass => "dart-decimate/security-tls-bypass",
+        SecurityCategory::WebViewRisk => "dart-decimate/security-webview-risk",
+        SecurityCategory::ProcessExecution => "dart-decimate/security-process-execution",
+        SecurityCategory::RawSql => "dart-decimate/security-raw-sql",
+        SecurityCategory::PlainSecretStorage => "dart-decimate/security-plain-secret-storage",
     };
     rules.level(rule_id, FindingKind::SecurityCandidate) != RuleLevel::Off
 }

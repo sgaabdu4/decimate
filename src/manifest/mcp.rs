@@ -12,8 +12,8 @@ use crate::project_list::PROJECT_LIST_SCHEMA_VERSION;
 
 pub(super) fn mcp_tools() -> Value {
     json!({
-        "server": "decimate-mcp",
-        "note": "Agent tool contracts backed by existing Decimate CLI commands. fix_apply is mutating and requires yes: true.",
+        "server": "dart-decimate-mcp",
+        "note": "Agent tool contracts backed by existing Dart Decimate CLI commands. fix_apply is mutating and requires yes: true.",
         "tools": mcp_tool_list()
     })
 }
@@ -31,14 +31,14 @@ fn mcp_overview_tools() -> Vec<Value> {
     vec![
         mcp_tool(
             "code_execute",
-            "decimate-mcp code_execute",
+            "dart-decimate-mcp code_execute",
             CODE_EXECUTE_SCHEMA_VERSION,
             &["code", "max_steps", "max_tool_calls", "max_result_bytes"],
         ),
         analyze_mcp_tool(),
         mcp_tool(
             "check_changed",
-            "decimate check --format json --changed-since",
+            "dart-decimate check --format json --changed-since",
             SCHEMA_VERSION,
             &[
                 "root",
@@ -54,7 +54,7 @@ fn mcp_overview_tools() -> Vec<Value> {
         ),
         mcp_tool(
             "project_info",
-            "decimate list --format json",
+            "dart-decimate list --format json",
             PROJECT_LIST_SCHEMA_VERSION,
             &[
                 "root",
@@ -74,7 +74,7 @@ fn mcp_overview_tools() -> Vec<Value> {
         ),
         mcp_tool(
             "list_boundaries",
-            "decimate list --format json --boundaries",
+            "dart-decimate list --format json --boundaries",
             PROJECT_LIST_SCHEMA_VERSION,
             &[
                 "root",
@@ -89,7 +89,7 @@ fn mcp_overview_tools() -> Vec<Value> {
         ),
         mcp_tool(
             "inspect_target",
-            "decimate inspect --format json",
+            "dart-decimate inspect --format json",
             INSPECT_SCHEMA_VERSION,
             &["root", "config", "target", "file", "symbol", "production"],
         ),
@@ -100,25 +100,25 @@ fn mcp_trace_tools() -> Vec<Value> {
     vec![
         mcp_tool(
             "trace_file",
-            "decimate trace-file --format json",
+            "dart-decimate trace-file --format json",
             TRACE_SCHEMA_VERSION,
             &["root", "config", "file"],
         ),
         mcp_tool(
             "trace_export",
-            "decimate trace-symbol --format json",
+            "dart-decimate trace-symbol --format json",
             TRACE_SCHEMA_VERSION,
             &["root", "config", "file", "symbol", "export_name"],
         ),
         mcp_tool(
             "trace_dependency",
-            "decimate trace-dependency --format json",
+            "dart-decimate trace-dependency --format json",
             TRACE_SCHEMA_VERSION,
             &["root", "config", "dependency", "package_name"],
         ),
         mcp_tool(
             "trace_clone",
-            "decimate trace-clone --format json",
+            "dart-decimate trace-clone --format json",
             TRACE_SCHEMA_VERSION,
             &[
                 "root",
@@ -144,7 +144,7 @@ fn mcp_trace_tools() -> Vec<Value> {
 fn analyze_mcp_tool() -> Value {
     mcp_tool(
         "analyze",
-        "decimate check --format json",
+        "dart-decimate check --format json",
         SCHEMA_VERSION,
         &[
             "root",
@@ -205,13 +205,13 @@ fn mcp_analysis_tools() -> Vec<Value> {
         feature_flags_mcp_tool(),
         mcp_tool(
             "impact",
-            "decimate impact --format json --quiet",
+            "dart-decimate impact --format json --quiet",
             IMPACT_SCHEMA_VERSION,
             &["root"],
         ),
         mcp_tool(
             "impact_all",
-            "decimate impact --format json --quiet --all",
+            "dart-decimate impact --format json --quiet --all",
             IMPACT_SCHEMA_VERSION,
             &["sort", "limit"],
         ),
@@ -222,7 +222,7 @@ fn mcp_analysis_tools() -> Vec<Value> {
 fn dupes_mcp_tool() -> Value {
     mcp_tool(
         "find_dupes",
-        "decimate dupes --format json",
+        "dart-decimate dupes --format json",
         SCHEMA_VERSION,
         &[
             "root",
@@ -255,7 +255,7 @@ fn dupes_mcp_tool() -> Value {
 fn health_mcp_tool() -> Value {
     mcp_tool(
         "check_health",
-        "decimate health --format json",
+        "dart-decimate health --format json",
         SCHEMA_VERSION,
         &[
             "root",
@@ -352,7 +352,7 @@ fn runtime_mcp_tools() -> Vec<Value> {
 fn security_mcp_tool() -> Value {
     mcp_tool(
         "security_candidates",
-        "decimate security --format json",
+        "dart-decimate security --format json",
         SCHEMA_VERSION,
         &[
             "root",
@@ -383,7 +383,7 @@ fn security_mcp_tool() -> Value {
 fn feature_flags_mcp_tool() -> Value {
     mcp_tool(
         "feature_flags",
-        "decimate flags --format json",
+        "dart-decimate flags --format json",
         SCHEMA_VERSION,
         &[
             "root",
@@ -411,19 +411,19 @@ fn mcp_change_tools() -> Vec<Value> {
         audit_mcp_tool(),
         mcp_tool(
             "decision_surface",
-            "decimate decision-surface --format json",
+            "dart-decimate decision-surface --format json",
             DECISION_SURFACE_SCHEMA_VERSION,
             &["root", "config", "base", "max_decisions"],
         ),
         mcp_tool(
-            "decimate_explain",
-            "decimate explain --format json",
+            "dart_decimate_explain",
+            "dart-decimate explain --format json",
             EXPLAIN_SCHEMA_VERSION,
             &["issue_type", "rule_id"],
         ),
         mcp_tool(
             "fallow_explain",
-            "decimate explain --format json",
+            "dart-decimate explain --format json",
             EXPLAIN_SCHEMA_VERSION,
             &["issue_type", "rule_id"],
         ),
@@ -433,7 +433,7 @@ fn mcp_change_tools() -> Vec<Value> {
 fn fix_preview_mcp_tool() -> Value {
     mcp_tool(
         "fix_preview",
-        "decimate fix --format json --dry-run",
+        "dart-decimate fix --format json --dry-run",
         FIX_SCHEMA_VERSION,
         &[
             "root",
@@ -454,7 +454,7 @@ fn fix_preview_mcp_tool() -> Value {
 fn fix_apply_mcp_tool() -> Value {
     mcp_write_tool(
         "fix_apply",
-        "decimate fix --format json --yes",
+        "dart-decimate fix --format json --yes",
         FIX_SCHEMA_VERSION,
         &[
             "root",
@@ -476,7 +476,7 @@ fn fix_apply_mcp_tool() -> Value {
 fn audit_mcp_tool() -> Value {
     mcp_tool(
         "audit",
-        "decimate audit --format json",
+        "dart-decimate audit --format json",
         SCHEMA_VERSION,
         &[
             "root",
@@ -534,7 +534,7 @@ fn audit_mcp_tool() -> Value {
 fn runtime_mcp_tool(name: &str, key_params: &[&str]) -> Value {
     mcp_tool(
         name,
-        "decimate coverage analyze --format json",
+        "dart-decimate coverage analyze --format json",
         COVERAGE_ANALYSIS_SCHEMA_VERSION,
         key_params,
     )

@@ -20,7 +20,7 @@ fn trace_file_command_emits_json_contract() -> Result<(), Box<dyn std::error::Er
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "trace-file",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -35,7 +35,7 @@ fn trace_file_command_emits_json_contract() -> Result<(), Box<dyn std::error::Er
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.trace.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.trace.v1");
     assert_eq!(json["kind"], "trace-file");
     assert_eq!(json["command"], "trace-file");
     assert_eq!(json["path"], "lib/barrel.dart");
@@ -56,7 +56,7 @@ fn trace_file_command_reports_missing_file_without_failure()
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "trace-file",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -96,7 +96,7 @@ fn trace_symbol_command_emits_json_contract() -> Result<(), Box<dyn std::error::
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "trace-symbol",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -138,7 +138,7 @@ fn trace_command_alias_emits_symbol_trace_contract() -> Result<(), Box<dyn std::
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "trace",
             "--root",
             fixture.path().to_str().unwrap_or("."),
@@ -153,7 +153,7 @@ fn trace_command_alias_emits_symbol_trace_contract() -> Result<(), Box<dyn std::
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.trace.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.trace.v1");
     assert_eq!(json["kind"], "trace-symbol");
     assert_eq!(json["command"], "trace-symbol");
     assert_eq!(json["path"], "lib/src/api.dart");
@@ -184,7 +184,7 @@ void main() {}\n",
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "trace-dependency",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -197,7 +197,7 @@ void main() {}\n",
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.trace.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.trace.v1");
     assert_eq!(json["kind"], "trace-dependency");
     assert_eq!(json["command"], "trace-dependency");
     assert_eq!(json["dependency"], "collection");

@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -13,7 +13,7 @@ fn security_command_emits_json_contract() -> Result<(), Box<dyn std::error::Erro
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -25,7 +25,7 @@ fn security_command_emits_json_contract() -> Result<(), Box<dyn std::error::Erro
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 1);
-    assert_eq!(json["schema_version"], "decimate.report.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.report.v1");
     assert_eq!(json["command"], "security");
     assert_eq!(json["verdict"], "fail");
     assert_eq!(json["summary"]["security_candidates"], 2);
@@ -69,7 +69,7 @@ fn security_command_emits_json_contract() -> Result<(), Box<dyn std::error::Erro
             .all(|occurrence| !occurrence["evidence"]
                 .as_str()
                 .unwrap_or_default()
-                .contains("decimate_fixture_value_1234567890"))
+                .contains("dart_decimate_fixture_value_1234567890"))
     );
 
     Ok(())
@@ -81,7 +81,7 @@ fn security_config_categories_filter_candidates() -> Result<(), Box<dyn std::err
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "[cli]\nformat = \"json\"\n\n[security]\nsurface = true\ncategories = [\"insecure-transport\"]\n",
     )?;
     write_security_candidates(&fixture)?;
@@ -89,7 +89,7 @@ fn security_config_categories_filter_candidates() -> Result<(), Box<dyn std::err
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
         ],
@@ -103,7 +103,7 @@ fn security_config_categories_filter_candidates() -> Result<(), Box<dyn std::err
     assert_eq!(json["summary"]["attack_surface"], 1);
     assert_eq!(
         json["security_candidates"][0]["rule_id"],
-        "decimate/security-insecure-transport"
+        "dart-decimate/security-insecure-transport"
     );
 
     Ok(())
@@ -118,7 +118,7 @@ fn security_command_emits_sarif_contract() -> Result<(), Box<dyn std::error::Err
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -135,10 +135,10 @@ fn security_command_emits_sarif_contract() -> Result<(), Box<dyn std::error::Err
     };
     assert_eq!(code, 1);
     assert_eq!(json["version"], "2.1.0");
-    assert_eq!(json["runs"][0]["tool"]["driver"]["name"], "decimate");
+    assert_eq!(json["runs"][0]["tool"]["driver"]["name"], "dart-decimate");
     assert_eq!(
         json["runs"][0]["properties"]["schemaVersion"],
-        "decimate.report.v1"
+        "dart-decimate.report.v1"
     );
     assert_eq!(json["runs"][0]["properties"]["command"], "security");
     assert_eq!(results.len(), 2);
@@ -151,9 +151,9 @@ fn security_command_emits_sarif_contract() -> Result<(), Box<dyn std::error::Err
             && result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
                 == "lib/main.dart"
     }));
-    assert_sarif_location(results, "decimate/security-hardcoded-secret", 1, 21);
-    assert_sarif_location(results, "decimate/security-insecure-transport", 2, 23);
-    assert!(!String::from_utf8(output)?.contains("decimate_fixture_value_1234567890"));
+    assert_sarif_location(results, "dart-decimate/security-hardcoded-secret", 1, 21);
+    assert_sarif_location(results, "dart-decimate/security-insecure-transport", 2, 23);
+    assert!(!String::from_utf8(output)?.contains("dart_decimate_fixture_value_1234567890"));
 
     Ok(())
 }
@@ -167,7 +167,7 @@ fn security_sarif_passes_when_no_candidates() -> Result<(), Box<dyn std::error::
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -182,7 +182,7 @@ fn security_sarif_passes_when_no_candidates() -> Result<(), Box<dyn std::error::
     };
     assert_eq!(code, 0);
     assert_eq!(json["version"], "2.1.0");
-    assert_eq!(json["runs"][0]["tool"]["driver"]["name"], "decimate");
+    assert_eq!(json["runs"][0]["tool"]["driver"]["name"], "dart-decimate");
     assert!(results.is_empty());
 
     Ok(())
@@ -195,15 +195,15 @@ fn security_sarif_omits_suppressed_findings() -> Result<(), Box<dyn std::error::
     write(
         &fixture,
         "lib/main.dart",
-        "// decimate-ignore-next-line security-candidate
-const accessToken = 'decimate_fixture_value_1234567890';
+        "// dart-decimate-ignore-next-line security-candidate
+const accessToken = 'dart_decimate_fixture_value_1234567890';
 ",
     )?;
     let mut output = Vec::new();
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -218,7 +218,7 @@ const accessToken = 'decimate_fixture_value_1234567890';
     };
     assert_eq!(code, 0);
     assert!(results.is_empty());
-    assert!(!String::from_utf8(output)?.contains("decimate_fixture_value_1234567890"));
+    assert!(!String::from_utf8(output)?.contains("dart_decimate_fixture_value_1234567890"));
 
     Ok(())
 }
@@ -232,7 +232,7 @@ fn security_sarif_file_writes_code_scanning_output() -> Result<(), Box<dyn std::
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -251,11 +251,11 @@ fn security_sarif_file_writes_code_scanning_output() -> Result<(), Box<dyn std::
         panic!("sarif results array");
     };
     assert_eq!(code, 1);
-    assert_eq!(stdout["schema_version"], "decimate.report.v1");
+    assert_eq!(stdout["schema_version"], "dart-decimate.report.v1");
     assert_eq!(stdout["command"], "security");
     assert_eq!(sarif["version"], "2.1.0");
     assert_eq!(results.len(), 2);
-    assert!(!sarif_text.contains("decimate_fixture_value_1234567890"));
+    assert!(!sarif_text.contains("dart_decimate_fixture_value_1234567890"));
 
     Ok(())
 }
@@ -270,7 +270,7 @@ fn security_gate_new_filters_json_to_added_lines() -> Result<(), Box<dyn std::er
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -300,12 +300,12 @@ fn security_gate_new_filters_json_to_added_lines() -> Result<(), Box<dyn std::er
     assert_eq!(candidates.len(), 1);
     assert_eq!(
         candidates[0]["rule_id"],
-        "decimate/security-insecure-transport"
+        "dart-decimate/security-insecure-transport"
     );
     assert_eq!(candidates[0]["occurrences"][0]["line"], 2);
     assert_eq!(
         findings[0]["rule_id"],
-        "decimate/security-insecure-transport"
+        "dart-decimate/security-insecure-transport"
     );
     assert_eq!(findings[0]["line"], 2);
 
@@ -322,7 +322,7 @@ fn security_gate_new_filters_sarif_to_added_lines() -> Result<(), Box<dyn std::e
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -341,11 +341,11 @@ fn security_gate_new_filters_sarif_to_added_lines() -> Result<(), Box<dyn std::e
     };
     assert_eq!(code, 8);
     assert_eq!(results.len(), 1);
-    assert_sarif_location(results, "decimate/security-hardcoded-secret", 1, 21);
+    assert_sarif_location(results, "dart-decimate/security-hardcoded-secret", 1, 21);
     assert!(
         results
             .iter()
-            .all(|result| { result["ruleId"] != "decimate/security-insecure-transport" })
+            .all(|result| { result["ruleId"] != "dart-decimate/security-insecure-transport" })
     );
 
     Ok(())
@@ -362,7 +362,7 @@ fn security_gate_new_passes_when_diff_has_no_candidates() -> Result<(), Box<dyn 
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -400,7 +400,7 @@ fn security_gate_new_requires_diff_file() -> Result<(), Box<dyn std::error::Erro
 
     let error = match run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -432,7 +432,7 @@ fn security_gate_newly_reachable_requires_diff_file() -> Result<(), Box<dyn std:
 
     let error = match run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -465,7 +465,7 @@ fn check_command_supports_sarif_output() -> Result<(), Box<dyn std::error::Error
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -484,7 +484,7 @@ fn check_command_supports_sarif_output() -> Result<(), Box<dyn std::error::Error
     assert!(
         results
             .iter()
-            .any(|result| result["ruleId"] == "decimate/dead-file")
+            .any(|result| result["ruleId"] == "dart-decimate/dead-file")
     );
 
     Ok(())
@@ -503,7 +503,7 @@ fn check_command_includes_security_candidates() -> Result<(), Box<dyn std::error
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -520,7 +520,7 @@ fn check_command_includes_security_candidates() -> Result<(), Box<dyn std::error
     assert_eq!(json["summary"]["attack_surface"], 0);
     assert_eq!(
         json["security_candidates"][0]["rule_id"],
-        "decimate/security-insecure-transport"
+        "dart-decimate/security-insecure-transport"
     );
     assert!(json["findings"].as_array().is_some_and(|findings| {
         findings
@@ -540,7 +540,7 @@ fn security_top_limits_grouped_candidates() -> Result<(), Box<dyn std::error::Er
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -576,7 +576,7 @@ fn security_command_passes_when_no_candidates() -> Result<(), Box<dyn std::error
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -609,15 +609,15 @@ fn security_findings_respect_inline_suppression() -> Result<(), Box<dyn std::err
     write(
         &fixture,
         "lib/main.dart",
-        "// fallow-ignore-next-line security-candidate
-const accessToken = 'decimate_fixture_value_1234567890';
+        "// dart-decimate-ignore-next-line security-candidate
+const accessToken = 'dart_decimate_fixture_value_1234567890';
 ",
     )?;
     let mut output = Vec::new();
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -647,7 +647,7 @@ fn write_security_candidates(fixture: &TempDir) -> Result<(), std::io::Error> {
     write(
         fixture,
         "lib/main.dart",
-        "const accessToken = 'decimate_fixture_value_1234567890';
+        "const accessToken = 'dart_decimate_fixture_value_1234567890';
 final uri = Uri.parse('http://api.example.com/login');
 ",
     )
@@ -656,7 +656,7 @@ final uri = Uri.parse('http://api.example.com/login');
 fn write_security_diff(fixture: &TempDir, added_line: usize) -> Result<(), std::io::Error> {
     let prefix = " context\n".repeat(added_line.saturating_sub(1));
     let added = match added_line {
-        1 => "+const accessToken = 'decimate_fixture_value_1234567890';\n",
+        1 => "+const accessToken = 'dart_decimate_fixture_value_1234567890';\n",
         2 => "+final uri = Uri.parse('http://api.example.com/login');\n",
         _ => "+void helper() {}\n",
     };

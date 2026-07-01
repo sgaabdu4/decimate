@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -10,12 +10,12 @@ fn list_boundaries_reports_zones_rules_and_uncovered_files()
     let fixture = boundary_fixture()?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "[[boundary]]\nfrom = \"lib/domain\"\ndisallow = \"lib/ui\"\n",
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "list",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -45,7 +45,7 @@ fn list_boundaries_reports_presets_and_allow_unmatched() -> Result<(), Box<dyn s
     let fixture = boundary_fixture()?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "\
 [boundaries]
 preset = \"layered\"
@@ -54,7 +54,7 @@ allowUnmatched = [\"lib/data/**\"]
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "list",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -89,11 +89,15 @@ fn boundary_preset_config_reports_architecture_violations() -> Result<(), Box<dy
     write(&fixture, "lib/ui/page.dart", "class Page {}\n")?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "[cli]\nformat = \"json\"\n\n[boundaries]\npreset = \"layered\"\n",
     )?;
 
-    let (code, json) = run_json(["decimate", "check", fixture.path().to_str().unwrap_or(".")])?;
+    let (code, json) = run_json([
+        "dart-decimate",
+        "check",
+        fixture.path().to_str().unwrap_or("."),
+    ])?;
 
     assert_eq!(code, 1);
     assert_eq!(json["summary"]["boundary_violations"], 1);
@@ -111,7 +115,7 @@ fn check_boundary_coverage_is_opt_in_and_actionable() -> Result<(), Box<dyn std:
     let fixture = boundary_fixture()?;
 
     let (default_code, default_json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -123,7 +127,7 @@ fn check_boundary_coverage_is_opt_in_and_actionable() -> Result<(), Box<dyn std:
     assert_eq!(default_json["summary"]["boundary_coverage"], 0);
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -136,13 +140,13 @@ fn check_boundary_coverage_is_opt_in_and_actionable() -> Result<(), Box<dyn std:
     let finding = &json["findings"][0];
     assert_eq!(code, 1);
     assert_eq!(json["summary"]["boundary_coverage"], 1);
-    assert_eq!(finding["rule_id"], "decimate/boundary-violation");
+    assert_eq!(finding["rule_id"], "dart-decimate/boundary-violation");
     assert_eq!(finding["kind"], "boundary-coverage");
     assert_eq!(finding["path"], "lib/data/repository.dart");
     assert_eq!(finding["actions"][0]["action"], "assign-boundary");
     assert_eq!(
         finding["actions"][0]["suppression_comment"],
-        "// decimate-ignore-next-line boundary-violation"
+        "// dart-decimate-ignore-next-line boundary-violation"
     );
 
     Ok(())
@@ -154,7 +158,7 @@ fn boundary_coverage_allow_unmatched_suppresses_unzoned_files()
     let fixture = boundary_fixture()?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "\
 [cli]
 format = \"json\"
@@ -168,7 +172,11 @@ allowUnmatched = [\"lib/data/**\"]
 ",
     )?;
 
-    let (code, json) = run_json(["decimate", "check", fixture.path().to_str().unwrap_or(".")])?;
+    let (code, json) = run_json([
+        "dart-decimate",
+        "check",
+        fixture.path().to_str().unwrap_or("."),
+    ])?;
 
     assert_eq!(code, 0);
     assert_eq!(json["summary"]["boundary_coverage"], 0);
@@ -187,15 +195,19 @@ fn boundary_coverage_can_be_enabled_by_config_and_suppressed()
     write(
         &fixture,
         "lib/data/repository.dart",
-        "// decimate-ignore-next-line boundary-violation\nclass Repository {}\n",
+        "// dart-decimate-ignore-next-line boundary-violation\nclass Repository {}\n",
     )?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "[cli]\nformat = \"json\"\nboundaryCoverage = true\nboundary = [\"lib/domain:lib/ui\"]\n",
     )?;
 
-    let (code, json) = run_json(["decimate", "check", fixture.path().to_str().unwrap_or(".")])?;
+    let (code, json) = run_json([
+        "dart-decimate",
+        "check",
+        fixture.path().to_str().unwrap_or("."),
+    ])?;
 
     assert_eq!(code, 0);
     assert_eq!(json["summary"]["boundary_coverage"], 0);
@@ -209,7 +221,7 @@ fn boundary_coverage_rule_can_be_disabled() -> Result<(), Box<dyn std::error::Er
     let fixture = boundary_fixture()?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "\
 [cli]
 format = \"json\"
@@ -221,7 +233,11 @@ boundary-coverage = \"off\"
 ",
     )?;
 
-    let (code, json) = run_json(["decimate", "check", fixture.path().to_str().unwrap_or(".")])?;
+    let (code, json) = run_json([
+        "dart-decimate",
+        "check",
+        fixture.path().to_str().unwrap_or("."),
+    ])?;
 
     assert_eq!(code, 0);
     assert_eq!(json["summary"]["boundary_coverage"], 0);

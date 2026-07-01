@@ -7,7 +7,7 @@ fn analyze_maps_read_only_parity_flags() -> Result<(), String> {
     let args = arguments_json(
         r#"{
             "root": "/repo",
-            "config": "decimate.json",
+            "config": "dart-decimate.json",
             "entry": ["lib/main.dart"],
             "dart_platform": "web",
             "file": ["lib/src/a.dart"],
@@ -54,7 +54,7 @@ fn analyze_maps_read_only_parity_flags() -> Result<(), String> {
 
     let cli = cli_args_for_tool("analyze", &args)?;
 
-    assert_eq!(cli[..4], ["decimate", "check", "--format", "json"]);
+    assert_eq!(cli[..4], ["dart-decimate", "check", "--format", "json"]);
     assert_pair(&cli, "--root", "/repo");
     assert_pair(&cli, "--entry", "lib/main.dart");
     assert_pair(&cli, "--dart-platform", "web");
@@ -125,7 +125,7 @@ fn security_candidates_map_gate_and_ci_flags() -> Result<(), String> {
 
     let cli = cli_args_for_tool("security_candidates", &args)?;
 
-    assert_eq!(cli[..4], ["decimate", "security", "--format", "json"]);
+    assert_eq!(cli[..4], ["dart-decimate", "security", "--format", "json"]);
     assert_pair(&cli, "--entry", "lib/main.dart");
     assert_pair(&cli, "--file", "lib/auth.dart");
     assert_pair(&cli, "--file", "lib/trace.dart");
@@ -154,7 +154,7 @@ fn inspect_target_maps_production_scope() -> Result<(), String> {
 
     let cli = cli_args_for_tool("inspect_target", &args)?;
 
-    assert_eq!(cli[..4], ["decimate", "inspect", "--format", "json"]);
+    assert_eq!(cli[..4], ["dart-decimate", "inspect", "--format", "json"]);
     assert_pair(&cli, "--file", "lib/main.dart");
     assert_flag(&cli, "--no-production");
     Ok(())
@@ -186,7 +186,7 @@ fn trace_clone_maps_selector_and_duplicate_options() -> Result<(), String> {
 
     assert_eq!(
         by_file[..4],
-        ["decimate", "trace-clone", "--format", "json"]
+        ["dart-decimate", "trace-clone", "--format", "json"]
     );
     assert_pair(&by_file, "--fingerprint", "lib/a.dart:12");
     assert_pair(&by_file, "--mode", "semantic");
@@ -244,7 +244,7 @@ fn trace_clone_rejects_ambiguous_or_invalid_location() -> Result<(), String> {
 }
 
 #[test]
-fn fallow_explain_alias_maps_to_decimate_explain() -> Result<(), String> {
+fn fallow_explain_alias_maps_to_dart_decimate_explain() -> Result<(), String> {
     let cli = cli_args_for_tool(
         "fallow_explain",
         &arguments_json(r#"{ "rule_id": "fallow/code-duplication" }"#)?,
@@ -256,7 +256,7 @@ fn fallow_explain_alias_maps_to_decimate_explain() -> Result<(), String> {
     assert_eq!(
         cli,
         [
-            "decimate",
+            "dart-decimate",
             "explain",
             "fallow/code-duplication",
             "--format",
@@ -292,14 +292,17 @@ fn changed_and_boundary_tools_map_direct_fallow_aliases() -> Result<(), String> 
         )?,
     )?;
 
-    assert_eq!(changed[..4], ["decimate", "check", "--format", "json"]);
+    assert_eq!(changed[..4], ["dart-decimate", "check", "--format", "json"]);
     assert_pair(&changed, "--root", "/repo");
     assert_pair(&changed, "--changed-since", "origin/main");
     assert_pair(&changed, "--baseline", "baseline.json");
     assert_flag(&changed, "--fail-on-regression");
     assert_flag(&changed, "--no-production");
 
-    assert_eq!(boundaries[..4], ["decimate", "list", "--format", "json"]);
+    assert_eq!(
+        boundaries[..4],
+        ["dart-decimate", "list", "--format", "json"]
+    );
     assert_pair(&boundaries, "--root", "/repo");
     assert_pair(&boundaries, "--workspace", "app");
     assert_flag(&boundaries, "--production");
@@ -324,7 +327,7 @@ fn runtime_coverage_tools_map_fallow_coverage_param() -> Result<(), String> {
     let args = arguments_json(
         r#"{
             "root": "/repo",
-            "config": "decimate.json",
+            "config": "dart-decimate.json",
             "coverage": "coverage/coverage-final.json",
             "min_invocations_hot": 25,
             "min_observation_volume": 100,
@@ -338,10 +341,10 @@ fn runtime_coverage_tools_map_fallow_coverage_param() -> Result<(), String> {
 
     assert_eq!(
         cli[..5],
-        ["decimate", "coverage", "analyze", "--format", "json"]
+        ["dart-decimate", "coverage", "analyze", "--format", "json"]
     );
     assert_pair(&cli, "--root", "/repo");
-    assert_pair(&cli, "--config", "decimate.json");
+    assert_pair(&cli, "--config", "dart-decimate.json");
     assert_pair(&cli, "--runtime-coverage", "coverage/coverage-final.json");
     assert_pair(&cli, "--min-invocations-hot", "25");
     assert_pair(&cli, "--min-observation-volume", "100");
@@ -363,14 +366,28 @@ fn impact_tools_map_read_only_reports() -> Result<(), String> {
     assert_eq!(
         impact,
         [
-            "decimate", "impact", "--format", "json", "--quiet", "--root", "/repo"
+            "dart-decimate",
+            "impact",
+            "--format",
+            "json",
+            "--quiet",
+            "--root",
+            "/repo"
         ]
     );
     assert_eq!(
         impact_all,
         [
-            "decimate", "impact", "--format", "json", "--quiet", "--all", "--sort", "surfaced",
-            "--limit", "5"
+            "dart-decimate",
+            "impact",
+            "--format",
+            "json",
+            "--quiet",
+            "--all",
+            "--sort",
+            "surfaced",
+            "--limit",
+            "5"
         ]
     );
 
@@ -401,7 +418,7 @@ fn fix_tools_map_preview_and_confirmed_apply() -> Result<(), String> {
     let preview = cli_args_for_tool("fix_preview", &preview_args)?;
     let apply = cli_args_for_tool("fix_apply", &apply_args)?;
 
-    assert_eq!(preview[..4], ["decimate", "fix", "--format", "json"]);
+    assert_eq!(preview[..4], ["dart-decimate", "fix", "--format", "json"]);
     assert_pair(&preview, "--root", "/repo");
     assert_pair(&preview, "--entry", "lib/main.dart");
     assert_pair(&preview, "--file", "lib/dead.dart");
@@ -409,7 +426,7 @@ fn fix_tools_map_preview_and_confirmed_apply() -> Result<(), String> {
     assert_pair(&preview, "--action", "delete-file");
     assert_flag(&preview, "--dry-run");
 
-    assert_eq!(apply[..4], ["decimate", "fix", "--format", "json"]);
+    assert_eq!(apply[..4], ["dart-decimate", "fix", "--format", "json"]);
     assert_pair(&apply, "--root", "/repo");
     assert_pair(&apply, "--entry", "lib/main.dart");
     assert_pair(&apply, "--action", "delete-file");
@@ -450,7 +467,7 @@ fn audit_maps_baselines_and_analysis_knobs() -> Result<(), String> {
 
     let cli = cli_args_for_tool("audit", &args)?;
 
-    assert_eq!(cli[..4], ["decimate", "audit", "--format", "json"]);
+    assert_eq!(cli[..4], ["dart-decimate", "audit", "--format", "json"]);
     assert_pair(&cli, "--base", "origin/main");
     assert_pair(&cli, "--gate", "new-only");
     assert_pair(&cli, "--dead-code-baseline", "dead.json");

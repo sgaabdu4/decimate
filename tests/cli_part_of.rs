@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -22,7 +22,7 @@ fn check_reports_part_of_violations() -> Result<(), Box<dyn std::error::Error>> 
     let mut output = Vec::new();
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or_default(),
             "--format",
@@ -37,7 +37,7 @@ fn check_reports_part_of_violations() -> Result<(), Box<dyn std::error::Error>> 
     let Some(finding) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|finding| finding["rule_id"] == "decimate/part-of-violation")
+            .find(|finding| finding["rule_id"] == "dart-decimate/part-of-violation")
     }) else {
         panic!("part-of-violation finding");
     };
@@ -66,7 +66,7 @@ fn check_reports_duplicate_part_owner() -> Result<(), Box<dyn std::error::Error>
     let mut output = Vec::new();
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or_default(),
             "--format",
@@ -81,7 +81,7 @@ fn check_reports_duplicate_part_owner() -> Result<(), Box<dyn std::error::Error>
     let Some(finding) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|finding| finding["rule_id"] == "decimate/part-of-violation")
+            .find(|finding| finding["rule_id"] == "dart-decimate/part-of-violation")
     }) else {
         panic!("duplicate part owner finding");
     };

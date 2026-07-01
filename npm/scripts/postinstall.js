@@ -4,7 +4,7 @@ const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
-if (process.env.DECIMATE_SKIP_BUILD === "1") {
+if (process.env.DART_DECIMATE_SKIP_BUILD === "1") {
   process.exit(0);
 }
 
@@ -22,12 +22,12 @@ const build = spawnSync(cargo, ["build", "--release", "--locked"], {
 if (build.error) {
   if (build.error.code === "ENOENT") {
     console.error(
-      "decimate: Rust/Cargo is required to install this npm source package. " +
+      "dart-decimate: Rust/Cargo is required to install this npm source package. " +
         "Install Rust from https://rustup.rs."
     );
     process.exit(127);
   }
-  console.error(`decimate: cargo build failed to start: ${build.error.message}`);
+  console.error(`dart-decimate: cargo build failed to start: ${build.error.message}`);
   process.exit(1);
 }
 
@@ -36,7 +36,7 @@ if (build.status !== 0) {
 }
 
 fs.mkdirSync(cacheDir, { recursive: true });
-for (const binary of ["decimate", "decimate-mcp"]) {
+for (const binary of ["dart-decimate", "dart-decimate-mcp"]) {
   const builtBinary = path.join(root, "target", "release", `${binary}${exeExt}`);
   const cachedBinary = path.join(cacheDir, `${binary}${exeExt}`);
   fs.copyFileSync(builtBinary, cachedBinary);

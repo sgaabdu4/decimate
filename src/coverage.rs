@@ -9,7 +9,7 @@ use crate::output::JsonRuntimeCoverage;
 use crate::{DartFile, ScannedProject};
 
 /// Stable schema version for focused runtime coverage analysis.
-pub const COVERAGE_ANALYSIS_SCHEMA_VERSION: &str = "decimate.coverage.v1";
+pub const COVERAGE_ANALYSIS_SCHEMA_VERSION: &str = "dart-decimate.coverage.v1";
 
 /// Focused runtime coverage analysis output.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -71,7 +71,7 @@ pub struct CoverageSetupSummary {
 /// Runtime coverage setup config state.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CoverageSetupConfigSummary {
-    /// Whether Decimate config already existed.
+    /// Whether Dart Decimate config already existed.
     pub exists: bool,
     /// Whether loaded config already points at coverage input.
     pub coverage_configured: bool,
@@ -165,7 +165,7 @@ pub fn coverage_analysis_report(runtime_coverage: JsonRuntimeCoverage) -> Covera
     CoverageAnalysisReport {
         schema_version: COVERAGE_ANALYSIS_SCHEMA_VERSION.to_owned(),
         kind: "runtime-coverage".to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: "coverage analyze".to_owned(),
         runtime_coverage,
     }
@@ -184,7 +184,7 @@ pub fn coverage_setup_report(
     coverage_configured: bool,
 ) -> io::Result<CoverageSetupReport> {
     let root = &project.root;
-    let config_path = root.join(".decimaterc");
+    let config_path = root.join(".dart-decimaterc");
     let config_exists = config_path.exists();
     let action = if config_exists {
         CoverageSetupFileAction::Unchanged
@@ -211,7 +211,7 @@ pub fn coverage_setup_report(
     Ok(CoverageSetupReport {
         schema_version: COVERAGE_ANALYSIS_SCHEMA_VERSION.to_owned(),
         kind: "coverage-setup".to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: "coverage setup".to_owned(),
         root: root.clone(),
         applied: apply,
@@ -226,16 +226,16 @@ pub fn coverage_setup_report(
             },
         },
         files: vec![CoverageSetupFile {
-            path: ".decimaterc".to_owned(),
+            path: ".dart-decimaterc".to_owned(),
             kind: "config".to_owned(),
             action,
             reason: setup_file_reason(action).to_owned(),
         }],
         capture_commands: coverage_capture_commands(flutter),
         next_steps: vec![
-            "decimate health . --coverage coverage/lcov.info --coverage-gaps --format json"
+            "dart-decimate health . --coverage coverage/lcov.info --coverage-gaps --format json"
                 .to_owned(),
-            "decimate coverage analyze . --runtime-coverage coverage/coverage-final.json --format json"
+            "dart-decimate coverage analyze . --runtime-coverage coverage/coverage-final.json --format json"
                 .to_owned(),
         ],
         warnings,
@@ -359,7 +359,7 @@ fn upload_report(input: UploadReportInput<'_>) -> CoverageUploadReport {
     CoverageUploadReport {
         schema_version: COVERAGE_ANALYSIS_SCHEMA_VERSION.to_owned(),
         kind: input.kind.to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: input.command.to_owned(),
         root: input.root.to_path_buf(),
         dry_run: input.dry_run,
@@ -374,7 +374,7 @@ fn upload_report(input: UploadReportInput<'_>) -> CoverageUploadReport {
         files: input.files,
         actions: vec![
             "review dry-run packet before enabling hosted runtime coverage".to_owned(),
-            "run decimate coverage analyze with a local --runtime-coverage file for immediate evidence"
+            "run dart-decimate coverage analyze with a local --runtime-coverage file for immediate evidence"
                 .to_owned(),
         ],
         warnings: Vec::new(),
@@ -428,7 +428,7 @@ fn coverage_capture_commands(flutter: bool) -> Vec<String> {
     }
     commands.push("dart run coverage:test_with_coverage".to_owned());
     commands.push(
-        "decimate coverage analyze . --runtime-coverage coverage/coverage-final.json --format json"
+        "dart-decimate coverage analyze . --runtime-coverage coverage/coverage-final.json --format json"
             .to_owned(),
     );
     commands

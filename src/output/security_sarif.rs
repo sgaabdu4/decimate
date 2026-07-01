@@ -18,7 +18,7 @@ pub(crate) fn render_sarif_report(report: &JsonReport) -> Value {
             {
                 "tool": {
                     "driver": {
-                        "name": "decimate",
+                        "name": "dart-decimate",
                         "rules": sarif_rules(&findings)
                     }
                 },
@@ -63,7 +63,7 @@ fn sarif_rules(findings: &[&Finding]) -> Vec<Value> {
                 "id": &finding.rule_id,
                 "name": &finding.rule_id,
                 "shortDescription": {
-                    "text": "Decimate codebase intelligence finding"
+                    "text": "Dart Decimate codebase intelligence finding"
                 },
                 "fullDescription": {
                     "text": &finding.message

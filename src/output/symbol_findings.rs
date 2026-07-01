@@ -37,7 +37,7 @@ fn private_type_leak_finding(root: &Path, leak: &PrivateTypeLeak) -> Finding {
     let path = display_path(root, &leak.path);
     let symbol_target = format!("{path}:{}", leak.declaration);
     Finding {
-        rule_id: "decimate/private-type-leak".to_owned(),
+        rule_id: "dart-decimate/private-type-leak".to_owned(),
         fingerprint: None,
         kind: FindingKind::PrivateTypeLeak,
         severity: Severity::Error,
@@ -61,14 +61,14 @@ fn private_type_leak_finding(root: &Path, leak: &PrivateTypeLeak) -> Finding {
             )
             .with_target_path(path.clone())
             .with_target_symbol(leak.declaration.clone())
-            .with_decimate_args([
+            .with_dart_decimate_args([
                 "inspect",
                 "--format",
                 "json",
                 "--symbol",
                 symbol_target.as_str(),
             ])
-            .with_suppression_comment("// decimate-ignore-next-line private-type-leak"),
+            .with_suppression_comment("// dart-decimate-ignore-next-line private-type-leak"),
         ],
     }
 }
@@ -85,14 +85,17 @@ fn unused_export_finding(root: &Path, unused: &UnusedExport) -> Finding {
         )
         .with_target_path(path.clone())
         .with_target_symbol(unused.name.clone())
-        .with_decimate_args([
+        .with_dart_decimate_args([
             "inspect",
             "--format",
             "json",
             "--symbol",
             symbol_target.as_str(),
         ])
-        .with_suppression_comment(format!("// decimate-ignore-next-line {}", kind_key(kind))),
+        .with_suppression_comment(format!(
+            "// dart-decimate-ignore-next-line {}",
+            kind_key(kind)
+        )),
     ];
     if unused.safe_to_delete {
         actions.insert(
@@ -125,8 +128,8 @@ fn unused_export_finding(root: &Path, unused: &UnusedExport) -> Finding {
 
 const fn unused_top_level_rule_id(kind: DeclarationKind) -> &'static str {
     match kind {
-        DeclarationKind::TypeAlias => "decimate/unused-type",
-        _ => "decimate/unused-export",
+        DeclarationKind::TypeAlias => "dart-decimate/unused-type",
+        _ => "dart-decimate/unused-export",
     }
 }
 
@@ -160,7 +163,7 @@ fn duplicate_export_finding(root: &Path, duplicate: &DuplicateExport) -> Finding
         .map(|declaration| display_path(root, &declaration.path))
         .collect::<Vec<_>>();
     Finding {
-        rule_id: "decimate/duplicate-export".to_owned(),
+        rule_id: "dart-decimate/duplicate-export".to_owned(),
         fingerprint: None,
         kind: FindingKind::DuplicateExport,
         severity: Severity::Error,
@@ -182,7 +185,7 @@ fn duplicate_export_finding(root: &Path, duplicate: &DuplicateExport) -> Finding
             )
             .with_target_path(path.clone())
             .with_target_symbol(duplicate.name.clone())
-            .with_decimate_args([
+            .with_dart_decimate_args([
                 "inspect",
                 "--format",
                 "json",
@@ -198,12 +201,12 @@ fn unused_member_finding(root: &Path, unused: &UnusedMember) -> Finding {
     let symbol_target = format!("{path}:{}", unused.owner);
     let (rule_id, kind, noun) = match unused.kind {
         MemberKind::EnumConstant => (
-            "decimate/unused-enum-member",
+            "dart-decimate/unused-enum-member",
             FindingKind::UnusedEnumMember,
             "enum constant",
         ),
         _ => (
-            "decimate/unused-class-member",
+            "dart-decimate/unused-class-member",
             FindingKind::UnusedClassMember,
             "private class-like member",
         ),
@@ -226,19 +229,19 @@ fn unused_member_finding(root: &Path, unused: &UnusedMember) -> Finding {
         actions: vec![
             FindingAction::new(
                 "review-member",
-                "Review same-library references before removing this member; Decimate has no fix preview yet",
+                "Review same-library references before removing this member; Dart Decimate has no fix preview yet",
                 false,
             )
             .with_target_path(path.clone())
             .with_target_symbol(format!("{}.{}", unused.owner, unused.name))
-            .with_decimate_args([
+            .with_dart_decimate_args([
                 "inspect",
                 "--format",
                 "json",
                 "--symbol",
                 symbol_target.as_str(),
             ])
-            .with_suppression_comment(format!("// decimate-ignore-next-line {}", kind_key(kind))),
+            .with_suppression_comment(format!("// dart-decimate-ignore-next-line {}", kind_key(kind))),
         ],
     }
 }

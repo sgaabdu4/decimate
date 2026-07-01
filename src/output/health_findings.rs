@@ -317,8 +317,8 @@ fn complexity_finding(root: &Path, finding: &ComplexityFinding) -> Finding {
             )
             .with_target_path(path.clone())
             .with_target_symbol(finding.symbol.clone())
-            .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
-            .with_suppression_comment("// decimate-ignore-next-line complexity"),
+            .with_dart_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
+            .with_suppression_comment("// dart-decimate-ignore-next-line complexity"),
         ],
     }
 }
@@ -326,7 +326,7 @@ fn complexity_finding(root: &Path, finding: &ComplexityFinding) -> Finding {
 fn coverage_gap_finding(root: &Path, finding: &CoverageGapFinding) -> Finding {
     let path = display_path(root, &finding.path);
     Finding {
-        rule_id: "decimate/coverage-gap".to_owned(),
+        rule_id: "dart-decimate/coverage-gap".to_owned(),
         fingerprint: Some(format!("coverage-gap:{path}")),
         kind: FindingKind::CoverageGap,
         severity: Severity::Error,
@@ -348,7 +348,7 @@ fn coverage_gap_finding(root: &Path, finding: &CoverageGapFinding) -> Finding {
                 false,
             )
             .with_target_path(path.clone())
-            .with_decimate_args([
+            .with_dart_decimate_args([
                 "inspect",
                 "--format",
                 "json",
@@ -362,7 +362,7 @@ fn coverage_gap_finding(root: &Path, finding: &CoverageGapFinding) -> Finding {
 fn crap_finding(root: &Path, finding: &CrapFinding) -> Finding {
     let path = display_path(root, &finding.path);
     Finding {
-        rule_id: "decimate/high-crap-score".to_owned(),
+        rule_id: "dart-decimate/high-crap-score".to_owned(),
         fingerprint: Some(format!(
             "high-crap-score:{}:{}:{:?}",
             path, finding.symbol, finding.kind
@@ -387,8 +387,8 @@ fn crap_finding(root: &Path, finding: &CrapFinding) -> Finding {
             )
             .with_target_path(path.clone())
             .with_target_symbol(finding.symbol.clone())
-            .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
-            .with_suppression_comment("// decimate-ignore-next-line complexity"),
+            .with_dart_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
+            .with_suppression_comment("// dart-decimate-ignore-next-line complexity"),
         ],
     }
 }
@@ -396,7 +396,7 @@ fn crap_finding(root: &Path, finding: &CrapFinding) -> Finding {
 fn hotspot_finding(root: &Path, finding: &HealthHotspot) -> Finding {
     let path = display_path(root, &finding.path);
     Finding {
-        rule_id: "decimate/health-hotspot".to_owned(),
+        rule_id: "dart-decimate/health-hotspot".to_owned(),
         fingerprint: Some(format!("health-hotspot:{path}")),
         kind: FindingKind::HealthHotspot,
         severity: Severity::Error,
@@ -414,7 +414,7 @@ fn hotspot_finding(root: &Path, finding: &HealthHotspot) -> Finding {
                 false,
             )
             .with_target_path(path.clone())
-            .with_decimate_args([
+            .with_dart_decimate_args([
                 "inspect",
                 "--format",
                 "json",
@@ -428,7 +428,7 @@ fn hotspot_finding(root: &Path, finding: &HealthHotspot) -> Finding {
 fn refactoring_target_finding(root: &Path, finding: &RefactoringTarget) -> Finding {
     let path = display_path(root, &finding.path);
     Finding {
-        rule_id: "decimate/refactoring-target".to_owned(),
+        rule_id: "dart-decimate/refactoring-target".to_owned(),
         fingerprint: Some(format!("refactoring-target:{path}")),
         kind: FindingKind::RefactoringTarget,
         severity: Severity::Error,
@@ -449,7 +449,7 @@ fn refactoring_target_finding(root: &Path, finding: &RefactoringTarget) -> Findi
                 false,
             )
             .with_target_path(path.clone())
-            .with_decimate_args([
+            .with_dart_decimate_args([
                 "inspect",
                 "--format",
                 "json",
@@ -504,7 +504,7 @@ fn json_complexity_finding(root: &Path, finding: &ComplexityFinding) -> JsonComp
 
 fn json_crap_finding(root: &Path, finding: &CrapFinding) -> JsonComplexityFinding {
     JsonComplexityFinding {
-        rule_id: "decimate/high-crap-score".to_owned(),
+        rule_id: "dart-decimate/high-crap-score".to_owned(),
         path: display_path(root, &finding.path),
         symbol: finding.symbol.clone(),
         kind: format!("{:?}", finding.kind)

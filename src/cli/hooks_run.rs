@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use clap::{Arg, ArgAction, ArgMatches, Command, value_parser};
 
-use crate::config::DecimateConfig;
+use crate::config::DartDecimateConfig;
 use crate::hooks::{
     HookOptions, HookTarget, hooks_status, install_hooks, render_hooks_report, uninstall_hooks,
 };
@@ -13,17 +13,24 @@ use super::{CliError, OutputFormat, output_format};
 
 pub(super) fn hooks_command() -> Command {
     Command::new("hooks")
-        .about("Inspect, install, or remove Decimate-managed hooks")
+        .about("Inspect, install, or remove Dart Decimate-managed hooks")
         .subcommand_required(true)
         .arg_required_else_help(true)
-        .subcommand(hook_subcommand("status", "Inspect Decimate hook status"))
-        .subcommand(hook_subcommand("install", "Install Decimate-managed hooks").arg(force_arg()))
-        .subcommand(hook_subcommand("uninstall", "Remove Decimate-managed hooks").arg(force_arg()))
+        .subcommand(hook_subcommand(
+            "status",
+            "Inspect Dart Decimate hook status",
+        ))
+        .subcommand(
+            hook_subcommand("install", "Install Dart Decimate-managed hooks").arg(force_arg()),
+        )
+        .subcommand(
+            hook_subcommand("uninstall", "Remove Dart Decimate-managed hooks").arg(force_arg()),
+        )
 }
 
 pub(super) fn setup_hooks_command() -> Command {
     Command::new("setup-hooks")
-        .about("Install or remove Decimate-managed agent hooks")
+        .about("Install or remove Dart Decimate-managed agent hooks")
         .arg(root_arg())
         .arg(root_flag_arg())
         .arg(format_arg())
@@ -44,13 +51,13 @@ pub(super) fn setup_hooks_command() -> Command {
         .arg(
             Arg::new("uninstall")
                 .long("uninstall")
-                .help("Remove Decimate-managed agent hooks")
+                .help("Remove Dart Decimate-managed agent hooks")
                 .action(ArgAction::SetTrue),
         )
         .arg(
             Arg::new("user")
                 .long("user")
-                .help("User-level agent hooks are not supported by Decimate")
+                .help("User-level agent hooks are not supported by Dart Decimate")
                 .action(ArgAction::SetTrue),
         )
         .arg(
@@ -120,7 +127,7 @@ where
 {
     let root = root_path(subcommand);
     let report = operation(&root, &hook_options(subcommand))?;
-    match output_format(subcommand, &DecimateConfig::default()) {
+    match output_format(subcommand, &DartDecimateConfig::default()) {
         OutputFormat::Json => {
             serde_json::to_writer_pretty(&mut writer, &report)?;
             writeln!(writer)?;

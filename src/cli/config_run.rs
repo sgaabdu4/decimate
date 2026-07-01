@@ -6,11 +6,11 @@ use serde::Serialize;
 
 use super::common_args::{config_arg, format_arg, root_arg, root_flag_arg, root_path};
 use super::{CliError, OutputFormat, load_config, output_format};
-use crate::config::{CONFIG_SCHEMA_VERSION, DecimateConfig};
+use crate::config::{CONFIG_SCHEMA_VERSION, DartDecimateConfig};
 
 pub(super) fn config_command() -> Command {
     Command::new("config")
-        .about("Print the resolved Decimate configuration")
+        .about("Print the resolved Dart Decimate configuration")
         .arg(root_arg())
         .arg(root_flag_arg())
         .arg(format_arg())
@@ -56,9 +56,9 @@ pub(super) fn run_config<W: Write>(
     Ok(0)
 }
 
-fn render_config(config: &DecimateConfig) -> String {
+fn render_config(config: &DartDecimateConfig) -> String {
     let Some(path) = &config.path else {
-        return "No Decimate config found\n".to_owned();
+        return "No Dart Decimate config found\n".to_owned();
     };
 
     format!(
@@ -74,5 +74,5 @@ fn render_config(config: &DecimateConfig) -> String {
 struct ConfigEnvelope<'a> {
     schema_version: &'static str,
     path: Option<&'a Path>,
-    config: &'a DecimateConfig,
+    config: &'a DartDecimateConfig,
 }

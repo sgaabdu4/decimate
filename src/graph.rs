@@ -102,7 +102,7 @@ pub struct UnresolvedDependency {
     pub kind: DependencyKind,
     /// Location of the directive in the source file.
     pub location: Location,
-    /// Local filesystem path Decimate tried to resolve.
+    /// Local filesystem path Dart Decimate tried to resolve.
     pub attempted_path: PathBuf,
     /// Import/export visibility metadata carried by this unresolved edge.
     pub visibility: DependencyVisibility,

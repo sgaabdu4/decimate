@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -22,7 +22,7 @@ fn dead_code_unused_exports_filter_limits_visible_findings()
     write(&fixture, "lib/src/dead.dart", "class Dead {}\n")?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "dead-code",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -66,7 +66,7 @@ dev_dependencies:\n  lints: ^5.0.0\n",
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "dead-code",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -104,7 +104,7 @@ fn check_unresolved_import_filter_preserves_only_unresolved_findings()
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -140,7 +140,7 @@ fn check_private_type_leaks_filter_hides_other_findings() -> Result<(), Box<dyn 
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -180,7 +180,7 @@ fn check_circular_deps_filter_preserves_only_cycles() -> Result<(), Box<dyn std:
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -217,7 +217,7 @@ fn check_boundary_violations_filter_groups_boundary_family()
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -266,7 +266,7 @@ fn check_policy_violations_filter_uses_existing_policy_flag()
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -296,7 +296,7 @@ fn dead_code_rejects_check_only_issue_filters() -> Result<(), Box<dyn std::error
     let mut output = Vec::new();
     let error = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -335,7 +335,7 @@ fn dead_code_combines_multiple_filter_flags() -> Result<(), Box<dyn std::error::
     write(&fixture, "lib/src/dead.dart", "class Dead {}\n")?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "dead-code",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -360,7 +360,7 @@ fn dead_code_combines_multiple_filter_flags() -> Result<(), Box<dyn std::error::
 
 #[test]
 fn schema_lists_dead_code_issue_filter_flags() -> Result<(), Box<dyn std::error::Error>> {
-    let (_, json) = run_json(["decimate", "schema", "--format", "json"])?;
+    let (_, json) = run_json(["dart-decimate", "schema", "--format", "json"])?;
     assert_manifest_flags(
         &json,
         "dead-code",

@@ -1,6 +1,6 @@
-# Decimate
+# Dart Decimate
 
-![Decimate banner](assets/decimate-banner.png)
+![Dart Decimate banner](assets/dart-decimate-banner.png)
 
 Find dead Dart code, circular dependencies, duplicated code, complex functions,
 dependency problems, risky Flutter wiring, and PR risk fast.
@@ -9,7 +9,7 @@ dependency problems, risky Flutter wiring, and PR risk fast.
 ![Dart and Flutter](https://img.shields.io/badge/Dart%20%2B%20Flutter-codebase%20intelligence-111111)
 ![License](https://img.shields.io/badge/license-MIT-2f855a)
 
-Decimate is a Rust-native codebase intelligence tool for Dart and Flutter. It
+Dart Decimate is a Rust-native codebase intelligence tool for Dart and Flutter. It
 looks at your repo as a graph:
 
 - Dart files are nodes.
@@ -36,22 +36,22 @@ It answers practical questions:
 Inside any Dart or Flutter project:
 
 ```bash
-decimate check . --format json --summary | jq .summary
+dart-decimate check . --format json --summary | jq .summary
 ```
 
 If you do not want JSON:
 
 ```bash
-decimate check .
+dart-decimate check .
 ```
 
-If the report says `"verdict": "fail"`, Decimate worked. It means it found
+If the report says `"verdict": "fail"`, Dart Decimate worked. It means it found
 error-level issues. It does not mean the tool crashed.
 
 Exit codes:
 
 - `0`: no error-level findings
-- `1`: Decimate found issues
+- `1`: Dart Decimate found issues
 - `2`: command, config, or runtime error
 - `8`: security gate found new review-required candidates
 
@@ -60,10 +60,10 @@ Exit codes:
 From GitHub:
 
 ```bash
-cargo install --git https://github.com/sgaabdu4/decimate
+cargo install --git https://github.com/sgaabdu4/dart-decimate
 ```
 
-Cargo installs `decimate` and `decimate-mcp` into `~/.cargo/bin`.
+Cargo installs `dart-decimate` and `dart-decimate-mcp` into `~/.cargo/bin`.
 
 Fish:
 
@@ -80,8 +80,8 @@ export PATH="$HOME/.cargo/bin:$PATH"
 From a local checkout:
 
 ```bash
-git clone https://github.com/sgaabdu4/decimate.git
-cd decimate
+git clone https://github.com/sgaabdu4/dart-decimate.git
+cd dart-decimate
 cargo install --path . --force
 ```
 
@@ -89,32 +89,30 @@ Then run it in your app:
 
 ```bash
 cd /path/to/flutter_or_dart_repo
-decimate check . --format json
+dart-decimate check . --format json
 ```
 
 ## npx
 
-The npm package name is `@sgaabdu4/decimate`.
-
-After the package is published:
+The npm package name is `dart-decimate`.
 
 ```bash
-npx @sgaabdu4/decimate check . --format json
+npx dart-decimate check . --format json
 ```
 
-Before publication, npm will return `404 Not Found`. Use Cargo or:
+To run the GitHub version directly:
 
 ```bash
-npx --yes --package github:sgaabdu4/decimate decimate check . --format json
+npx --yes --package github:sgaabdu4/dart-decimate dart-decimate check . --format json
 ```
 
-## What Decimate Looks For
+## What Dart Decimate Looks For
 
 ### 1. Dead Code
 
 Dead code is code that is not reachable from your entry points.
 
-Decimate finds:
+Dart Decimate finds:
 
 - dead Dart files
 - unused public exports
@@ -123,13 +121,13 @@ Decimate finds:
 - unused private class members
 - unrendered Flutter widgets
 - missing entry points
-- stale `decimate-ignore` / `fallow-ignore` comments
+- stale `dart-decimate-ignore` comments
 
 Useful commands:
 
 ```bash
-decimate dead-code . --entry lib/main.dart --format json
-decimate check . --unused-files --unused-exports --unused-deps --format json
+dart-decimate dead-code . --entry lib/main.dart --format json
+dart-decimate check . --unused-files --unused-exports --unused-deps --format json
 ```
 
 ### 2. Complex Code
@@ -141,7 +139,7 @@ Cognitive complexity means "how hard is this function to understand?"
 CRAP score combines complexity with test coverage. A complex function with poor
 coverage gets a worse score.
 
-Decimate finds:
+Dart Decimate finds:
 
 - high cyclomatic complexity
 - high cognitive complexity
@@ -155,25 +153,25 @@ Decimate finds:
 Useful commands:
 
 ```bash
-decimate health . --format json
-decimate health . --complexity-breakdown --top 10 --format json
-decimate health . --file-scores --hotspots --targets --format json
+dart-decimate health . --format json
+dart-decimate health . --complexity-breakdown --top 10 --format json
+dart-decimate health . --file-scores --hotspots --targets --format json
 ```
 
 ### 3. Duplicated Code
 
 Duplication means the same Dart code appears in more than one place.
 
-Decimate finds exact and semantic clone groups. Each clone group gets a stable
+Dart Decimate finds exact and semantic clone groups. Each clone group gets a stable
 fingerprint like `dup:abc12345`, so agents can trace it before touching code.
 
 Useful commands:
 
 ```bash
-decimate dupes . --format json
-decimate dupes . --mode semantic --min-lines 5 --format json
-decimate dupes . --threshold 5 --format json
-decimate trace-clone . --fingerprint dup:abc12345 --format json
+dart-decimate dupes . --format json
+dart-decimate dupes . --mode semantic --min-lines 5 --format json
+dart-decimate dupes . --threshold 5 --format json
+dart-decimate trace-clone . --fingerprint dup:abc12345 --format json
 ```
 
 ### 4. Circular Dependencies
@@ -181,7 +179,7 @@ decimate trace-clone . --fingerprint dup:abc12345 --format json
 A circular dependency means file A depends on file B, and B eventually depends
 back on A. Cycles make code harder to move, test, and delete.
 
-Decimate finds:
+Dart Decimate finds:
 
 - circular dependencies
 - re-export cycles
@@ -191,8 +189,8 @@ Decimate finds:
 Useful commands:
 
 ```bash
-decimate cycles . --format json
-decimate check . --circular-deps --re-export-cycles --format json
+dart-decimate cycles . --format json
+dart-decimate check . --circular-deps --re-export-cycles --format json
 ```
 
 ### 5. Architecture Drift
@@ -201,7 +199,7 @@ Architecture drift means code crosses boundaries it should not cross.
 
 Example: `lib/domain/` depending on `lib/ui/`.
 
-Decimate finds:
+Dart Decimate finds:
 
 - boundary violations
 - files outside configured boundary zones
@@ -211,7 +209,7 @@ Decimate finds:
 Useful command:
 
 ```bash
-decimate check . \
+dart-decimate check . \
   --boundary lib/domain:lib/ui \
   --boundary-coverage \
   --format json
@@ -221,7 +219,7 @@ decimate check . \
 
 Dependency hygiene means your imports and `pubspec.yaml` agree.
 
-Decimate finds:
+Dart Decimate finds:
 
 - unused runtime dependencies
 - unused dev dependencies
@@ -235,16 +233,16 @@ Decimate finds:
 Useful commands:
 
 ```bash
-decimate trace-dependency . --dependency collection --format json
-decimate check . --unused-deps --unlisted-deps --private-src-imports --format json
+dart-decimate trace-dependency . --dependency collection --format json
+dart-decimate check . --unused-deps --unlisted-deps --private-src-imports --format json
 ```
 
 ### 7. Flutter-Specific Graph Issues
 
-Decimate does not care which state-management style you use. It uses Flutter
+Dart Decimate does not care which state-management style you use. It uses Flutter
 and Dart patterns only to avoid false positives and to find graph problems.
 
-Decimate finds:
+Dart Decimate finds:
 
 - GoRouter route path/name collisions
 - private Flutter widget classes
@@ -257,7 +255,7 @@ Decimate finds:
 
 These are review prompts, not proof of an exploit.
 
-Decimate finds candidates for:
+Dart Decimate finds candidates for:
 
 - hardcoded secrets
 - insecure HTTP transport
@@ -270,16 +268,16 @@ Decimate finds candidates for:
 Useful commands:
 
 ```bash
-decimate security . --surface --format json
-decimate security . --ci --sarif-file decimate-security.sarif
-git diff --cached --unified=0 | decimate security . --gate new --diff-stdin --format json
+dart-decimate security . --surface --format json
+dart-decimate security . --ci --sarif-file dart-decimate-security.sarif
+git diff --cached --unified=0 | dart-decimate security . --gate new --diff-stdin --format json
 ```
 
 ### 9. PR Risk
 
 Use this before merging changed code.
 
-Decimate reports:
+Dart Decimate reports:
 
 - risk score
 - pass / warn / fail risk level
@@ -290,21 +288,21 @@ Decimate reports:
 Useful commands:
 
 ```bash
-decimate audit . --base origin/main --format json
-decimate audit . --base origin/main --gate new-only --format json
+dart-decimate audit . --base origin/main --format json
+dart-decimate audit . --base origin/main --gate new-only --format json
 ```
 
 ### 10. Runtime Intelligence
 
 Static analysis says what is connected. Runtime coverage says what actually ran.
 
-Decimate can read LCOV, V8, and Istanbul coverage data.
+Dart Decimate can read LCOV, V8, and Istanbul coverage data.
 
 Useful commands:
 
 ```bash
-decimate health . --coverage coverage/lcov.info --coverage-gaps --max-crap 30 --format json
-decimate coverage analyze . --runtime-coverage coverage-final.json --format json
+dart-decimate health . --coverage coverage/lcov.info --coverage-gaps --max-crap 30 --format json
+dart-decimate coverage analyze . --runtime-coverage coverage-final.json --format json
 ```
 
 ## How To Read The Summary
@@ -326,13 +324,13 @@ Example:
 
 Plain English:
 
-- `files`: Dart files Decimate parsed
+- `files`: Dart files Dart Decimate parsed
 - `edges`: imports, exports, parts, and augments it resolved
 - `quality_score`: project health from `0` to `100`
 - `cycles`: circular dependency groups
 - `code_duplications`: duplicated code groups
 - `complex_functions`: functions over the complexity limits
-- `dead_files`: files Decimate thinks are unreachable
+- `dead_files`: files Dart Decimate thinks are unreachable
 - `findings`: total issues in the report
 
 ## JSON For Agents
@@ -340,7 +338,7 @@ Plain English:
 Use JSON when another tool or AI agent will read the result:
 
 ```bash
-decimate check . --format json
+dart-decimate check . --format json
 ```
 
 Every finding includes:
@@ -359,9 +357,9 @@ Example shape:
 
 ```json
 {
-  "schema_version": "decimate.report.v1",
+  "schema_version": "dart-decimate.report.v1",
   "kind": "combined",
-  "tool": "decimate",
+  "tool": "dart-decimate",
   "command": "check",
   "verdict": "fail",
   "summary": {
@@ -387,16 +385,16 @@ machine-readable:
 Preview safe fixes:
 
 ```bash
-decimate fix . --format json
+dart-decimate fix . --format json
 ```
 
 Apply confirmed safe fixes:
 
 ```bash
-decimate fix . --apply --confirm --format json
+dart-decimate fix . --apply --confirm --format json
 ```
 
-Safe fixes are intentionally conservative. Decimate can currently apply:
+Safe fixes are intentionally conservative. Dart Decimate can currently apply:
 
 - simple dead-file deletion
 - stale suppression removal
@@ -410,13 +408,13 @@ Everything else stays review-only.
 Rerun checks while you work:
 
 ```bash
-decimate watch . --no-clear
+dart-decimate watch . --no-clear
 ```
 
 Run once and exit, useful for scripts:
 
 ```bash
-decimate watch . --once --format json
+dart-decimate watch . --once --format json
 ```
 
 ## MCP
@@ -424,7 +422,7 @@ decimate watch . --once --format json
 Start the MCP server:
 
 ```bash
-decimate-mcp
+dart-decimate-mcp
 ```
 
 Agents can use it to inspect a project, trace files, trace symbols, inspect
@@ -435,13 +433,13 @@ ask what is safest to do next.
 
 ## Config
 
-Decimate reads config from:
+Dart Decimate reads config from:
 
-1. `.decimaterc`
-2. `.decimaterc.json`
-3. `.decimaterc.jsonc`
-4. `decimate.toml`
-5. `.decimate.toml`
+1. `.dart-decimaterc`
+2. `.dart-decimaterc.json`
+3. `.dart-decimaterc.jsonc`
+4. `dart-decimate.toml`
+5. `.dart-decimate.toml`
 
 Example:
 
@@ -483,7 +481,7 @@ security-candidate = "warn"
 Run this for the live list:
 
 ```bash
-decimate schema --format json | jq .issue_types
+dart-decimate schema --format json | jq .issue_types
 ```
 
 Current issue types:
@@ -534,23 +532,32 @@ missing-suppression-reason
 
 ## CI
 
-Typical GitHub Actions command:
+Use this in CI to review only changed code:
 
 ```bash
-decimate audit . --base origin/main --format json --fail-on-regression
+dart-decimate audit . --base origin/main --format json --fail-on-regression
 ```
+
+This repository already runs:
+
+- Rust format, clippy, and tests
+- npm package checks
+- version sync between `Cargo.toml` and `package.json`
+- a release-version gate so published versions cannot be reused
+- migration checks that block previous package, command, schema, and MCP names
+- Dependabot and weekly dependency/security audits
 
 Generate CI templates:
 
 ```bash
-decimate ci-template github --format yaml
-decimate ci-template gitlab --format yaml
+dart-decimate ci-template github --format yaml
+dart-decimate ci-template gitlab --format yaml
 ```
 
 Preview review-thread reconciliation without changing GitHub or GitLab:
 
 ```bash
-decimate ci reconcile-review \
+dart-decimate ci reconcile-review \
   --provider github \
   --repo owner/repo \
   --pr 123 \
@@ -561,16 +568,16 @@ decimate ci reconcile-review \
 
 ## Scope
 
-Decimate implements local Fallow-style codebase intelligence for Dart and
+Dart Decimate implements local Fallow-style codebase intelligence for Dart and
 Flutter.
 
 Fallow features that are JS-specific or require hosted backends return clear
 unsupported JSON instead of pretending to work:
 
 ```bash
-decimate migrate --dry-run --format json
-decimate telemetry status --format json
-decimate license status --format json
+dart-decimate migrate --dry-run --format json
+dart-decimate telemetry status --format json
+dart-decimate license status --format json
 ```
 
 ## Development
@@ -579,10 +586,31 @@ decimate license status --format json
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo test --all-targets
+npm run version:check
+npm run release:check
+npm run migration:check
 npm run pack:check
 ```
 
 This repository forbids `unsafe_code`.
+
+## Release Flow
+
+Current version: `0.0.1`.
+
+After the first public release, changes should go through pull requests.
+
+To release a new version:
+
+1. Update both `Cargo.toml` and `package.json`.
+2. Open a PR.
+3. Let CI pass.
+4. Merge to `main`.
+5. GitHub Actions publishes `dart-decimate` to npm, creates tag `vX.Y.Z`, and
+   creates the GitHub release.
+
+Local hooks block stale package names, mismatched versions, reused npm versions,
+and direct pushes to `main`.
 
 ## License
 

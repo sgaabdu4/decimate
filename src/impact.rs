@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 /// Stable schema version for local impact reports.
-pub const IMPACT_SCHEMA_VERSION: &str = "decimate.impact.v1";
-const IMPACT_HISTORY_PATH: &str = ".decimate/impact.jsonl";
+pub const IMPACT_SCHEMA_VERSION: &str = "dart-decimate.impact.v1";
+const IMPACT_HISTORY_PATH: &str = ".dart-decimate/impact.jsonl";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ImpactReport {
@@ -108,7 +108,7 @@ pub fn impact_report(root: impl AsRef<Path>) -> ImpactReport {
     ImpactReport {
         schema_version: IMPACT_SCHEMA_VERSION.to_owned(),
         kind: "impact".to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: "impact".to_owned(),
         enabled,
         enabled_source: if enabled {
@@ -137,7 +137,7 @@ pub fn impact_all_report(sort: ImpactSort, limit: usize) -> ImpactAllReport {
     ImpactAllReport {
         schema_version: IMPACT_SCHEMA_VERSION.to_owned(),
         kind: "impact-all".to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: "impact --all".to_owned(),
         summary: ImpactAllSummary {
             projects: projects.len(),
@@ -256,7 +256,7 @@ fn project_label(root: &Path) -> String {
 }
 
 fn stable_project_id(root: &Path) -> String {
-    format!("decimate:impact:{:016x}", stable_hash(root))
+    format!("dart-decimate:impact:{:016x}", stable_hash(root))
 }
 
 fn stable_hash(root: &Path) -> u64 {

@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::{Value, json};
 use tempfile::TempDir;
 
@@ -9,7 +9,7 @@ fn check_reports_private_widget_class() -> Result<(), Box<dyn std::error::Error>
     let fixture = private_widget_fixture()?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         r#"{ "rules": { "private-widget-class": "warn" } }"#,
     )?;
     let mut output = Vec::new();
@@ -34,7 +34,7 @@ fn check_reports_private_widget_class() -> Result<(), Box<dyn std::error::Error>
     assert_eq!(finding["actions"][0]["target_symbol"], "_PrivateCard");
     assert_eq!(
         finding["actions"][0]["suppression_comment"],
-        "// decimate-ignore-next-line private-widget-class"
+        "// dart-decimate-ignore-next-line private-widget-class"
     );
     assert_no_private_widget_for(&json, "_PublicStatefulState");
     assert_no_private_widget_for(&json, "_PublicConsumerState");
@@ -47,7 +47,7 @@ fn private_widget_class_rule_can_error_or_turn_off() -> Result<(), Box<dyn std::
     let fixture = private_widget_fixture()?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         r#"{ "rules": { "private-widget-class": "error" } }"#,
     )?;
     let mut output = Vec::new();
@@ -60,8 +60,8 @@ fn private_widget_class_rule_can_error_or_turn_off() -> Result<(), Box<dyn std::
 
     write(
         &fixture,
-        ".decimaterc.json",
-        r#"{ "rules": { "decimate/private-widget-class": "off" } }"#,
+        ".dart-decimaterc.json",
+        r#"{ "rules": { "dart-decimate/private-widget-class": "off" } }"#,
     )?;
     output.clear();
 
@@ -141,7 +141,7 @@ class _PublicConsumerState extends ConsumerState<PublicConsumer> {}
 fn run_check(fixture: &TempDir, output: &mut Vec<u8>) -> Result<i32, Box<dyn std::error::Error>> {
     Ok(run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -157,7 +157,7 @@ fn private_widget_finding(json: &Value) -> &Value {
     let Some(finding) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|finding| finding["rule_id"] == "decimate/private-widget-class")
+            .find(|finding| finding["rule_id"] == "dart-decimate/private-widget-class")
     }) else {
         panic!("private widget class finding");
     };
@@ -167,7 +167,7 @@ fn private_widget_finding(json: &Value) -> &Value {
 fn assert_no_private_widget_for(json: &Value, class_name: &str) {
     assert!(json["findings"].as_array().is_some_and(|findings| {
         findings.iter().all(|finding| {
-            finding["rule_id"] != "decimate/private-widget-class"
+            finding["rule_id"] != "dart-decimate/private-widget-class"
                 || finding["actions"][0]["target_symbol"] != class_name
         })
     }));

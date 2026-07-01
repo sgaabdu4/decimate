@@ -43,7 +43,7 @@ pub(super) fn add_widget_findings(root: &Path, report: &WidgetReport, findings: 
 fn private_widget_class_finding(root: &Path, private: &PrivateWidgetClass) -> Finding {
     let path = display_path(root, &private.path);
     Finding {
-        rule_id: "decimate/private-widget-class".to_owned(),
+        rule_id: "dart-decimate/private-widget-class".to_owned(),
         fingerprint: Some(format!(
             "private-widget-class:{path}:{}",
             private.widget_class
@@ -68,8 +68,8 @@ fn private_widget_class_finding(root: &Path, private: &PrivateWidgetClass) -> Fi
             )
             .with_target_path(path.clone())
             .with_target_symbol(private.widget_class.clone())
-            .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
-            .with_suppression_comment("// decimate-ignore-next-line private-widget-class"),
+            .with_dart_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
+            .with_suppression_comment("// dart-decimate-ignore-next-line private-widget-class"),
         ],
     }
 }
@@ -77,7 +77,7 @@ fn private_widget_class_finding(root: &Path, private: &PrivateWidgetClass) -> Fi
 fn top_level_function_finding(root: &Path, function: &WidgetTopLevelFunction) -> Finding {
     let path = display_path(root, &function.path);
     Finding {
-        rule_id: "decimate/widget-top-level-function-boundary".to_owned(),
+        rule_id: "dart-decimate/widget-top-level-function-boundary".to_owned(),
         fingerprint: Some(format!(
             "widget-top-level-function-boundary:{path}:{}",
             function.function_name
@@ -102,9 +102,9 @@ fn top_level_function_finding(root: &Path, function: &WidgetTopLevelFunction) ->
             )
             .with_target_path(path.clone())
             .with_target_symbol(function.function_name.clone())
-            .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
+            .with_dart_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
             .with_suppression_comment(
-                "// decimate-ignore-next-line widget-top-level-function-boundary",
+                "// dart-decimate-ignore-next-line widget-top-level-function-boundary",
             ),
         ],
     }
@@ -114,7 +114,7 @@ fn unused_widget_param_finding(root: &Path, unused: &UnusedWidgetParam) -> Findi
     let path = display_path(root, &unused.path);
     let target_symbol = format!("{}.{}", unused.widget_class, unused.param_name);
     Finding {
-        rule_id: "decimate/unused-widget-param".to_owned(),
+        rule_id: "dart-decimate/unused-widget-param".to_owned(),
         fingerprint: Some(format!("unused-widget-param:{path}:{target_symbol}")),
         kind: FindingKind::UnusedWidgetParam,
         severity: Severity::Warning,
@@ -136,8 +136,8 @@ fn unused_widget_param_finding(root: &Path, unused: &UnusedWidgetParam) -> Findi
             )
             .with_target_path(path.clone())
             .with_target_symbol(target_symbol)
-            .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
-            .with_suppression_comment("// decimate-ignore-next-line unused-widget-param"),
+            .with_dart_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
+            .with_suppression_comment("// dart-decimate-ignore-next-line unused-widget-param"),
         ],
     }
 }
@@ -145,7 +145,7 @@ fn unused_widget_param_finding(root: &Path, unused: &UnusedWidgetParam) -> Findi
 fn unrendered_widget_finding(root: &Path, widget: &UnrenderedWidgetClass) -> Finding {
     let path = display_path(root, &widget.path);
     Finding {
-        rule_id: "decimate/unrendered-widget".to_owned(),
+        rule_id: "dart-decimate/unrendered-widget".to_owned(),
         fingerprint: Some(format!("unrendered-widget:{path}:{}", widget.widget_class)),
         kind: FindingKind::UnrenderedWidget,
         severity: Severity::Warning,
@@ -167,8 +167,8 @@ fn unrendered_widget_finding(root: &Path, widget: &UnrenderedWidgetClass) -> Fin
             )
             .with_target_path(path.clone())
             .with_target_symbol(widget.widget_class.clone())
-            .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
-            .with_suppression_comment("// decimate-ignore-next-line unrendered-widget"),
+            .with_dart_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
+            .with_suppression_comment("// dart-decimate-ignore-next-line unrendered-widget"),
         ],
     }
 }
@@ -179,7 +179,7 @@ fn missing_context_mounted_finding(
 ) -> Finding {
     let path = display_path(root, &missing.path);
     Finding {
-        rule_id: "decimate/missing-context-mounted-after-await".to_owned(),
+        rule_id: "dart-decimate/missing-context-mounted-after-await".to_owned(),
         fingerprint: Some(format!(
             "missing-context-mounted-after-await:{path}:{}:{}",
             missing.owner, missing.location.line
@@ -204,9 +204,9 @@ fn missing_context_mounted_finding(
             )
             .with_target_path(path.clone())
             .with_target_symbol(missing.owner.clone())
-            .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
+            .with_dart_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
             .with_suppression_comment(
-                "// decimate-ignore-next-line missing-context-mounted-after-await",
+                "// dart-decimate-ignore-next-line missing-context-mounted-after-await",
             ),
         ],
     }

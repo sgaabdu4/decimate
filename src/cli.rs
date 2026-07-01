@@ -12,8 +12,8 @@ use crate::baseline::{
     save_regression_baseline as write_regression_baseline,
 };
 use crate::config::{
-    ConfigError, DecimateConfig, IgnoreDependencyOverrideRule, RuleConfig, apply_rules_to_report,
-    load_decimate_config,
+    ConfigError, DartDecimateConfig, IgnoreDependencyOverrideRule, RuleConfig,
+    apply_rules_to_report, load_dart_decimate_config,
 };
 use crate::output::{
     ReportCommand, Verdict, build_json_report, filter_report_findings, render_human_report,
@@ -185,7 +185,7 @@ struct TraceSymbolSpec {
     symbol: String,
 }
 
-/// Run Decimate from explicit arguments.
+/// Run Dart Decimate from explicit arguments.
 ///
 /// # Errors
 ///
@@ -303,7 +303,7 @@ fn apply_duplication_threshold_gate(report: &mut crate::output::JsonReport) {
 }
 
 fn command() -> Command {
-    let command = Command::new("decimate")
+    let command = Command::new("dart-decimate")
         .about("Rust-native Dart and Flutter module-graph intelligence")
         .subcommand_required(false)
         .arg_required_else_help(false);
@@ -578,8 +578,8 @@ fn resolve_report_path(root: &Path, path: &Path) -> PathBuf {
     }
 }
 
-fn load_config(root: &Path, subcommand: &ArgMatches) -> Result<DecimateConfig, ConfigError> {
-    load_decimate_config(
+fn load_config(root: &Path, subcommand: &ArgMatches) -> Result<DartDecimateConfig, ConfigError> {
+    load_dart_decimate_config(
         root,
         subcommand
             .get_one::<PathBuf>("config")
@@ -587,7 +587,7 @@ fn load_config(root: &Path, subcommand: &ArgMatches) -> Result<DecimateConfig, C
     )
 }
 
-fn entry_points(subcommand: &ArgMatches, config: &DecimateConfig) -> Vec<PathBuf> {
+fn entry_points(subcommand: &ArgMatches, config: &DartDecimateConfig) -> Vec<PathBuf> {
     if subcommand.value_source("entry") == Some(ValueSource::CommandLine) {
         return subcommand
             .get_many::<PathBuf>("entry")

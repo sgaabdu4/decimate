@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use super::{CliError, run_from};
 
-/// Run Decimate from process arguments and return an exit code.
+/// Run Dart Decimate from process arguments and return an exit code.
 #[must_use]
 pub fn run_from_env() -> i32 {
     let args = std::env::args_os().collect::<Vec<_>>();

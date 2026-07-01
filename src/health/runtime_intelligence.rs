@@ -170,8 +170,8 @@ fn runtime_importance(
                 LowTrafficThreshold::from_fraction(observation.invocations, total_invocations);
             let score = importance_score(observation, complexity, caller_count, total_invocations);
             RuntimeImportance {
-                id: stable_prefixed("decimate:importance", observation),
-                stable_id: stable_prefixed("decimate:fn", observation),
+                id: stable_prefixed("dart-decimate:importance", observation),
+                stable_id: stable_prefixed("dart-decimate:fn", observation),
                 path: observation.path.clone(),
                 line: observation.line,
                 symbol: observation.symbol.clone(),
@@ -216,8 +216,8 @@ fn runtime_blast_radius(
             let caller_reach = caller_reach(&callers, &invocation_by_path, total_invocations);
             let risk = blast_risk(hot_path.invocations, callers.len(), options);
             RuntimeBlastRadius {
-                id: stable_prefixed("decimate:blast", &observation),
-                stable_id: stable_prefixed("decimate:fn", &observation),
+                id: stable_prefixed("dart-decimate:blast", &observation),
+                stable_id: stable_prefixed("dart-decimate:fn", &observation),
                 path: hot_path.path.clone(),
                 line: hot_path.line,
                 symbol: hot_path.symbol.clone(),
@@ -357,8 +357,8 @@ fn hot_path_intelligence(
 ) -> RuntimeCoverageIntelligence {
     let observation = RuntimeObservation::from_hot_path(hot_path);
     RuntimeCoverageIntelligence {
-        id: stable_prefixed("decimate:coverage-intel", &observation),
-        stable_id: stable_prefixed("decimate:fn", &observation),
+        id: stable_prefixed("dart-decimate:coverage-intel", &observation),
+        stable_id: stable_prefixed("dart-decimate:fn", &observation),
         kind: RuntimeCoverageIntelligenceKind::HotPathTouched,
         path: hot_path.path.clone(),
         line: hot_path.line,
@@ -385,8 +385,8 @@ fn finding_intelligence(
     };
     let (kind, priority, signals) = finding_intelligence_parts(finding.kind);
     RuntimeCoverageIntelligence {
-        id: stable_prefixed("decimate:coverage-intel", &observation),
-        stable_id: stable_prefixed("decimate:fn", &observation),
+        id: stable_prefixed("dart-decimate:coverage-intel", &observation),
+        stable_id: stable_prefixed("dart-decimate:fn", &observation),
         kind,
         path: finding.path.clone(),
         line: Some(finding.line),

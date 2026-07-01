@@ -13,7 +13,7 @@ use super::{CliError, run_from};
 
 pub(super) fn watch_command() -> Command {
     Command::new("watch")
-        .about("Watch Dart project files and rerun Decimate check")
+        .about("Watch Dart project files and rerun Dart Decimate check")
         .arg(root_arg())
         .arg(root_flag_arg())
         .arg(format_arg())
@@ -75,7 +75,7 @@ fn run_check_once<W: Write>(
     let mut output = Vec::new();
     let code = run_from(
         [
-            OsString::from("decimate"),
+            OsString::from("dart-decimate"),
             OsString::from("check"),
             root.as_os_str().to_os_string(),
             OsString::from("--format"),
@@ -134,7 +134,10 @@ fn watched_file(path: &Path) -> bool {
     path.extension().and_then(|extension| extension.to_str()) == Some("dart")
         || matches!(
             name,
-            "pubspec.yaml" | "pubspec_overrides.yaml" | ".decimaterc" | ".decimaterc.json"
+            "pubspec.yaml"
+                | "pubspec_overrides.yaml"
+                | ".dart-decimaterc"
+                | ".dart-decimaterc.json"
         )
 }
 

@@ -1,9 +1,9 @@
 use std::collections::BTreeSet;
 use std::fs;
 
-use decimate::cli::run_from;
-use decimate::output::{Finding, FindingAction, FindingKind, Severity};
-use decimate::{FixMode, fix_findings};
+use dart_decimate::cli::run_from;
+use dart_decimate::output::{Finding, FindingAction, FindingKind, Severity};
+use dart_decimate::{FixMode, fix_findings};
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -13,7 +13,7 @@ fn fix_command_dry_run_reports_safe_plan_without_writing() -> Result<(), Box<dyn
     let fixture = fix_fixture()?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "fix",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -23,7 +23,7 @@ fn fix_command_dry_run_reports_safe_plan_without_writing() -> Result<(), Box<dyn
     ])?;
 
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.fix.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.fix.v1");
     assert_eq!(json["kind"], "fix");
     assert_eq!(json["mode"], "dry-run");
     assert_eq!(json["summary"]["planned"], 2);
@@ -36,7 +36,7 @@ fn fix_command_dry_run_reports_safe_plan_without_writing() -> Result<(), Box<dyn
     assert!(fixture.path().join("lib/dead.dart").exists());
     assert!(
         fs::read_to_string(fixture.path().join("lib/main.dart"))?
-            .contains("decimate-ignore-next-line")
+            .contains("dart-decimate-ignore-next-line")
     );
 
     Ok(())
@@ -47,7 +47,7 @@ fn fix_command_accepts_fallow_dry_run_alias() -> Result<(), Box<dyn std::error::
     let fixture = fix_fixture()?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "fix",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -70,7 +70,7 @@ fn fix_command_applies_confirmed_safe_changes() -> Result<(), Box<dyn std::error
     let fixture = fix_fixture()?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "fix",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -93,7 +93,7 @@ fn fix_command_applies_confirmed_safe_changes() -> Result<(), Box<dyn std::error
     );
 
     let (check_code, check_json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -112,7 +112,7 @@ fn fix_command_applies_with_fallow_yes_alias() -> Result<(), Box<dyn std::error:
     let fixture = fix_fixture()?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "fix",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -136,7 +136,7 @@ fn fix_command_filters_by_action() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = fix_fixture()?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "fix",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -373,7 +373,7 @@ dependencies:\n  collection: ^1.18.0\n",
     write(&fixture, "lib/main.dart", "void main() {}\n")?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "fix",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -410,7 +410,7 @@ fn fix_command_applies_safe_one_line_unused_symbol_from_check_output()
     write(&fixture, "lib/src/live.dart", "class Unused {}\n")?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "fix",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -440,7 +440,7 @@ fn fix_fixture() -> Result<TempDir, std::io::Error> {
     write(
         &fixture,
         "lib/main.dart",
-        "// decimate-ignore-next-line dead-file\nvoid main() {}\n",
+        "// dart-decimate-ignore-next-line dead-file\nvoid main() {}\n",
     )?;
     write(&fixture, "lib/dead.dart", "void dead() {}\n")?;
     Ok(fixture)
@@ -454,9 +454,9 @@ fn unused_pub_dependency(
     safe_to_delete: bool,
 ) -> Finding {
     let rule_id = if kind == FindingKind::UnusedDevDependency {
-        "decimate/unused-dev-dependency"
+        "dart-decimate/unused-dev-dependency"
     } else {
-        "decimate/unused-dependency"
+        "dart-decimate/unused-dependency"
     };
     Finding {
         rule_id: rule_id.to_owned(),

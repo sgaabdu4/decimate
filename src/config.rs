@@ -29,12 +29,12 @@ pub use rules::{
     private_type_leaks_enabled, validate_rules,
 };
 
-/// Stable Decimate configuration schema version.
-pub const CONFIG_SCHEMA_VERSION: &str = "decimate.config.v1";
+/// Stable Dart Decimate configuration schema version.
+pub const CONFIG_SCHEMA_VERSION: &str = "dart-decimate.config.v1";
 
-/// A discovered or explicitly loaded Decimate configuration.
+/// A discovered or explicitly loaded Dart Decimate configuration.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
-pub struct DecimateConfig {
+pub struct DartDecimateConfig {
     /// Config file path, when one was loaded.
     pub path: Option<PathBuf>,
     /// Default output format for CLI commands.
@@ -77,7 +77,7 @@ pub struct DecimateConfig {
     pub rules: RuleConfig,
 }
 
-/// Output formats accepted in Decimate config.
+/// Output formats accepted in Dart Decimate config.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ConfigOutputFormat {
@@ -141,7 +141,7 @@ pub struct SecurityConfig {
     pub categories: Vec<SecurityCategory>,
 }
 
-/// Errors returned while reading Decimate config.
+/// Errors returned while reading Dart Decimate config.
 #[derive(Debug, Error)]
 pub enum ConfigError {
     /// Current directory could not be read.
@@ -205,30 +205,30 @@ pub enum ConfigError {
     Rule(#[from] RuleError),
 }
 
-/// Load Decimate config discovered from `root`, or from an explicit config path.
+/// Load Dart Decimate config discovered from `root`, or from an explicit config path.
 ///
 /// # Errors
 ///
 /// Returns [`ConfigError`] when an explicit config is missing, unreadable,
 /// malformed, or contains an invalid boundary rule.
-pub fn load_decimate_config(
+pub fn load_dart_decimate_config(
     root: impl AsRef<Path>,
     explicit: Option<&Path>,
-) -> Result<DecimateConfig, ConfigError> {
+) -> Result<DartDecimateConfig, ConfigError> {
     let root = normalize_config_root(root.as_ref())?;
     let Some(path) = config_path(&root, explicit)? else {
-        return Ok(DecimateConfig::default());
+        return Ok(DartDecimateConfig::default());
     };
     parse_config_file(&path)
 }
 
-/// Return a JSON schema describing supported Decimate config keys.
+/// Return a JSON schema describing supported Dart Decimate config keys.
 #[must_use]
 pub fn config_schema() -> Value {
     json!({
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "schema_version": CONFIG_SCHEMA_VERSION,
-        "title": "Decimate configuration",
+        "title": "Dart Decimate configuration",
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -263,7 +263,7 @@ pub fn config_schema() -> Value {
     })
 }
 
-impl DecimateConfig {
+impl DartDecimateConfig {
     /// Build health analyzer options from config defaults.
     #[must_use]
     pub fn health_options(&self) -> HealthOptions {
@@ -380,7 +380,7 @@ struct RawCliConfig {
 }
 
 impl RawConfig {
-    fn into_config(self, path: PathBuf) -> Result<DecimateConfig, ConfigError> {
+    fn into_config(self, path: PathBuf) -> Result<DartDecimateConfig, ConfigError> {
         validate_rules(&self.rules)?;
         self.health.validate()?;
         let mut entry_points = self.entry;
@@ -399,7 +399,7 @@ impl RawConfig {
         let mut policy_packs = self.rule_packs;
         policy_packs.extend(self.cli.rule_packs);
 
-        Ok(DecimateConfig {
+        Ok(DartDecimateConfig {
             path: Some(path),
             output_format: self.cli.format.or(self.format),
             entry_points,
@@ -463,18 +463,18 @@ fn config_path(root: &Path, explicit: Option<&Path>) -> Result<Option<PathBuf>, 
 
 fn config_candidates(root: &Path) -> Vec<PathBuf> {
     [
-        ".decimaterc",
-        ".decimaterc.json",
-        ".decimaterc.jsonc",
-        "decimate.toml",
-        ".decimate.toml",
+        ".dart-decimaterc",
+        ".dart-decimaterc.json",
+        ".dart-decimaterc.jsonc",
+        "dart-decimate.toml",
+        ".dart-decimate.toml",
     ]
     .into_iter()
     .map(|name| root.join(name))
     .collect()
 }
 
-fn parse_config_file(path: &Path) -> Result<DecimateConfig, ConfigError> {
+fn parse_config_file(path: &Path) -> Result<DartDecimateConfig, ConfigError> {
     let source = fs::read_to_string(path).map_err(|source| ConfigError::Read {
         path: path.to_path_buf(),
         source,

@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 
 #[test]
@@ -8,15 +8,15 @@ fn github_ci_template_emits_yaml_workflow() -> Result<(), Box<dyn std::error::Er
     let mut output = Vec::new();
 
     let code = run_from(
-        ["decimate", "ci-template", "github", "--format", "yaml"],
+        ["dart-decimate", "ci-template", "github", "--format", "yaml"],
         &mut output,
     )?;
 
     let yaml = String::from_utf8(output)?;
     assert_eq!(code, 0);
-    assert!(yaml.contains("name: Decimate"));
+    assert!(yaml.contains("name: Dart Decimate"));
     assert!(yaml.contains("pull_request:"));
-    assert!(yaml.contains("decimate audit --format json --base"));
+    assert!(yaml.contains("dart-decimate audit --format json --base"));
 
     Ok(())
 }
@@ -26,15 +26,15 @@ fn gitlab_ci_template_emits_yaml_template() -> Result<(), Box<dyn std::error::Er
     let mut output = Vec::new();
 
     let code = run_from(
-        ["decimate", "ci-template", "gitlab", "--format", "yaml"],
+        ["dart-decimate", "ci-template", "gitlab", "--format", "yaml"],
         &mut output,
     )?;
 
     let yaml = String::from_utf8(output)?;
     assert_eq!(code, 0);
     assert!(yaml.contains("stages:"));
-    assert!(yaml.contains("decimate:"));
-    assert!(yaml.contains("decimate audit --format json --base"));
+    assert!(yaml.contains("dart-decimate:"));
+    assert!(yaml.contains("dart-decimate audit --format json --base"));
 
     Ok(())
 }
@@ -45,13 +45,13 @@ fn ci_template_json_envelope_lists_target_path_and_content()
     let mut output = Vec::new();
 
     let code = run_from(
-        ["decimate", "ci-template", "gitlab", "--format", "json"],
+        ["dart-decimate", "ci-template", "gitlab", "--format", "json"],
         &mut output,
     )?;
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.ci-template.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.ci-template.v1");
     assert_eq!(json["kind"], "ci-template");
     assert_eq!(json["platform"], "gitlab");
     assert_eq!(json["vendor"], false);
@@ -59,7 +59,7 @@ fn ci_template_json_envelope_lists_target_path_and_content()
     assert!(
         json["files"][0]["content"]
             .as_str()
-            .is_some_and(|content| content.contains("decimate audit --format json --base"))
+            .is_some_and(|content| content.contains("dart-decimate audit --format json --base"))
     );
 
     Ok(())
@@ -74,7 +74,7 @@ fn gitlab_vendor_writes_scoped_files_and_refuses_overwrite()
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "ci-template",
             "gitlab",
             "--format",
@@ -94,12 +94,12 @@ fn gitlab_vendor_writes_scoped_files_and_refuses_overwrite()
     assert!(fixture.path().join("ci/scripts/comment.sh").is_file());
     assert!(
         fs::read_to_string(fixture.path().join("ci/scripts/review.sh"))?
-            .contains("decimate audit --format json --base")
+            .contains("dart-decimate audit --format json --base")
     );
 
     let error = match run_from(
         [
-            "decimate",
+            "dart-decimate",
             "ci-template",
             "gitlab",
             "--vendor",
@@ -123,11 +123,11 @@ fn ci_reconcile_review_dry_run_extracts_fingerprints() -> Result<(), Box<dyn std
     fs::write(
         &envelope,
         serde_json::json!({
-            "schema_version": "decimate.review-github.v1",
+            "schema_version": "dart-decimate.review-github.v1",
             "findings": [
-                { "fingerprint": "decimate:a" },
-                { "fingerprint": "decimate:b" },
-                { "fingerprint": "decimate:a" }
+                { "fingerprint": "dart-decimate:a" },
+                { "fingerprint": "dart-decimate:b" },
+                { "fingerprint": "dart-decimate:a" }
             ]
         })
         .to_string(),
@@ -136,7 +136,7 @@ fn ci_reconcile_review_dry_run_extracts_fingerprints() -> Result<(), Box<dyn std
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "ci",
             "reconcile-review",
             "--provider",
@@ -154,12 +154,15 @@ fn ci_reconcile_review_dry_run_extracts_fingerprints() -> Result<(), Box<dyn std
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.ci-reconcile-review.v1");
+    assert_eq!(
+        json["schema_version"],
+        "dart-decimate.ci-reconcile-review.v1"
+    );
     assert_eq!(json["kind"], "ci-reconcile-review");
     assert_eq!(json["provider"], "github");
     assert_eq!(json["summary"]["envelope_fingerprints"], 2);
-    assert_eq!(json["fingerprints"][0], "decimate:a");
-    assert_eq!(json["fingerprints"][1], "decimate:b");
+    assert_eq!(json["fingerprints"][0], "dart-decimate:a");
+    assert_eq!(json["fingerprints"][1], "dart-decimate:b");
 
     Ok(())
 }
@@ -172,7 +175,7 @@ fn ci_reconcile_review_requires_dry_run() -> Result<(), Box<dyn std::error::Erro
 
     let error = match run_from(
         [
-            "decimate",
+            "dart-decimate",
             "ci",
             "reconcile-review",
             "--envelope",
@@ -192,23 +195,26 @@ fn ci_reconcile_review_requires_dry_run() -> Result<(), Box<dyn std::error::Erro
 fn manifest_lists_ci_template_command() -> Result<(), Box<dyn std::error::Error>> {
     let mut output = Vec::new();
 
-    let code = run_from(["decimate", "schema", "--format", "json"], &mut output)?;
+    let code = run_from(["dart-decimate", "schema", "--format", "json"], &mut output)?;
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
     assert_eq!(
         json["schemas"]["ci_reconcile_review"],
-        "decimate.ci-reconcile-review.v1"
+        "dart-decimate.ci-reconcile-review.v1"
     );
-    assert_eq!(json["schemas"]["ci_template"], "decimate.ci-template.v1");
+    assert_eq!(
+        json["schemas"]["ci_template"],
+        "dart-decimate.ci-template.v1"
+    );
     assert!(json["commands"].as_array().is_some_and(|commands| {
         commands.iter().any(|command| {
-            command["name"] == "ci-template" && command["schema"] == "decimate.ci-template.v1"
+            command["name"] == "ci-template" && command["schema"] == "dart-decimate.ci-template.v1"
         })
     }));
     assert!(json["commands"].as_array().is_some_and(|commands| {
         commands.iter().any(|command| {
-            command["name"] == "ci" && command["schema"] == "decimate.ci-reconcile-review.v1"
+            command["name"] == "ci" && command["schema"] == "dart-decimate.ci-reconcile-review.v1"
         })
     }));
 

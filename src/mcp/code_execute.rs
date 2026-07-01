@@ -6,7 +6,7 @@ use serde_json::{Map, Value, json};
 use super::{CliToolOutput, run_cli_json, tool_result};
 use crate::mcp::cli_args::cli_args_for_tool;
 
-pub(crate) const CODE_EXECUTE_SCHEMA_VERSION: &str = "decimate.mcp.code_execute.v1";
+pub(crate) const CODE_EXECUTE_SCHEMA_VERSION: &str = "dart-decimate.mcp.code_execute.v1";
 
 const DEFAULT_MAX_STEPS: usize = 8;
 const HARD_MAX_STEPS: usize = 16;
@@ -433,7 +433,7 @@ const READ_ONLY_TOOLS: &[&str] = &[
     "impact_all",
     "audit",
     "decision_surface",
-    "decimate_explain",
+    "dart_decimate_explain",
     "fallow_explain",
 ];
 

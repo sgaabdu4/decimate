@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -17,7 +17,7 @@ fn security_gate_newly_reachable_keeps_downstream_reachable_candidate()
     write(
         &fixture,
         "lib/src/target.dart",
-        "const accessToken = 'decimate_fixture_value_1234567890';\nvoid target() => print(accessToken);\n",
+        "const accessToken = 'dart_decimate_fixture_value_1234567890';\nvoid target() => print(accessToken);\n",
     )?;
     write(
         &fixture,
@@ -27,7 +27,7 @@ fn security_gate_newly_reachable_keeps_downstream_reachable_candidate()
     write_changed_import_diff(&fixture)?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "security",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -61,7 +61,7 @@ fn security_gate_newly_reachable_passes_for_changed_unreachable_candidate()
     write(
         &fixture,
         "lib/src/secret.dart",
-        "const token = 'decimate_fixture_value_1234567890';\n",
+        "const token = 'dart_decimate_fixture_value_1234567890';\n",
     )?;
     write(
         &fixture,
@@ -70,11 +70,11 @@ fn security_gate_newly_reachable_passes_for_changed_unreachable_candidate()
 --- a/lib/src/secret.dart\n\
 +++ b/lib/src/secret.dart\n\
 @@ -0,0 +1,1 @@\n\
-+const token = 'decimate_fixture_value_1234567890';\n",
++const token = 'dart_decimate_fixture_value_1234567890';\n",
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "security",
         fixture.path().to_str().unwrap_or("."),
         "--format",

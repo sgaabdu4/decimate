@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -19,7 +19,7 @@ fn inspect_file_emits_evidence_bundle() -> Result<(), Box<dyn std::error::Error>
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "inspect",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -34,11 +34,14 @@ fn inspect_file_emits_evidence_bundle() -> Result<(), Box<dyn std::error::Error>
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.inspect.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.inspect.v1");
     assert_eq!(json["kind"], "inspect");
     assert_eq!(json["target"]["kind"], "file");
     assert_eq!(json["target"]["path"], "lib/barrel.dart");
-    assert_eq!(json["file_trace"]["schema_version"], "decimate.trace.v1");
+    assert_eq!(
+        json["file_trace"]["schema_version"],
+        "dart-decimate.trace.v1"
+    );
     assert_eq!(
         json["file_trace"]["re_exports"][0]["to"],
         "lib/src/api.dart"
@@ -68,7 +71,7 @@ fn inspect_symbol_emits_trace_and_scoped_report() -> Result<(), Box<dyn std::err
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "inspect",
             fixture.path().to_str().unwrap_or("."),
             "--format",

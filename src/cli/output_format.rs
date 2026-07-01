@@ -1,6 +1,6 @@
 use clap::{ArgMatches, parser::ValueSource};
 
-use crate::config::{ConfigOutputFormat, DecimateConfig};
+use crate::config::{ConfigOutputFormat, DartDecimateConfig};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum OutputFormat {
@@ -15,7 +15,7 @@ pub(super) enum ReportOutputFormat {
     Sarif,
 }
 
-pub(super) fn output_format(subcommand: &ArgMatches, config: &DecimateConfig) -> OutputFormat {
+pub(super) fn output_format(subcommand: &ArgMatches, config: &DartDecimateConfig) -> OutputFormat {
     if subcommand.value_source("format") == Some(ValueSource::CommandLine) {
         return output_format_value(subcommand);
     }
@@ -38,7 +38,7 @@ pub(super) fn output_format_value(subcommand: &ArgMatches) -> OutputFormat {
 
 pub(super) fn report_output_format(
     subcommand: &ArgMatches,
-    config: &DecimateConfig,
+    config: &DartDecimateConfig,
 ) -> ReportOutputFormat {
     if subcommand.value_source("format") == Some(ValueSource::CommandLine) {
         return report_output_format_value(subcommand);

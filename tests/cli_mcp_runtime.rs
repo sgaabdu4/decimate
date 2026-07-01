@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::mcp::handle_message;
+use dart_decimate::mcp::handle_message;
 use serde_json::Value;
 use tempfile::TempDir;
 

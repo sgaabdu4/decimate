@@ -1,7 +1,7 @@
 use std::fs;
 use std::process::Command;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -25,7 +25,7 @@ fn summary_flag_is_supported_by_report_commands() -> Result<(), Box<dyn std::err
     for (command, extra) in commands {
         let (code, json) = run_json(report_args(command, &fixture, extra, true))?;
         assert_eq!(code, 0, "{command} --summary should pass on clean fixture");
-        assert_eq!(json["schema_version"], "decimate.report.v1");
+        assert_eq!(json["schema_version"], "dart-decimate.report.v1");
         assert_eq!(json["command"], command);
         assert_eq!(json["summary"]["findings"], 0);
     }
@@ -63,7 +63,7 @@ fn run_json(args: Vec<String>) -> Result<(i32, Value), Box<dyn std::error::Error
 
 fn report_args(command: &str, fixture: &TempDir, extra: &[&str], summary: bool) -> Vec<String> {
     let mut args = vec![
-        "decimate".to_owned(),
+        "dart-decimate".to_owned(),
         command.to_owned(),
         fixture.path().display().to_string(),
         "--format".to_owned(),
@@ -90,8 +90,11 @@ fn write_duplicate_pair(fixture: &TempDir) -> Result<(), std::io::Error> {
 fn git_fixture() -> Result<TempDir, Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     git(&fixture, ["init", "-q"])?;
-    git(&fixture, ["config", "user.email", "decimate@example.com"])?;
-    git(&fixture, ["config", "user.name", "Decimate Tests"])?;
+    git(
+        &fixture,
+        ["config", "user.email", "dart-decimate@example.com"],
+    )?;
+    git(&fixture, ["config", "user.name", "Dart Decimate Tests"])?;
     Ok(fixture)
 }
 

@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -11,11 +11,11 @@ fn check_reports_stale_inline_suppression() -> Result<(), Box<dyn std::error::Er
     write(
         &fixture,
         "lib/main.dart",
-        "// decimate-ignore-next-line dead-file\nvoid main() {}\n",
+        "// dart-decimate-ignore-next-line dead-file\nvoid main() {}\n",
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -27,7 +27,10 @@ fn check_reports_stale_inline_suppression() -> Result<(), Box<dyn std::error::Er
     assert_eq!(code, 1);
     assert_eq!(json["verdict"], "fail");
     assert_eq!(json["summary"]["findings"], 1);
-    assert_eq!(json["findings"][0]["rule_id"], "decimate/stale-suppression");
+    assert_eq!(
+        json["findings"][0]["rule_id"],
+        "dart-decimate/stale-suppression"
+    );
     assert_eq!(json["findings"][0]["kind"], "stale-suppression");
     assert_eq!(json["findings"][0]["path"], "lib/main.dart");
     assert_eq!(json["findings"][0]["line"], 1);
@@ -46,7 +49,7 @@ fn check_reports_stale_inline_suppression() -> Result<(), Box<dyn std::error::Er
     );
     assert_eq!(
         json["findings"][0]["actions"][0]["suppression_comment"],
-        "// decimate-ignore-next-line dead-file"
+        "// dart-decimate-ignore-next-line dead-file"
     );
     assert_eq!(json["findings"][0]["actions"][0]["auto_fixable"], true);
 
@@ -60,11 +63,11 @@ fn used_inline_suppression_is_not_reported_as_stale() -> Result<(), Box<dyn std:
     write(
         &fixture,
         "lib/main.dart",
-        "// fallow-ignore-next-line feature-flag\nconst beta = bool.fromEnvironment('FEATURE_BETA');\n",
+        "// dart-decimate-ignore-next-line feature-flag\nconst beta = bool.fromEnvironment('FEATURE_BETA');\n",
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "flags",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -94,7 +97,7 @@ fn unused_member_findings_respect_fallow_suppression() -> Result<(), Box<dyn std
         "\
 enum Mode {
   on,
-  // fallow-ignore-next-line unused-enum-member
+  // dart-decimate-ignore-next-line unused-enum-member
   off,
 }
 void runLive() { print(Mode.on); }
@@ -102,7 +105,7 @@ void runLive() { print(Mode.on); }
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "dead-code",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -125,17 +128,17 @@ fn stale_suppression_rule_can_be_disabled() -> Result<(), Box<dyn std::error::Er
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         "{\"rules\":{\"stale-suppression\":\"off\"}}\n",
     )?;
     write(
         &fixture,
         "lib/main.dart",
-        "// decimate-ignore-next-line dead-file\nvoid main() {}\n",
+        "// dart-decimate-ignore-next-line dead-file\nvoid main() {}\n",
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -159,17 +162,17 @@ fn missing_suppression_reason_reports_when_rule_enabled() -> Result<(), Box<dyn 
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         "{\"rules\":{\"missing-suppression-reason\":\"warn\"}}\n",
     )?;
     write(
         &fixture,
         "lib/main.dart",
-        "// decimate-ignore-next-line feature-flag\nconst beta = bool.fromEnvironment('FEATURE_BETA');\n",
+        "// dart-decimate-ignore-next-line feature-flag\nconst beta = bool.fromEnvironment('FEATURE_BETA');\n",
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "flags",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -181,7 +184,7 @@ fn missing_suppression_reason_reports_when_rule_enabled() -> Result<(), Box<dyn 
     assert_eq!(json["summary"]["missing_suppression_reasons"], 1);
     assert_eq!(
         json["findings"][0]["rule_id"],
-        "decimate/missing-suppression-reason"
+        "dart-decimate/missing-suppression-reason"
     );
     assert_eq!(json["findings"][0]["kind"], "missing-suppression-reason");
     assert_eq!(json["findings"][0]["severity"], "warning");
@@ -196,17 +199,17 @@ fn documented_suppression_reason_is_accepted() -> Result<(), Box<dyn std::error:
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         "{\"rules\":{\"missing-suppression-reason\":\"error\"}}\n",
     )?;
     write(
         &fixture,
         "lib/main.dart",
-        "// fallow-ignore-next-line feature-flag -- platform rollout flag\nconst beta = bool.fromEnvironment('FEATURE_BETA');\n",
+        "// dart-decimate-ignore-next-line feature-flag -- platform rollout flag\nconst beta = bool.fromEnvironment('FEATURE_BETA');\n",
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "flags",
         fixture.path().to_str().unwrap_or("."),
         "--format",

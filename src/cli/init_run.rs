@@ -2,7 +2,7 @@ use std::io::Write;
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
 
-use crate::config::DecimateConfig;
+use crate::config::DartDecimateConfig;
 use crate::init::{InitOptions, init_project, render_init_report};
 
 use super::common_args::{format_arg, root_arg, root_flag_arg, root_path};
@@ -10,7 +10,7 @@ use super::{CliError, OutputFormat, output_format};
 
 pub(super) fn init_command() -> Command {
     Command::new("init")
-        .about("Create Decimate config and optional agent guidance")
+        .about("Create Dart Decimate config and optional agent guidance")
         .arg(root_arg())
         .arg(root_flag_arg())
         .arg(format_arg())
@@ -38,7 +38,7 @@ pub(super) fn run_init<W: Write>(subcommand: &ArgMatches, mut writer: W) -> Resu
         },
     )?;
 
-    match output_format(subcommand, &DecimateConfig::default()) {
+    match output_format(subcommand, &DartDecimateConfig::default()) {
         OutputFormat::Json => {
             serde_json::to_writer_pretty(&mut writer, &report)?;
             writeln!(writer)?;

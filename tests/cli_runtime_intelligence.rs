@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::{Value, json};
 use tempfile::TempDir;
 
@@ -61,7 +61,7 @@ fn coverage_analyze_emits_same_runtime_intelligence_contract()
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "coverage",
             "analyze",
             root.as_str(),
@@ -82,7 +82,7 @@ fn coverage_analyze_emits_same_runtime_intelligence_contract()
     let report = serde_json::from_slice::<Value>(&output)?;
     let runtime = &report["runtime_coverage"];
     assert_eq!(code, 0);
-    assert_eq!(report["schema_version"], "decimate.coverage.v1");
+    assert_eq!(report["schema_version"], "dart-decimate.coverage.v1");
     assert!(
         runtime["coverage_intelligence"]
             .as_array()
@@ -198,7 +198,7 @@ fn runtime_coverage_schema_requires_intelligence_arrays() -> Result<(), Box<dyn 
 {
     let mut output = Vec::new();
     let code = run_from(
-        ["decimate", "report-schema", "--format", "json"],
+        ["dart-decimate", "report-schema", "--format", "json"],
         &mut output,
     )?;
 
@@ -226,7 +226,7 @@ fn run_runtime_health(fixture: &TempDir) -> Result<Value, Box<dyn std::error::Er
     let mut output = Vec::new();
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "health",
             root.as_str(),
             "--format",

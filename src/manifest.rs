@@ -19,21 +19,21 @@ mod mcp;
 use mcp::mcp_tools;
 
 /// Stable schema version for the agent capability manifest.
-pub const MANIFEST_SCHEMA_VERSION: &str = "decimate.schema.v1";
+pub const MANIFEST_SCHEMA_VERSION: &str = "dart-decimate.schema.v1";
 
-/// Return Decimate's machine-readable CLI and issue manifest.
+/// Return Dart Decimate's machine-readable CLI and issue manifest.
 #[must_use]
-pub fn decimate_schema() -> Value {
+pub fn dart_decimate_schema() -> Value {
     json!({
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "kind": "schema",
-        "tool": "decimate",
-        "name": "Decimate",
+        "tool": "dart-decimate",
+        "name": "Dart Decimate",
         "description": "Rust-native Dart and Flutter module-graph intelligence.",
         "manifest_version": MANIFEST_SCHEMA_VERSION,
         "version": env!("CARGO_PKG_VERSION"),
         "default_command": "check",
-        "default_behavior": "Bare decimate invocations default to decimate check against the provided root.",
+        "default_behavior": "Bare dart-decimate invocations default to dart-decimate check against the provided root.",
         "global_flags": ["--root", "--format", "--config", "--quiet"],
         "output_formats": ["human", "json", "sarif"],
         "plugins": plugins(),
@@ -47,8 +47,8 @@ pub fn decimate_schema() -> Value {
         ],
         "severity_levels": ["error", "warning"],
         "suppression_comments": {
-            "next_line": "// decimate-ignore-next-line <issue-type>",
-            "file": "// decimate-ignore-file <issue-type>"
+            "next_line": "// dart-decimate-ignore-next-line <issue-type>",
+            "file": "// dart-decimate-ignore-file <issue-type>"
         },
         "schemas": {
             "report": SCHEMA_VERSION,
@@ -97,9 +97,9 @@ fn plugins() -> Value {
 fn environment_variables() -> Value {
     json!([
         {
-            "name": "DECIMATE_BASE",
+            "name": "DART_DECIMATE_BASE",
             "scope": "generated-git-hook",
-            "description": "Overrides the base ref used by Decimate-managed Git pre-commit hooks."
+            "description": "Overrides the base ref used by Dart Decimate-managed Git pre-commit hooks."
         }
     ])
 }
@@ -194,7 +194,7 @@ fn analysis_commands() -> Value {
         {
             "name": "impact",
             "kind": "impact",
-            "description": "Read the local Decimate value report without running analysis.",
+            "description": "Read the local Dart Decimate value report without running analysis.",
             "schema": IMPACT_SCHEMA_VERSION,
             "flags": ["--root", "--format", "--quiet", "--all", "--sort", "--limit"]
         }
@@ -294,7 +294,7 @@ fn project_support_commands() -> Vec<Value> {
         json!({
             "name": "list",
             "kind": "list",
-            "description": "List Decimate project structure and active Dart/Flutter adapters.",
+            "description": "List Dart Decimate project structure and active Dart/Flutter adapters.",
             "schema": PROJECT_LIST_SCHEMA_VERSION,
             "flags": ["--root", "--format", "--config", "--entry", "--dart-platform", "--production", "--no-production", "--files", "--entry-points", "--workspaces", "--plugins", "--boundaries", "--file", "--workspace", "--changed-workspaces"]
         }),
@@ -308,7 +308,7 @@ fn project_support_commands() -> Vec<Value> {
         json!({
             "name": "explain",
             "kind": "explain",
-            "description": "Explain one Decimate issue type without running analysis.",
+            "description": "Explain one Dart Decimate issue type without running analysis.",
             "schema": EXPLAIN_SCHEMA_VERSION,
             "flags": ["--format"]
         }),
@@ -334,42 +334,42 @@ fn local_support_commands() -> Vec<Value> {
         json!({
             "name": "telemetry",
             "kind": "unsupported",
-            "description": "Report Decimate telemetry support status.",
+            "description": "Report Dart Decimate telemetry support status.",
             "schema": UNSUPPORTED_SCHEMA_VERSION,
             "flags": ["status", "enable", "disable", "--format"]
         }),
         json!({
             "name": "license",
             "kind": "unsupported",
-            "description": "Report Decimate license support status.",
+            "description": "Report Dart Decimate license support status.",
             "schema": UNSUPPORTED_SCHEMA_VERSION,
             "flags": ["status", "activate", "--format"]
         }),
         json!({
             "name": "init",
             "kind": "init",
-            "description": "Create Decimate config and optional AGENTS.md guidance.",
+            "description": "Create Dart Decimate config and optional AGENTS.md guidance.",
             "schema": INIT_SCHEMA_VERSION,
             "flags": ["--root", "--format", "--agents", "--force"]
         }),
         json!({
             "name": "hooks",
             "kind": "hooks",
-            "description": "Inspect, install, or remove Decimate-managed Git and agent hooks.",
+            "description": "Inspect, install, or remove Dart Decimate-managed Git and agent hooks.",
             "schema": HOOKS_SCHEMA_VERSION,
             "flags": ["status", "install", "uninstall", "--root", "--format", "--target", "--branch", "--force"]
         }),
         json!({
             "name": "setup-hooks",
             "kind": "hooks",
-            "description": "Install or remove Decimate-managed repo-local agent hooks.",
+            "description": "Install or remove Dart Decimate-managed repo-local agent hooks.",
             "schema": HOOKS_SCHEMA_VERSION,
             "flags": ["--root", "--format", "--agent", "--branch", "--dry-run", "--force", "--uninstall"]
         }),
         json!({
             "name": "watch",
             "kind": "watch",
-            "description": "Watch Dart project files and rerun Decimate check.",
+            "description": "Watch Dart project files and rerun Dart Decimate check.",
             "schema": SCHEMA_VERSION,
             "flags": ["--root", "--format", "--no-clear", "--once", "--interval-ms"]
         }),
@@ -395,7 +395,7 @@ fn integration_support_commands() -> Vec<Value> {
         json!({
             "name": "config",
             "kind": "config",
-            "description": "Print the resolved Decimate configuration.",
+            "description": "Print the resolved Dart Decimate configuration.",
             "schema": CONFIG_SCHEMA_VERSION,
             "flags": ["--root", "--format", "--config", "--path"]
         }),
@@ -480,72 +480,72 @@ fn task_matrix() -> Value {
     json!([
         {
             "intent": "find cleanup opportunities",
-            "command": "decimate check --format json",
+            "command": "dart-decimate check --format json",
             "reason": "Combined graph, symbol, dependency, duplication, health, flag, and security report."
         },
         {
             "intent": "review changed code",
-            "command": "decimate audit --format json --base <ref>",
+            "command": "dart-decimate audit --format json --base <ref>",
             "reason": "Changed-file gate with related graph findings."
         },
         {
             "intent": "review structural decisions",
-            "command": "decimate decision-surface --format json --base <ref>",
+            "command": "dart-decimate decision-surface --format json --base <ref>",
             "reason": "Ranked changed-code questions for architecture, API, and dependency reviewers."
         },
         {
             "intent": "delete an unused file or export",
-            "command": "decimate inspect --format json --file <path>",
+            "command": "dart-decimate inspect --format json --file <path>",
             "reason": "Evidence bundle before any deletion or suppression."
         },
         {
             "intent": "trace a top-level symbol",
-            "command": "decimate inspect --format json --symbol <file>:<symbol>",
+            "command": "dart-decimate inspect --format json --symbol <file>:<symbol>",
             "reason": "Declaration, references, re-export chains, and file-scoped findings."
         },
         {
             "intent": "verify an unused dependency",
-            "command": "decimate trace-dependency --format json --dependency <package>",
+            "command": "dart-decimate trace-dependency --format json --dependency <package>",
             "reason": "Pubspec declarations and Dart import/export usage."
         },
         {
             "intent": "consolidate duplicated code",
-            "command": "decimate trace-clone --format json --fingerprint <fingerprint>",
+            "command": "dart-decimate trace-clone --format json --fingerprint <fingerprint>",
             "reason": "Duplicate group instances and extraction suggestion."
         },
         {
             "intent": "scope a monorepo",
-            "command": "decimate check --format json --workspace <pattern>",
+            "command": "dart-decimate check --format json --workspace <pattern>",
             "reason": "Restrict findings to matching local pub packages."
         },
         {
             "intent": "explain an issue",
-            "command": "decimate explain --format json <issue-type>",
+            "command": "dart-decimate explain --format json <issue-type>",
             "reason": "Rule rationale, aliases, suppressions, and follow-up commands."
         },
         {
             "intent": "show local value report",
-            "command": "decimate impact --format json --quiet",
+            "command": "dart-decimate impact --format json --quiet",
             "reason": "Read-only local impact report; disabled projects return a populated zero-count report."
         },
         {
             "intent": "initialize a Dart or Flutter project",
-            "command": "decimate init --agents",
-            "reason": "Write agent-first Decimate defaults and optional coding-agent guidance."
+            "command": "dart-decimate init --agents",
+            "reason": "Write agent-first Dart Decimate defaults and optional coding-agent guidance."
         },
         {
             "intent": "guard commits",
-            "command": "decimate hooks install --target git --branch origin/main",
-            "reason": "Install a Decimate-managed pre-commit hook that runs changed-code audit."
+            "command": "dart-decimate hooks install --target git --branch origin/main",
+            "reason": "Install a Dart Decimate-managed pre-commit hook that runs changed-code audit."
         },
         {
             "intent": "set up runtime coverage",
-            "command": "decimate coverage setup --non-interactive --format json",
+            "command": "dart-decimate coverage setup --non-interactive --format json",
             "reason": "Read-only setup plan; add --yes to create local coverage defaults."
         },
         {
             "intent": "set up CI",
-            "command": "decimate ci-template github --format yaml",
+            "command": "dart-decimate ci-template github --format yaml",
             "reason": "Read-only CI template output for changed-code audit gating."
         }
     ])

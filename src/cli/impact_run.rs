@@ -11,7 +11,7 @@ use super::{CliError, OutputFormat};
 
 pub(super) fn impact_command() -> Command {
     Command::new("impact")
-        .about("Show Decimate's local value report")
+        .about("Show Dart Decimate's local value report")
         .arg(root_arg())
         .arg(root_flag_arg())
         .arg(format_arg())

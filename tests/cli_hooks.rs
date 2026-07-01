@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -11,7 +11,7 @@ fn hooks_status_reports_missing_git_hook() -> Result<(), Box<dyn std::error::Err
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "hooks",
             "status",
             fixture.path().to_str().unwrap_or("."),
@@ -23,7 +23,7 @@ fn hooks_status_reports_missing_git_hook() -> Result<(), Box<dyn std::error::Err
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.hooks.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.hooks.v1");
     assert_eq!(json["command"], "hooks status");
     assert_eq!(json["files"][0]["path"], ".git/hooks/pre-commit");
     assert_eq!(json["files"][0]["installed"], false);
@@ -39,7 +39,7 @@ fn hooks_install_writes_managed_executable_git_hook() -> Result<(), Box<dyn std:
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "hooks",
             "install",
             fixture.path().to_str().unwrap_or("."),
@@ -58,9 +58,9 @@ fn hooks_install_writes_managed_executable_git_hook() -> Result<(), Box<dyn std:
     assert_eq!(json["command"], "hooks install");
     assert_eq!(json["files"][0]["action"], "created");
     assert_eq!(json["files"][0]["managed"], true);
-    assert!(source.contains("decimate-managed-hook"));
+    assert!(source.contains("dart-decimate-managed-hook"));
     assert!(source.contains("origin/dev"));
-    assert!(source.contains("decimate audit . --base \"$BASE\" --format json --summary"));
+    assert!(source.contains("dart-decimate audit . --base \"$BASE\" --format json --summary"));
 
     Ok(())
 }
@@ -73,7 +73,7 @@ fn hooks_install_refuses_unmanaged_hook_without_force() -> Result<(), Box<dyn st
 
     let error = match run_from(
         [
-            "decimate",
+            "dart-decimate",
             "hooks",
             "install",
             fixture.path().to_str().unwrap_or("."),
@@ -99,7 +99,7 @@ fn hooks_uninstall_removes_only_managed_hook() -> Result<(), Box<dyn std::error:
     let fixture = git_fixture()?;
     run_from(
         [
-            "decimate",
+            "dart-decimate",
             "hooks",
             "install",
             fixture.path().to_str().unwrap_or("."),
@@ -112,7 +112,7 @@ fn hooks_uninstall_removes_only_managed_hook() -> Result<(), Box<dyn std::error:
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "hooks",
             "uninstall",
             fixture.path().to_str().unwrap_or("."),
@@ -139,7 +139,7 @@ fn hooks_install_agent_manages_claude_gate_and_agents_block()
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "hooks",
             "install",
             fixture.path().to_str().unwrap_or("."),
@@ -154,14 +154,14 @@ fn hooks_install_agent_manages_claude_gate_and_agents_block()
     )?;
 
     let json = serde_json::from_slice::<Value>(&output)?;
-    let script = fixture.path().join(".claude/hooks/decimate-gate.sh");
+    let script = fixture.path().join(".claude/hooks/dart-decimate-gate.sh");
     let settings = fixture.path().join(".claude/settings.json");
     let agents = fixture.path().join("AGENTS.md");
     assert_eq!(code, 0);
     assert_eq!(json["target"], "agent");
     assert_eq!(json["files"].as_array().map_or(0, Vec::len), 3);
-    assert!(fs::read_to_string(script)?.contains("decimate-managed-hook"));
-    assert!(fs::read_to_string(settings)?.contains("decimate-gate.sh"));
+    assert!(fs::read_to_string(script)?.contains("dart-decimate-managed-hook"));
+    assert!(fs::read_to_string(settings)?.contains("dart-decimate-gate.sh"));
     assert!(fs::read_to_string(agents)?.contains("origin/dev"));
 
     Ok(())
@@ -173,7 +173,7 @@ fn hooks_uninstall_agent_removes_managed_agent_surfaces() -> Result<(), Box<dyn 
     let fixture = tempfile::tempdir()?;
     run_from(
         [
-            "decimate",
+            "dart-decimate",
             "hooks",
             "install",
             fixture.path().to_str().unwrap_or("."),
@@ -186,7 +186,7 @@ fn hooks_uninstall_agent_removes_managed_agent_surfaces() -> Result<(), Box<dyn 
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "hooks",
             "uninstall",
             fixture.path().to_str().unwrap_or("."),
@@ -199,13 +199,13 @@ fn hooks_uninstall_agent_removes_managed_agent_surfaces() -> Result<(), Box<dyn 
     )?;
 
     let json = serde_json::from_slice::<Value>(&output)?;
-    let script = fixture.path().join(".claude/hooks/decimate-gate.sh");
+    let script = fixture.path().join(".claude/hooks/dart-decimate-gate.sh");
     let settings = fs::read_to_string(fixture.path().join(".claude/settings.json"))?;
     let agents = fs::read_to_string(fixture.path().join("AGENTS.md"))?;
     assert_eq!(code, 0);
     assert!(!script.exists());
-    assert!(!settings.contains("decimate-gate.sh"));
-    assert!(!agents.contains("decimate-managed-hook:start"));
+    assert!(!settings.contains("dart-decimate-gate.sh"));
+    assert!(!agents.contains("dart-decimate-managed-hook:start"));
     assert_eq!(json["files"][0]["action"], "removed");
 
     Ok(())
@@ -218,7 +218,7 @@ fn setup_hooks_alias_installs_agent_hook() -> Result<(), Box<dyn std::error::Err
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "setup-hooks",
             fixture.path().to_str().unwrap_or("."),
             "--agent",
@@ -234,7 +234,7 @@ fn setup_hooks_alias_installs_agent_hook() -> Result<(), Box<dyn std::error::Err
     assert!(
         fixture
             .path()
-            .join(".claude/hooks/decimate-gate.sh")
+            .join(".claude/hooks/dart-decimate-gate.sh")
             .exists()
     );
 
@@ -246,7 +246,7 @@ fn setup_hooks_dry_run_is_read_only() -> Result<(), Box<dyn std::error::Error>> 
     let fixture = tempfile::tempdir()?;
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "setup-hooks",
             fixture.path().to_str().unwrap_or("."),
             "--dry-run",
@@ -260,7 +260,7 @@ fn setup_hooks_dry_run_is_read_only() -> Result<(), Box<dyn std::error::Error>> 
     assert!(
         !fixture
             .path()
-            .join(".claude/hooks/decimate-gate.sh")
+            .join(".claude/hooks/dart-decimate-gate.sh")
             .exists()
     );
 

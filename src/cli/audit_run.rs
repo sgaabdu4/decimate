@@ -311,7 +311,7 @@ fn create_temp_dir() -> Result<PathBuf, std::io::Error> {
         .map_or(0, |duration| duration.as_nanos());
     for attempt in 0..100u8 {
         let path = base.join(format!(
-            "decimate-audit-base-{}-{nanos}-{attempt}",
+            "dart-decimate-audit-base-{}-{nanos}-{attempt}",
             std::process::id()
         ));
         match fs::create_dir(&path) {
@@ -322,6 +322,6 @@ fn create_temp_dir() -> Result<PathBuf, std::io::Error> {
     }
     Err(std::io::Error::new(
         std::io::ErrorKind::AlreadyExists,
-        "could not create unique Decimate audit temp directory",
+        "could not create unique Dart Decimate audit temp directory",
     ))
 }

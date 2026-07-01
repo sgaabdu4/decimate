@@ -10,7 +10,7 @@ fn binary_emits_json_error_for_missing_entry_points() -> Result<(), Box<dyn std:
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write(&fixture, "lib/src/hidden.dart", "class Hidden {}\n")?;
 
-    let output = Command::new(env!("CARGO_BIN_EXE_decimate"))
+    let output = Command::new(env!("CARGO_BIN_EXE_dart-decimate"))
         .args([
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
@@ -38,7 +38,7 @@ fn binary_emits_json_error_for_missing_entry_points() -> Result<(), Box<dyn std:
 #[test]
 fn binary_emits_json_error_for_missing_runtime_coverage() -> Result<(), Box<dyn std::error::Error>>
 {
-    let output = Command::new(env!("CARGO_BIN_EXE_decimate"))
+    let output = Command::new(env!("CARGO_BIN_EXE_dart-decimate"))
         .args(["coverage", "analyze", "--format", "json"])
         .output()?;
 
@@ -60,13 +60,13 @@ fn binary_emits_json_error_for_malformed_config() -> Result<(), Box<dyn std::err
     let fixture = tempfile::tempdir()?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "[health]\nmax_cyclomatic = \"low\"\n",
     )?;
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write(&fixture, "lib/main.dart", "void main() {}\n")?;
 
-    let output = Command::new(env!("CARGO_BIN_EXE_decimate"))
+    let output = Command::new(env!("CARGO_BIN_EXE_dart-decimate"))
         .args([
             "health",
             fixture.path().to_str().unwrap_or("."),
@@ -81,7 +81,7 @@ fn binary_emits_json_error_for_malformed_config() -> Result<(), Box<dyn std::err
     assert_eq!(json["error"], true);
     assert_eq!(json["exit_code"], 2);
     assert!(json["message"].as_str().is_some_and(|message| {
-        message.contains(".decimaterc") && message.contains("max_cyclomatic")
+        message.contains(".dart-decimaterc") && message.contains("max_cyclomatic")
     }));
 
     Ok(())
@@ -89,7 +89,7 @@ fn binary_emits_json_error_for_malformed_config() -> Result<(), Box<dyn std::err
 
 #[test]
 fn binary_emits_json_error_for_clap_errors() -> Result<(), Box<dyn std::error::Error>> {
-    let output = Command::new(env!("CARGO_BIN_EXE_decimate"))
+    let output = Command::new(env!("CARGO_BIN_EXE_dart-decimate"))
         .args(["dead-code", "--format", "json", "--unknown"])
         .output()?;
 

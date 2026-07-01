@@ -1,7 +1,7 @@
 use std::fs;
 use std::process::Command;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -13,7 +13,7 @@ fn workspace_scope_matches_package_name() -> Result<(), Box<dyn std::error::Erro
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -43,7 +43,7 @@ fn workspace_scope_matches_path_glob_and_exclude() -> Result<(), Box<dyn std::er
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -72,7 +72,7 @@ fn workspace_scope_keeps_pubspec_dependency_findings() -> Result<(), Box<dyn std
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -103,7 +103,7 @@ fn list_workspace_scope_filters_file_and_package_metadata() -> Result<(), Box<dy
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "list",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -138,7 +138,7 @@ fn workspace_scope_errors_when_no_package_matches() -> Result<(), Box<dyn std::e
 
     let Err(error) = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -171,7 +171,7 @@ fn changed_workspaces_scope_selects_changed_package() -> Result<(), Box<dyn std:
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -207,7 +207,7 @@ fn changed_workspaces_empty_when_no_package_changed() -> Result<(), Box<dyn std:
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -237,7 +237,7 @@ fn changed_workspaces_conflicts_with_workspace() -> Result<(), Box<dyn std::erro
 
     let error = match run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -268,7 +268,7 @@ fn changed_workspaces_errors_for_invalid_base() -> Result<(), Box<dyn std::error
 
     let error = match run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -336,8 +336,11 @@ dependencies:
 fn git_fixture() -> Result<TempDir, Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     git(&fixture, ["init", "-q"])?;
-    git(&fixture, ["config", "user.email", "decimate@example.com"])?;
-    git(&fixture, ["config", "user.name", "Decimate Tests"])?;
+    git(
+        &fixture,
+        ["config", "user.email", "dart-decimate@example.com"],
+    )?;
+    git(&fixture, ["config", "user.name", "Dart Decimate Tests"])?;
     Ok(fixture)
 }
 

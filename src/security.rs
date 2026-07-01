@@ -75,13 +75,13 @@ pub enum SecurityCategory {
 impl SecurityCategory {
     const fn rule_id(self) -> &'static str {
         match self {
-            Self::HardcodedSecret => "decimate/security-hardcoded-secret",
-            Self::InsecureTransport => "decimate/security-insecure-transport",
-            Self::TlsBypass => "decimate/security-tls-bypass",
-            Self::WebViewRisk => "decimate/security-webview-risk",
-            Self::ProcessExecution => "decimate/security-process-execution",
-            Self::RawSql => "decimate/security-raw-sql",
-            Self::PlainSecretStorage => "decimate/security-plain-secret-storage",
+            Self::HardcodedSecret => "dart-decimate/security-hardcoded-secret",
+            Self::InsecureTransport => "dart-decimate/security-insecure-transport",
+            Self::TlsBypass => "dart-decimate/security-tls-bypass",
+            Self::WebViewRisk => "dart-decimate/security-webview-risk",
+            Self::ProcessExecution => "dart-decimate/security-process-execution",
+            Self::RawSql => "dart-decimate/security-raw-sql",
+            Self::PlainSecretStorage => "dart-decimate/security-plain-secret-storage",
         }
     }
 }

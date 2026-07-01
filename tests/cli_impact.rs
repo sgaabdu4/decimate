@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 
 #[test]
@@ -10,7 +10,7 @@ fn impact_reports_disabled_local_value_contract() -> Result<(), Box<dyn std::err
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "impact",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -22,9 +22,9 @@ fn impact_reports_disabled_local_value_contract() -> Result<(), Box<dyn std::err
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.impact.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.impact.v1");
     assert_eq!(json["kind"], "impact");
-    assert_eq!(json["tool"], "decimate");
+    assert_eq!(json["tool"], "dart-decimate");
     assert_eq!(json["command"], "impact");
     assert_eq!(json["enabled"], false);
     assert_eq!(json["enabled_source"], "default");
@@ -38,7 +38,7 @@ fn impact_reports_disabled_local_value_contract() -> Result<(), Box<dyn std::err
     assert!(
         json["project"]["id"]
             .as_str()
-            .is_some_and(|id| id.starts_with("decimate:impact:"))
+            .is_some_and(|id| id.starts_with("dart-decimate:impact:"))
     );
 
     Ok(())
@@ -47,10 +47,10 @@ fn impact_reports_disabled_local_value_contract() -> Result<(), Box<dyn std::err
 #[test]
 fn impact_reads_local_history_jsonl() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
-    let decimate_dir = fixture.path().join(".decimate");
-    fs::create_dir(&decimate_dir)?;
+    let dart_decimate_dir = fixture.path().join(".dart-decimate");
+    fs::create_dir(&dart_decimate_dir)?;
     fs::write(
-        decimate_dir.join("impact.jsonl"),
+        dart_decimate_dir.join("impact.jsonl"),
         concat!(
             r#"{"timestamp":"2026-06-01T00:00:00Z","surfaced":3,"resolved":1,"suppressed":0,"contained_commits":2}"#,
             "\n",
@@ -62,7 +62,7 @@ fn impact_reads_local_history_jsonl() -> Result<(), Box<dyn std::error::Error>> 
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "impact",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -74,7 +74,7 @@ fn impact_reads_local_history_jsonl() -> Result<(), Box<dyn std::error::Error>> 
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.impact.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.impact.v1");
     assert_eq!(json["enabled"], true);
     assert_eq!(json["enabled_source"], "local-history");
     assert_eq!(json["record_count"], 2);
@@ -98,14 +98,22 @@ fn impact_all_reports_empty_cross_repo_contract() -> Result<(), Box<dyn std::err
 
     let code = run_from(
         [
-            "decimate", "impact", "--all", "--format", "json", "--sort", "surfaced", "--limit", "5",
+            "dart-decimate",
+            "impact",
+            "--all",
+            "--format",
+            "json",
+            "--sort",
+            "surfaced",
+            "--limit",
+            "5",
         ],
         &mut output,
     )?;
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.impact.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.impact.v1");
     assert_eq!(json["kind"], "impact-all");
     assert_eq!(json["command"], "impact --all");
     assert_eq!(json["summary"]["projects"], 0);
@@ -119,15 +127,15 @@ fn impact_all_reports_empty_cross_repo_contract() -> Result<(), Box<dyn std::err
 fn schema_manifest_lists_impact_command() -> Result<(), Box<dyn std::error::Error>> {
     let mut output = Vec::new();
 
-    let code = run_from(["decimate", "schema", "--format", "json"], &mut output)?;
+    let code = run_from(["dart-decimate", "schema", "--format", "json"], &mut output)?;
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schemas"]["impact"], "decimate.impact.v1");
+    assert_eq!(json["schemas"]["impact"], "dart-decimate.impact.v1");
     assert!(json["commands"].as_array().is_some_and(|commands| {
-        commands
-            .iter()
-            .any(|command| command["name"] == "impact" && command["schema"] == "decimate.impact.v1")
+        commands.iter().any(|command| {
+            command["name"] == "impact" && command["schema"] == "dart-decimate.impact.v1"
+        })
     }));
 
     Ok(())

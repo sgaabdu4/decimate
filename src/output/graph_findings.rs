@@ -14,7 +14,7 @@ pub(super) fn add_dead_code_findings(
     for path in &dead_code.missing_entry_points {
         let path = display_path(root, path);
         findings.push(Finding {
-            rule_id: "decimate/missing-entry-point".to_owned(),
+            rule_id: "dart-decimate/missing-entry-point".to_owned(),
             fingerprint: None,
             kind: FindingKind::MissingEntryPoint,
             severity: Severity::Error,
@@ -41,7 +41,7 @@ pub(super) fn add_dead_code_findings(
     for dead_file in &dead_code.dead_files {
         let path = display_path(root, &dead_file.path);
         findings.push(Finding {
-            rule_id: "decimate/dead-file".to_owned(),
+            rule_id: "dart-decimate/dead-file".to_owned(),
             fingerprint: None,
             kind: FindingKind::DeadFile,
             severity: Severity::Error,
@@ -59,7 +59,7 @@ pub(super) fn add_dead_code_findings(
                     dead_file.safe_to_delete,
                 )
                 .with_target_path(path.clone())
-                .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()]),
+                .with_dart_decimate_args(["inspect", "--format", "json", "--file", path.as_str()]),
             ],
         });
     }
@@ -78,7 +78,7 @@ pub(super) fn add_cycle_findings(
             .collect::<Vec<_>>();
         let path = files.first().cloned().unwrap_or_default();
         findings.push(Finding {
-            rule_id: "decimate/circular-dependency".to_owned(),
+            rule_id: "dart-decimate/circular-dependency".to_owned(),
             fingerprint: None,
             kind: FindingKind::CircularDependency,
             severity: Severity::Error,
@@ -96,7 +96,7 @@ pub(super) fn add_cycle_findings(
                     false,
                 )
                 .with_target_path(path.clone())
-                .with_decimate_args([
+                .with_dart_decimate_args([
                     "inspect",
                     "--format",
                     "json",
@@ -121,7 +121,7 @@ pub(super) fn add_re_export_cycle_findings(
             .collect::<Vec<_>>();
         let path = files.first().cloned().unwrap_or_default();
         findings.push(Finding {
-            rule_id: "decimate/re-export-cycle".to_owned(),
+            rule_id: "dart-decimate/re-export-cycle".to_owned(),
             fingerprint: None,
             kind: FindingKind::ReExportCycle,
             severity: Severity::Error,
@@ -139,7 +139,7 @@ pub(super) fn add_re_export_cycle_findings(
                     false,
                 )
                 .with_target_path(path.clone())
-                .with_decimate_args([
+                .with_dart_decimate_args([
                     "inspect",
                     "--format",
                     "json",
@@ -160,7 +160,7 @@ pub(super) fn add_boundary_findings(
         let from = display_path(root, &violation.from_path);
         let to = display_path(root, &violation.to_path);
         findings.push(Finding {
-            rule_id: "decimate/boundary-violation".to_owned(),
+            rule_id: "dart-decimate/boundary-violation".to_owned(),
             fingerprint: None,
             kind: FindingKind::BoundaryViolation,
             severity: Severity::Error,
@@ -183,8 +183,8 @@ pub(super) fn add_boundary_findings(
                     false,
                 )
                 .with_target_path(from.clone())
-                .with_decimate_args(["inspect", "--format", "json", "--file", from.as_str()])
-                .with_suppression_comment("// decimate-ignore-next-line boundary-violation"),
+                .with_dart_decimate_args(["inspect", "--format", "json", "--file", from.as_str()])
+                .with_suppression_comment("// dart-decimate-ignore-next-line boundary-violation"),
             ],
         });
     }
@@ -203,7 +203,7 @@ pub(super) fn add_boundary_coverage_findings(
             .map(|boundary| display_path(root, boundary))
             .collect::<Vec<_>>();
         findings.push(Finding {
-            rule_id: "decimate/boundary-violation".to_owned(),
+            rule_id: "dart-decimate/boundary-violation".to_owned(),
             fingerprint: None,
             kind: FindingKind::BoundaryCoverage,
             severity: Severity::Error,
@@ -223,7 +223,7 @@ pub(super) fn add_boundary_coverage_findings(
                 .with_target_path(path.clone())
                 .with_config_key("boundary")
                 .with_value_schema("array of FROM:DISALLOW architecture boundary rules")
-                .with_suppression_comment("// decimate-ignore-next-line boundary-violation"),
+                .with_suppression_comment("// dart-decimate-ignore-next-line boundary-violation"),
             ],
         });
     }
@@ -237,7 +237,7 @@ pub(super) fn add_boundary_call_findings(
     for violation in violations {
         let path = display_path(root, &violation.path);
         findings.push(Finding {
-            rule_id: "decimate/boundary-violation".to_owned(),
+            rule_id: "dart-decimate/boundary-violation".to_owned(),
             fingerprint: None,
             kind: FindingKind::BoundaryCallViolation,
             severity: Severity::Error,
@@ -260,7 +260,7 @@ pub(super) fn add_boundary_call_findings(
                 .with_target_path(path.clone())
                 .with_config_key("boundary_calls")
                 .with_value_schema("array of FROM:PATTERN forbidden direct call rules")
-                .with_suppression_comment("// decimate-ignore-next-line boundary-call-violation"),
+                .with_suppression_comment("// dart-decimate-ignore-next-line boundary-call-violation"),
             ],
         });
     }
@@ -301,7 +301,7 @@ pub(super) fn add_policy_findings(
                 .with_config_key("rulePacks")
                 .with_value_schema("array of declarative policy pack paths")
                 .with_suppression_comment(format!(
-                    "// decimate-ignore-next-line policy-violation {}",
+                    "// dart-decimate-ignore-next-line policy-violation {}",
                     violation.rule_id
                 )),
             ],
@@ -354,7 +354,7 @@ fn unresolved_finding(root: &std::path::Path, dependency: &UnresolvedDependency)
     let from = display_path(root, &dependency.from_path);
     let attempted = display_path(root, &dependency.attempted_path);
     Finding {
-        rule_id: "decimate/unresolved-dependency".to_owned(),
+        rule_id: "dart-decimate/unresolved-dependency".to_owned(),
         fingerprint: None,
         kind: FindingKind::UnresolvedDependency,
         severity: Severity::Error,
@@ -380,8 +380,8 @@ fn unresolved_finding(root: &std::path::Path, dependency: &UnresolvedDependency)
                 false,
             )
             .with_target_path(from.clone())
-            .with_decimate_args(["inspect", "--format", "json", "--file", from.as_str()])
-            .with_suppression_comment("// decimate-ignore-next-line unresolved-dependency"),
+            .with_dart_decimate_args(["inspect", "--format", "json", "--file", from.as_str()])
+            .with_suppression_comment("// dart-decimate-ignore-next-line unresolved-dependency"),
         ],
     }
 }
@@ -398,7 +398,7 @@ fn part_of_finding(root: &std::path::Path, relationship: &InvalidPartRelationshi
         .chain(std::iter::once(part.clone()))
         .collect::<Vec<_>>();
     Finding {
-        rule_id: "decimate/part-of-violation".to_owned(),
+        rule_id: "dart-decimate/part-of-violation".to_owned(),
         fingerprint: None,
         kind: FindingKind::PartOfViolation,
         severity: Severity::Error,
@@ -421,8 +421,8 @@ fn part_of_finding(root: &std::path::Path, relationship: &InvalidPartRelationshi
                 false,
             )
             .with_target_path(part.clone())
-            .with_decimate_args(["inspect", "--format", "json", "--file", part.as_str()])
-            .with_suppression_comment("// decimate-ignore-next-line part-of-violation"),
+            .with_dart_decimate_args(["inspect", "--format", "json", "--file", part.as_str()])
+            .with_suppression_comment("// dart-decimate-ignore-next-line part-of-violation"),
         ],
     }
 }

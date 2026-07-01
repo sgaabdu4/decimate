@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// Stable JSON schema version for project-list reports.
-pub const PROJECT_LIST_SCHEMA_VERSION: &str = "decimate.list.v1";
+pub const PROJECT_LIST_SCHEMA_VERSION: &str = "dart-decimate.list.v1";
 
 /// Sections included in a project-list report.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -27,7 +27,7 @@ pub enum ProjectListSection {
     EntryPoints,
     /// Discovered local pub packages.
     Workspaces,
-    /// Active Decimate adapters.
+    /// Active Dart Decimate adapters.
     Plugins,
     /// Architecture boundary zones and rules.
     Boundaries,
@@ -76,7 +76,7 @@ pub struct ProjectListReport {
     pub entry_points: Vec<ListedEntryPoint>,
     /// Discovered local pub packages.
     pub workspaces: Vec<ListedWorkspace>,
-    /// Active Decimate adapters.
+    /// Active Dart Decimate adapters.
     pub plugins: Vec<ListedPlugin>,
     /// Configured architecture boundaries.
     pub boundaries: ListedBoundaries,
@@ -121,7 +121,7 @@ pub struct ListedFile {
 pub struct ListedEntryPoint {
     /// Entry-point path, root-relative where possible.
     pub path: String,
-    /// Whether this came from config/CLI or Decimate heuristics.
+    /// Whether this came from config/CLI or Dart Decimate heuristics.
     pub source: String,
 }
 
@@ -136,14 +136,14 @@ pub struct ListedWorkspace {
     pub pubspec_path: String,
 }
 
-/// Decimate adapter metadata.
+/// Dart Decimate adapter metadata.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ListedPlugin {
     /// Adapter name.
     pub name: String,
     /// Whether the adapter is active for this project.
     pub active: bool,
-    /// Why Decimate selected or skipped it.
+    /// Why Dart Decimate selected or skipped it.
     pub reason: String,
 }
 
@@ -214,7 +214,7 @@ pub fn project_list_report(
     );
     ProjectListReport {
         schema_version: PROJECT_LIST_SCHEMA_VERSION.to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: "list".to_owned(),
         summary: ProjectListSummary {
             files: project.files.len(),

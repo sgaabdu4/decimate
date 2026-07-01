@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -17,10 +17,10 @@ fn check_command_saves_identity_baseline() -> Result<(), Box<dyn std::error::Err
     write(&fixture, "lib/live.dart", "void live() {}\n")?;
     write(&fixture, "lib/dead.dart", "// dead file\n")?;
     write_duplicate_pair(&fixture)?;
-    let baseline_path = fixture.path().join(".decimate/baseline.json");
+    let baseline_path = fixture.path().join(".dart-decimate/baseline.json");
 
     let (code, report) = run_json(vec![
-        "decimate",
+        "dart-decimate",
         "check",
         &root(&fixture),
         "--format",
@@ -37,13 +37,16 @@ fn check_command_saves_identity_baseline() -> Result<(), Box<dyn std::error::Err
 
     let baseline = read_json(&baseline_path)?;
     assert_eq!(code, 1);
-    assert_eq!(report["schema_version"], "decimate.report.v1");
-    assert_eq!(baseline["schema_version"], "decimate.baseline.v1");
-    assert_eq!(baseline["tool"], "decimate");
-    assert!(baseline_has_rule(&baseline, "decimate/dead-file"));
-    assert!(baseline_has_rule(&baseline, "decimate/code-duplication"));
+    assert_eq!(report["schema_version"], "dart-decimate.report.v1");
+    assert_eq!(baseline["schema_version"], "dart-decimate.baseline.v1");
+    assert_eq!(baseline["tool"], "dart-decimate");
+    assert!(baseline_has_rule(&baseline, "dart-decimate/dead-file"));
+    assert!(baseline_has_rule(
+        &baseline,
+        "dart-decimate/code-duplication"
+    ));
     assert_eq!(
-        baseline_fingerprint(&baseline, "decimate/code-duplication"),
+        baseline_fingerprint(&baseline, "dart-decimate/code-duplication"),
         report["clone_groups"][0]["fingerprint"]
     );
 
@@ -57,12 +60,12 @@ fn check_command_with_baseline_passes_when_all_findings_are_known()
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write(&fixture, "lib/main.dart", "void main() {}\n")?;
     write(&fixture, "lib/dead.dart", "// dead file\n")?;
-    let baseline_path = fixture.path().join("decimate-baseline.json");
+    let baseline_path = fixture.path().join("dart-decimate-baseline.json");
     let root = root(&fixture);
     let baseline = path_arg(&baseline_path);
 
     let (save_code, _) = run_json(vec![
-        "decimate",
+        "dart-decimate",
         "check",
         &root,
         "--format",
@@ -73,7 +76,7 @@ fn check_command_with_baseline_passes_when_all_findings_are_known()
         &baseline,
     ])?;
     let (code, report) = run_json(vec![
-        "decimate",
+        "dart-decimate",
         "check",
         &root,
         "--format",
@@ -112,12 +115,12 @@ fn check_baseline_suppresses_known_unused_member() -> Result<(), Box<dyn std::er
         "lib/src/live.dart",
         "class Live { void _unused() {} }\nvoid runLive() { Live(); }\n",
     )?;
-    let baseline_path = fixture.path().join("decimate-baseline.json");
+    let baseline_path = fixture.path().join("dart-decimate-baseline.json");
     let root = root(&fixture);
     let baseline = path_arg(&baseline_path);
 
     let (save_code, saved) = run_json(vec![
-        "decimate",
+        "dart-decimate",
         "check",
         &root,
         "--format",
@@ -128,7 +131,7 @@ fn check_baseline_suppresses_known_unused_member() -> Result<(), Box<dyn std::er
         &baseline,
     ])?;
     let (code, report) = run_json(vec![
-        "decimate",
+        "dart-decimate",
         "check",
         &root,
         "--format",
@@ -157,12 +160,12 @@ fn check_command_with_baseline_reports_only_new_identity() -> Result<(), Box<dyn
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write(&fixture, "lib/main.dart", "void main() {}\n")?;
     write(&fixture, "lib/dead.dart", "// dead file\n")?;
-    let baseline_path = fixture.path().join("decimate-baseline.json");
+    let baseline_path = fixture.path().join("dart-decimate-baseline.json");
     let root = root(&fixture);
     let baseline = path_arg(&baseline_path);
 
     run_json(vec![
-        "decimate",
+        "dart-decimate",
         "check",
         &root,
         "--format",
@@ -175,7 +178,7 @@ fn check_command_with_baseline_reports_only_new_identity() -> Result<(), Box<dyn
     write(&fixture, "lib/new_dead.dart", "// new dead file\n")?;
 
     let (code, report) = run_json(vec![
-        "decimate",
+        "dart-decimate",
         "check",
         &root,
         "--format",
@@ -189,7 +192,7 @@ fn check_command_with_baseline_reports_only_new_identity() -> Result<(), Box<dyn
     assert_eq!(code, 1);
     assert_eq!(report["summary"]["findings"], 1);
     assert_eq!(report["findings"][0]["path"], "lib/new_dead.dart");
-    assert_eq!(report["findings"][0]["rule_id"], "decimate/dead-file");
+    assert_eq!(report["findings"][0]["rule_id"], "dart-decimate/dead-file");
 
     Ok(())
 }
@@ -253,7 +256,7 @@ fn baseline_errors_for_missing_or_malformed_file() -> Result<(), Box<dyn std::er
     fs::write(&malformed, "{ not json")?;
 
     let missing_error = run_error(vec![
-        "decimate",
+        "dart-decimate",
         "check",
         &root(&fixture),
         "--format",
@@ -262,7 +265,7 @@ fn baseline_errors_for_missing_or_malformed_file() -> Result<(), Box<dyn std::er
         &path_arg(&missing),
     ]);
     let malformed_error = run_error(vec![
-        "decimate",
+        "dart-decimate",
         "check",
         &root(&fixture),
         "--format",
@@ -285,10 +288,10 @@ fn check_command_saves_regression_baseline_counts() -> Result<(), Box<dyn std::e
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write(&fixture, "lib/main.dart", "void main() {}\n")?;
     write(&fixture, "lib/dead.dart", "// dead file\n")?;
-    let baseline_path = fixture.path().join(".decimate/regression.json");
+    let baseline_path = fixture.path().join(".dart-decimate/regression.json");
 
     let (code, report) = run_json(vec![
-        "decimate",
+        "dart-decimate",
         "check",
         &root(&fixture),
         "--format",
@@ -304,12 +307,12 @@ fn check_command_saves_regression_baseline_counts() -> Result<(), Box<dyn std::e
     assert_eq!(report["summary"]["findings"], 1);
     assert_eq!(
         baseline["schema_version"],
-        "decimate.regression-baseline.v1"
+        "dart-decimate.regression-baseline.v1"
     );
-    assert_eq!(baseline["tool"], "decimate");
+    assert_eq!(baseline["tool"], "dart-decimate");
     assert_eq!(baseline["command"], "check");
     assert_eq!(baseline["counts"]["findings"], 1);
-    assert_eq!(baseline["counts"]["rules"]["decimate/dead-file"], 1);
+    assert_eq!(baseline["counts"]["rules"]["dart-decimate/dead-file"], 1);
 
     Ok(())
 }
@@ -450,7 +453,7 @@ fn audit_rejects_global_regression_baseline_flags() -> Result<(), Box<dyn std::e
 
     let error = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "audit",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -523,7 +526,7 @@ fn regression_fixture() -> Result<TempDir, std::io::Error> {
 
 fn regression_args<'a>(root: &'a str, tail: &'a [&'a str]) -> Vec<&'a str> {
     let mut args = vec![
-        "decimate",
+        "dart-decimate",
         "check",
         root,
         "--format",
@@ -537,7 +540,7 @@ fn regression_args<'a>(root: &'a str, tail: &'a [&'a str]) -> Vec<&'a str> {
 
 fn health_args<'a>(root: &'a str, tail: &'a [&'a str]) -> Vec<&'a str> {
     let mut args = vec![
-        "decimate",
+        "dart-decimate",
         "health",
         root,
         "--format",

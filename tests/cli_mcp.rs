@@ -2,7 +2,7 @@ use std::fs;
 use std::io::Write;
 use std::process::{Command, Stdio};
 
-use decimate::{manifest::decimate_schema, mcp::handle_message};
+use dart_decimate::{manifest::dart_decimate_schema, mcp::handle_message};
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -22,7 +22,10 @@ fn mcp_initialize_and_tools_list_follow_json_rpc_contract() -> Result<(), Box<dy
     assert_eq!(initialized["jsonrpc"], "2.0");
     assert_eq!(initialized["id"], 1);
     assert_eq!(initialized["result"]["protocolVersion"], MCP_VERSION);
-    assert_eq!(initialized["result"]["serverInfo"]["name"], "decimate-mcp");
+    assert_eq!(
+        initialized["result"]["serverInfo"]["name"],
+        "dart-decimate-mcp"
+    );
     assert_eq!(
         initialized["result"]["capabilities"]["tools"]["listChanged"],
         false
@@ -107,12 +110,12 @@ fn mcp_call_code_execute_composes_read_only_tools() -> Result<(), Box<dyn std::e
     assert_eq!(output["result"]["isError"], false);
     assert_eq!(
         output["result"]["structuredContent"]["schema_version"],
-        "decimate.mcp.code_execute.v1"
+        "dart-decimate.mcp.code_execute.v1"
     );
     assert_eq!(output["result"]["structuredContent"]["ok"], true);
     assert_eq!(
         output["result"]["structuredContent"]["result"],
-        "decimate/unused-export"
+        "dart-decimate/unused-export"
     );
     assert_eq!(
         output["result"]["structuredContent"]["calls"][0]["tool"],
@@ -273,7 +276,7 @@ fn mcp_protocol_errors_follow_json_rpc_codes() -> Result<(), Box<dyn std::error:
     assert_eq!(non_object_arguments["error"]["code"], -32602);
 
     let ignored_root = response(
-        r#"{"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"decimate_explain","arguments":{"issue_type":"unused-export","root":"."}}}"#,
+        r#"{"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"dart_decimate_explain","arguments":{"issue_type":"unused-export","root":"."}}}"#,
     )?;
     assert_eq!(ignored_root["error"]["code"], -32602);
 
@@ -288,7 +291,7 @@ fn mcp_protocol_errors_follow_json_rpc_codes() -> Result<(), Box<dyn std::error:
 #[test]
 fn mcp_call_explain_returns_structured_content() -> Result<(), Box<dyn std::error::Error>> {
     let output = response(
-        r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"decimate_explain","arguments":{"issue_type":"unused-export"}}}"#,
+        r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"dart_decimate_explain","arguments":{"issue_type":"unused-export"}}}"#,
     )?;
 
     assert_eq!(output["id"], 3);
@@ -296,12 +299,12 @@ fn mcp_call_explain_returns_structured_content() -> Result<(), Box<dyn std::erro
     assert_eq!(output["result"]["_meta"]["exit_code"], 0);
     assert_eq!(
         output["result"]["structuredContent"]["id"],
-        "decimate/unused-export"
+        "dart-decimate/unused-export"
     );
     assert!(
         output["result"]["content"][0]["text"]
             .as_str()
-            .is_some_and(|text| text.contains("decimate/unused-export"))
+            .is_some_and(|text| text.contains("dart-decimate/unused-export"))
     );
 
     Ok(())
@@ -317,14 +320,15 @@ fn mcp_call_fallow_explain_returns_structured_content() -> Result<(), Box<dyn st
     assert_eq!(output["result"]["isError"], false);
     assert_eq!(
         output["result"]["structuredContent"]["id"],
-        "decimate/code-duplication"
+        "dart-decimate/code-duplication"
     );
 
     Ok(())
 }
 
 #[test]
-fn mcp_call_analyze_runs_read_only_decimate_report() -> Result<(), Box<dyn std::error::Error>> {
+fn mcp_call_analyze_runs_read_only_dart_decimate_report() -> Result<(), Box<dyn std::error::Error>>
+{
     let fixture = tempfile::tempdir()?;
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write(&fixture, "lib/main.dart", "void main() {}\n")?;
@@ -348,7 +352,7 @@ fn mcp_call_analyze_runs_read_only_decimate_report() -> Result<(), Box<dyn std::
     assert_eq!(output["result"]["_meta"]["exit_code"], 1);
     assert_eq!(
         output["result"]["structuredContent"]["schema_version"],
-        "decimate.report.v1"
+        "dart-decimate.report.v1"
     );
     assert_eq!(output["result"]["structuredContent"]["command"], "check");
     assert_eq!(
@@ -366,7 +370,7 @@ fn mcp_call_list_boundaries_returns_project_list() -> Result<(), Box<dyn std::er
     write(&fixture, "lib/main.dart", "void main() {}\n")?;
     write(
         &fixture,
-        "decimate.json",
+        "dart-decimate.json",
         r#"{ "boundaries": [{ "from": "lib/domain", "disallow": "lib/ui" }] }"#,
     )?;
     let message = serde_json::json!({
@@ -377,7 +381,7 @@ fn mcp_call_list_boundaries_returns_project_list() -> Result<(), Box<dyn std::er
             "name": "list_boundaries",
             "arguments": {
                 "root": fixture.path(),
-                "config": "decimate.json"
+                "config": "dart-decimate.json"
             }
         }
     });
@@ -387,7 +391,7 @@ fn mcp_call_list_boundaries_returns_project_list() -> Result<(), Box<dyn std::er
     assert_eq!(output["result"]["isError"], false);
     assert_eq!(
         output["result"]["structuredContent"]["schema_version"],
-        "decimate.list.v1"
+        "dart-decimate.list.v1"
     );
     assert_eq!(output["result"]["structuredContent"]["command"], "list");
     assert_eq!(
@@ -464,7 +468,7 @@ fn mcp_call_impact_returns_read_only_report() -> Result<(), Box<dyn std::error::
     assert_eq!(output["result"]["isError"], false);
     assert_eq!(
         output["result"]["structuredContent"]["schema_version"],
-        "decimate.impact.v1"
+        "dart-decimate.impact.v1"
     );
     assert_eq!(output["result"]["structuredContent"]["kind"], "impact");
     assert_eq!(output["result"]["structuredContent"]["enabled"], false);
@@ -494,7 +498,7 @@ fn mcp_call_fix_preview_does_not_modify_files() -> Result<(), Box<dyn std::error
     assert_eq!(output["result"]["isError"], false);
     assert_eq!(
         output["result"]["structuredContent"]["schema_version"],
-        "decimate.fix.v1"
+        "dart-decimate.fix.v1"
     );
     assert_eq!(output["result"]["structuredContent"]["mode"], "dry-run");
     assert_eq!(
@@ -554,8 +558,8 @@ fn mcp_call_fix_apply_applies_confirmed_safe_changes() -> Result<(), Box<dyn std
 }
 
 #[test]
-fn decimate_mcp_binary_serves_stdio_json_rpc() -> Result<(), Box<dyn std::error::Error>> {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_decimate-mcp"))
+fn dart_decimate_mcp_binary_serves_stdio_json_rpc() -> Result<(), Box<dyn std::error::Error>> {
+    let mut child = Command::new(env!("CARGO_BIN_EXE_dart-decimate-mcp"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()?;
@@ -585,7 +589,10 @@ fn decimate_mcp_binary_serves_stdio_json_rpc() -> Result<(), Box<dyn std::error:
     let initialize = serde_json::from_str::<Value>(first)?;
     let tools = serde_json::from_str::<Value>(second)?;
 
-    assert_eq!(initialize["result"]["serverInfo"]["name"], "decimate-mcp");
+    assert_eq!(
+        initialize["result"]["serverInfo"]["name"],
+        "dart-decimate-mcp"
+    );
     assert!(tool_names(&tools).iter().any(|name| name == "analyze"));
 
     Ok(())
@@ -621,7 +628,7 @@ fn assert_tool_property(
 }
 
 fn manifest_tool_names() -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let schema = decimate_schema();
+    let schema = dart_decimate_schema();
     let tools = schema["mcp_tools"]["tools"]
         .as_array()
         .ok_or_else(|| "manifest mcp_tools.tools must be an array".to_owned())?;

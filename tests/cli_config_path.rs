@@ -1,7 +1,7 @@
 use std::fs;
 use std::process::Command;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 
 #[test]
 fn config_path_exits_three_when_no_config_is_found() -> Result<(), Box<dyn std::error::Error>> {
@@ -10,7 +10,7 @@ fn config_path_exits_three_when_no_config_is_found() -> Result<(), Box<dyn std::
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "config",
             fixture.path().to_str().unwrap_or("."),
             "--path",
@@ -21,7 +21,7 @@ fn config_path_exits_three_when_no_config_is_found() -> Result<(), Box<dyn std::
     assert_eq!(code, 3);
     assert!(output.is_empty());
 
-    let binary = Command::new(env!("CARGO_BIN_EXE_decimate"))
+    let binary = Command::new(env!("CARGO_BIN_EXE_dart-decimate"))
         .args(["config", fixture.path().to_str().unwrap_or("."), "--path"])
         .output()?;
 
@@ -35,13 +35,13 @@ fn config_path_exits_three_when_no_config_is_found() -> Result<(), Box<dyn std::
 #[test]
 fn config_path_prints_discovered_config() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
-    let config = fixture.path().join(".decimaterc");
-    write(&fixture, ".decimaterc", "[cli]\nformat = \"json\"\n")?;
+    let config = fixture.path().join(".dart-decimaterc");
+    write(&fixture, ".dart-decimaterc", "[cli]\nformat = \"json\"\n")?;
     let mut output = Vec::new();
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "config",
             fixture.path().to_str().unwrap_or("."),
             "--path",

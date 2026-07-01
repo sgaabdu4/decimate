@@ -133,7 +133,7 @@ fn collect_directives(
 
 fn stale_finding(key: &SuppressionKey, directive: &SuppressionDirective) -> Finding {
     Finding {
-        rule_id: "decimate/stale-suppression".to_owned(),
+        rule_id: "dart-decimate/stale-suppression".to_owned(),
         fingerprint: Some(format!("stale-suppression:{}:{}", key.path, key.line)),
         kind: FindingKind::StaleSuppression,
         severity: Severity::Error,
@@ -161,7 +161,7 @@ fn stale_finding(key: &SuppressionKey, directive: &SuppressionDirective) -> Find
 
 fn missing_reason_finding(key: &SuppressionKey, directive: &SuppressionDirective) -> Finding {
     Finding {
-        rule_id: "decimate/missing-suppression-reason".to_owned(),
+        rule_id: "dart-decimate/missing-suppression-reason".to_owned(),
         fingerprint: Some(format!(
             "missing-suppression-reason:{}:{}",
             key.path, key.line
@@ -221,7 +221,7 @@ struct ParsedSuppression {
 
 fn parse_suppression(line: &str) -> Option<ParsedSuppression> {
     let comment = line.trim_start().strip_prefix("//")?.trim_start();
-    for directive in ["decimate-ignore-next-line", "fallow-ignore-next-line"] {
+    for directive in ["dart-decimate-ignore-next-line"] {
         if let Some(rest) = comment.strip_prefix(directive)
             && rest.chars().next().is_none_or(char::is_whitespace)
         {

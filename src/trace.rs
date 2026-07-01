@@ -249,7 +249,7 @@ pub fn trace_file(
     FileTraceReport {
         schema_version: TRACE_SCHEMA_VERSION.to_owned(),
         kind: "trace-file".to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: "trace-file".to_owned(),
         path: display_path(&project.root, &path),
         found,
@@ -288,7 +288,7 @@ pub fn trace_symbol(
     SymbolTraceReport {
         schema_version: TRACE_SCHEMA_VERSION.to_owned(),
         kind: "trace-symbol".to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: "trace-symbol".to_owned(),
         path: display_path(&project.root, &path),
         symbol: symbol.to_owned(),
@@ -344,7 +344,7 @@ pub fn trace_dependency(
     Ok(DependencyTraceReport {
         schema_version: TRACE_SCHEMA_VERSION.to_owned(),
         kind: "trace-dependency".to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: "trace-dependency".to_owned(),
         dependency: dependency.to_owned(),
         found: declared || is_used,

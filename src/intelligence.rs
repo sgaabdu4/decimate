@@ -28,7 +28,7 @@ pub struct DeadCodeReport {
 pub struct DeadFile {
     /// Unreachable file path.
     pub path: PathBuf,
-    /// Whether Decimate can suggest deletion from graph evidence alone.
+    /// Whether Dart Decimate can suggest deletion from graph evidence alone.
     pub safe_to_delete: bool,
 }
 

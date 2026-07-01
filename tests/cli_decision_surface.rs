@@ -1,7 +1,7 @@
 use std::fs;
 use std::process::Command;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -27,7 +27,7 @@ fn decision_surface_reports_changed_public_api_and_coupling_decisions()
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "decision-surface",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -42,7 +42,7 @@ fn decision_surface_reports_changed_public_api_and_coupling_decisions()
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.decision-surface.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.decision-surface.v1");
     assert_eq!(json["kind"], "decision-surface");
     assert_eq!(json["summary"]["changed_files"], 1);
     assert!(has_category(&json, "coupling-boundary"));
@@ -74,7 +74,7 @@ fn decision_surface_reports_changed_pubspec_dependency_decision()
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "decision-surface",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -110,7 +110,7 @@ fn decision_surface_treats_nested_non_src_libraries_as_public_api()
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "decision-surface",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -145,7 +145,7 @@ fn review_command_emits_decision_surface_contract() -> Result<(), Box<dyn std::e
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "review",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -158,7 +158,7 @@ fn review_command_emits_decision_surface_contract() -> Result<(), Box<dyn std::e
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.decision-surface.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.decision-surface.v1");
     assert_eq!(json["kind"], "decision-surface");
     assert_eq!(json["command"], "review");
     assert_eq!(json["summary"]["decisions"], 1);
@@ -174,7 +174,7 @@ fn audit_brief_emits_review_contract_and_never_fails() -> Result<(), Box<dyn std
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "audit",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -188,7 +188,7 @@ fn audit_brief_emits_review_contract_and_never_fails() -> Result<(), Box<dyn std
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.decision-surface.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.decision-surface.v1");
     assert_eq!(json["kind"], "decision-surface");
     assert_eq!(json["command"], "audit --brief");
     assert_eq!(json["summary"]["decisions"], 1);
@@ -221,8 +221,11 @@ fn changed_dependency_fixture() -> Result<TempDir, Box<dyn std::error::Error>> {
 fn git_fixture() -> Result<TempDir, Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     git(&fixture, ["init", "-q"])?;
-    git(&fixture, ["config", "user.email", "decimate@example.com"])?;
-    git(&fixture, ["config", "user.name", "Decimate Tests"])?;
+    git(
+        &fixture,
+        ["config", "user.email", "dart-decimate@example.com"],
+    )?;
+    git(&fixture, ["config", "user.name", "Dart Decimate Tests"])?;
     Ok(fixture)
 }
 

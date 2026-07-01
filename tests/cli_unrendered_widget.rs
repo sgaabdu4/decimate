@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::{Value, json};
 use tempfile::TempDir;
 
@@ -29,7 +29,7 @@ fn check_reports_unrendered_widget_class() -> Result<(), Box<dyn std::error::Err
     assert_eq!(finding["actions"][0]["target_symbol"], "DeadCard");
     assert_eq!(
         finding["actions"][0]["suppression_comment"],
-        "// decimate-ignore-next-line unrendered-widget"
+        "// dart-decimate-ignore-next-line unrendered-widget"
     );
     for class_name in [
         "UsedCard",
@@ -51,7 +51,7 @@ fn unrendered_widget_rule_can_error_or_turn_off() -> Result<(), Box<dyn std::err
     let fixture = unrendered_widget_fixture()?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         r#"{ "rules": { "unused-export": "off", "dead-file": "off", "unrendered-widget": "error" } }"#,
     )?;
     let mut output = Vec::new();
@@ -64,7 +64,7 @@ fn unrendered_widget_rule_can_error_or_turn_off() -> Result<(), Box<dyn std::err
 
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         r#"{ "rules": { "unused-export": "off", "dead-file": "off", "unused-component": "off" } }"#,
     )?;
     output.clear();
@@ -85,7 +85,7 @@ fn check_skips_public_exported_package_widgets() -> Result<(), Box<dyn std::erro
     write(&fixture, "pubspec.yaml", "name: package_app\n")?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         r#"{ "rules": { "dead-file": "off", "unused-export": "off" } }"#,
     )?;
     write(
@@ -127,7 +127,7 @@ fn unrendered_widget_fixture() -> Result<TempDir, std::io::Error> {
     )?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         r#"{ "rules": { "unused-export": "off", "dead-file": "off" } }"#,
     )?;
     write(
@@ -217,7 +217,7 @@ class GeneratedDead extends StatelessWidget {
 fn run_check(fixture: &TempDir, output: &mut Vec<u8>) -> Result<i32, Box<dyn std::error::Error>> {
     Ok(run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -233,7 +233,7 @@ fn unrendered_widget_finding(json: &Value) -> &Value {
     let Some(finding) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|finding| finding["rule_id"] == "decimate/unrendered-widget")
+            .find(|finding| finding["rule_id"] == "dart-decimate/unrendered-widget")
     }) else {
         panic!("unrendered widget finding");
     };
@@ -243,7 +243,7 @@ fn unrendered_widget_finding(json: &Value) -> &Value {
 fn assert_no_unrendered_widget_for(json: &Value, class_name: &str) {
     assert!(json["findings"].as_array().is_some_and(|findings| {
         findings.iter().all(|finding| {
-            finding["rule_id"] != "decimate/unrendered-widget"
+            finding["rule_id"] != "dart-decimate/unrendered-widget"
                 || finding["actions"][0]["target_symbol"] != class_name
         })
     }));

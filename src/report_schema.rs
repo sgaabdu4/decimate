@@ -4,13 +4,13 @@ use crate::output::SCHEMA_VERSION;
 
 mod inventory;
 
-/// Return the JSON schema for `decimate.report.v1` CLI reports.
+/// Return the JSON schema for `dart-decimate.report.v1` CLI reports.
 #[must_use]
 pub fn report_schema() -> Value {
     json!({
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "schema_version": SCHEMA_VERSION,
-        "title": "Decimate report",
+        "title": "Dart Decimate report",
         "type": "object",
         "additionalProperties": false,
         "required": [
@@ -35,7 +35,7 @@ pub fn report_schema() -> Value {
         "properties": {
             "schema_version": { "const": SCHEMA_VERSION },
             "kind": { "type": "string", "enum": kind_values() },
-            "tool": { "const": "decimate" },
+            "tool": { "const": "dart-decimate" },
             "command": { "type": "string", "enum": command_values() },
             "verdict": { "type": "string", "enum": ["pass", "fail"] },
             "summary": { "$ref": "#/$defs/summary" },

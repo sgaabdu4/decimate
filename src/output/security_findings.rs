@@ -16,7 +16,7 @@ use crate::{
 pub struct JsonSecurityCandidate {
     /// Stable rule id.
     pub rule_id: String,
-    /// Stable finding id, equal to the SARIF/Decimate fingerprint.
+    /// Stable finding id, equal to the SARIF/Dart Decimate fingerprint.
     pub finding_id: String,
     /// Stable candidate fingerprint.
     pub fingerprint: String,
@@ -281,8 +281,8 @@ fn security_finding(root: &Path, candidate: &SecurityCandidate) -> Finding {
             )
             .with_target_path(path.clone())
             .with_target_symbol(candidate.sink.clone())
-            .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
-            .with_suppression_comment("// decimate-ignore-next-line security-sink"),
+            .with_dart_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
+            .with_suppression_comment("// dart-decimate-ignore-next-line security-sink"),
         ],
     }
 }

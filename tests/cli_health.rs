@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -13,7 +13,7 @@ fn health_command_emits_json_contract() -> Result<(), Box<dyn std::error::Error>
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "health",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -28,7 +28,7 @@ fn health_command_emits_json_contract() -> Result<(), Box<dyn std::error::Error>
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 1);
-    assert_eq!(json["schema_version"], "decimate.report.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.report.v1");
     assert_eq!(json["command"], "health");
     assert_eq!(json["verdict"], "fail");
     assert_eq!(json["summary"]["health_files"], 1);
@@ -42,7 +42,10 @@ fn health_command_emits_json_contract() -> Result<(), Box<dyn std::error::Error>
     assert_eq!(json["summary"]["file_scores"], 0);
     assert_eq!(json["summary"]["max_cyclomatic_complexity"], 4);
     assert_eq!(json["summary"]["max_cognitive_complexity"], 4);
-    assert_eq!(json["findings"][0]["rule_id"], "decimate/high-complexity");
+    assert_eq!(
+        json["findings"][0]["rule_id"],
+        "dart-decimate/high-complexity"
+    );
     assert_eq!(json["findings"][0]["kind"], "high-complexity");
     assert_eq!(json["findings"][0]["path"], "lib/main.dart");
     assert_eq!(json["findings"][0]["line"], 3);
@@ -68,7 +71,7 @@ fn check_command_includes_health_findings() -> Result<(), Box<dyn std::error::Er
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -90,7 +93,7 @@ fn check_command_includes_health_findings() -> Result<(), Box<dyn std::error::Er
     assert!(
         findings
             .iter()
-            .any(|finding| finding["rule_id"] == "decimate/high-complexity")
+            .any(|finding| finding["rule_id"] == "dart-decimate/high-complexity")
     );
 
     Ok(())
@@ -106,7 +109,7 @@ fn health_command_passes_when_thresholds_are_not_exceeded() -> Result<(), Box<dy
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "health",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -141,7 +144,7 @@ fn health_breakdown_includes_decision_contributions() -> Result<(), Box<dyn std:
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "health",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -193,7 +196,7 @@ fn health_ignores_generated_and_test_files() -> Result<(), Box<dyn std::error::E
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "health",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -225,7 +228,7 @@ fn health_coverage_flags_emit_json_contract() -> Result<(), Box<dyn std::error::
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "health",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -246,13 +249,13 @@ fn health_coverage_flags_emit_json_contract() -> Result<(), Box<dyn std::error::
     assert_eq!(json["summary"]["crap_functions"], 1);
     assert_eq!(json["summary"]["complex_functions"], 1);
     assert_eq!(json["summary"]["max_crap_score"], 20);
-    assert!(has_rule(&json, "decimate/coverage-gap"));
-    assert!(has_rule(&json, "decimate/high-crap-score"));
+    assert!(has_rule(&json, "dart-decimate/coverage-gap"));
+    assert!(has_rule(&json, "dart-decimate/high-crap-score"));
 
     let Some(crap) = json["complexity"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|item| item["rule_id"] == "decimate/high-crap-score")
+            .find(|item| item["rule_id"] == "dart-decimate/high-crap-score")
     }) else {
         panic!("high-crap-score complexity entry");
     };
@@ -265,7 +268,7 @@ fn health_coverage_flags_emit_json_contract() -> Result<(), Box<dyn std::error::
     let Some(coverage_gap) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|item| item["rule_id"] == "decimate/coverage-gap")
+            .find(|item| item["rule_id"] == "dart-decimate/coverage-gap")
     }) else {
         panic!("coverage-gap finding");
     };
@@ -283,7 +286,7 @@ fn health_coverage_rules_can_disable_and_warn() -> Result<(), Box<dyn std::error
     let fixture = tempfile::tempdir()?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "[cli]
 format = \"json\"
 
@@ -303,7 +306,11 @@ high-crap-score = \"warn\"
     let mut output = Vec::new();
 
     let code = run_from(
-        ["decimate", "health", fixture.path().to_str().unwrap_or(".")],
+        [
+            "dart-decimate",
+            "health",
+            fixture.path().to_str().unwrap_or("."),
+        ],
         &mut output,
     )?;
 
@@ -313,8 +320,11 @@ high-crap-score = \"warn\"
     assert_eq!(json["summary"]["coverage_gaps"], 0);
     assert_eq!(json["summary"]["crap_functions"], 1);
     assert_eq!(json["summary"]["findings"], 1);
-    assert!(!has_rule(&json, "decimate/coverage-gap"));
-    assert_eq!(json["findings"][0]["rule_id"], "decimate/high-crap-score");
+    assert!(!has_rule(&json, "dart-decimate/coverage-gap"));
+    assert_eq!(
+        json["findings"][0]["rule_id"],
+        "dart-decimate/high-crap-score"
+    );
     assert_eq!(json["findings"][0]["severity"], "warning");
 
     Ok(())
@@ -329,7 +339,7 @@ fn health_file_scores_are_inventory_only() -> Result<(), Box<dyn std::error::Err
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "health",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -369,7 +379,7 @@ fn health_hotspots_emit_actionable_findings() -> Result<(), Box<dyn std::error::
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "health",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -386,7 +396,10 @@ fn health_hotspots_emit_actionable_findings() -> Result<(), Box<dyn std::error::
     assert_eq!(json["summary"]["file_scores"], 2);
     assert_eq!(json["summary"]["hotspots"], 1);
     assert_eq!(json["hotspots"][0]["path"], "lib/complex.dart");
-    assert_eq!(json["findings"][0]["rule_id"], "decimate/health-hotspot");
+    assert_eq!(
+        json["findings"][0]["rule_id"],
+        "dart-decimate/health-hotspot"
+    );
     assert_eq!(json["findings"][0]["kind"], "health-hotspot");
     assert_eq!(
         json["findings"][0]["actions"][0]["action"],
@@ -406,7 +419,7 @@ fn health_targets_imply_hotspots_and_rank_targets() -> Result<(), Box<dyn std::e
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "health",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -431,11 +444,11 @@ fn health_targets_imply_hotspots_and_rank_targets() -> Result<(), Box<dyn std::e
             .as_u64()
             .is_some_and(|priority| priority > 0)
     );
-    assert!(has_rule(&json, "decimate/refactoring-target"));
+    assert!(has_rule(&json, "dart-decimate/refactoring-target"));
     let Some(target) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|finding| finding["rule_id"] == "decimate/refactoring-target")
+            .find(|finding| finding["rule_id"] == "dart-decimate/refactoring-target")
     }) else {
         panic!("refactoring-target finding");
     };
@@ -459,7 +472,7 @@ fn health_ownership_attaches_codeowners_metadata() -> Result<(), Box<dyn std::er
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "health",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -490,7 +503,7 @@ fn health_ownership_can_be_enabled_from_config() -> Result<(), Box<dyn std::erro
     let fixture = tempfile::tempdir()?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "[cli]\nformat = \"json\"\n\n[health]\nownership = true\nmin_score = 99\n",
     )?;
     write(&fixture, "pubspec.yaml", "name: app\n")?;
@@ -499,7 +512,11 @@ fn health_ownership_can_be_enabled_from_config() -> Result<(), Box<dyn std::erro
     let mut output = Vec::new();
 
     let code = run_from(
-        ["decimate", "health", fixture.path().to_str().unwrap_or(".")],
+        [
+            "dart-decimate",
+            "health",
+            fixture.path().to_str().unwrap_or("."),
+        ],
         &mut output,
     )?;
 
@@ -518,7 +535,7 @@ fn health_hotspot_and_target_rules_can_disable_and_warn() -> Result<(), Box<dyn 
     let fixture = tempfile::tempdir()?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "[cli]
 format = \"json\"
 
@@ -538,7 +555,11 @@ refactoring-target = \"warn\"
     let mut output = Vec::new();
 
     let code = run_from(
-        ["decimate", "health", fixture.path().to_str().unwrap_or(".")],
+        [
+            "dart-decimate",
+            "health",
+            fixture.path().to_str().unwrap_or("."),
+        ],
         &mut output,
     )?;
 
@@ -550,7 +571,7 @@ refactoring-target = \"warn\"
     assert_eq!(json["summary"]["findings"], 1);
     assert_eq!(
         json["findings"][0]["rule_id"],
-        "decimate/refactoring-target"
+        "dart-decimate/refactoring-target"
     );
     assert_eq!(json["findings"][0]["severity"], "warning");
     assert_eq!(json["hotspots"].as_array().map(Vec::len), Some(0));

@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::{cli::run_from, report_schema};
+use dart_decimate::{cli::run_from, report_schema};
 use serde_json::{Value, json};
 use tempfile::TempDir;
 
@@ -15,7 +15,7 @@ fn report_actions_validate_against_schema_and_include_argv()
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -36,12 +36,12 @@ fn report_actions_validate_against_schema_and_include_argv()
     assert_eq!(action["type"], "delete-file");
     assert_eq!(
         action["command"],
-        "decimate inspect --format json --file 'lib/dead file.dart'"
+        "dart-decimate inspect --format json --file 'lib/dead file.dart'"
     );
     assert_eq!(
         action["argv"],
         json!([
-            "decimate",
+            "dart-decimate",
             "inspect",
             "--format",
             "json",

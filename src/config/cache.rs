@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct CacheConfig {
-    /// Whether Decimate-owned caches are enabled.
+    /// Whether Dart Decimate-owned caches are enabled.
     pub enabled: Option<bool>,
     /// Local cache directory, relative to the project root unless absolute.
     pub path: Option<PathBuf>,

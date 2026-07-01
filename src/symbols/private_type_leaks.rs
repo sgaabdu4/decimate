@@ -22,7 +22,7 @@ pub struct PrivateTypeLeak {
     pub private_type: String,
     /// Location of the private type token in the signature.
     pub location: Location,
-    /// Whether Decimate can safely delete code from graph evidence alone.
+    /// Whether Dart Decimate can safely delete code from graph evidence alone.
     pub safe_to_delete: bool,
 }
 

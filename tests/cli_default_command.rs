@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -13,7 +13,7 @@ fn bare_command_defaults_to_check_and_preserves_flags() -> Result<(), Box<dyn st
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             fixture.path().to_str().unwrap_or("."),
             "--format",
             "json",
@@ -37,7 +37,7 @@ fn bare_command_defaults_to_check_with_root_flag() -> Result<(), Box<dyn std::er
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "--root",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -63,7 +63,7 @@ fn explicit_command_accepts_root_flag() -> Result<(), Box<dyn std::error::Error>
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "check",
             "--root",
             fixture.path().to_str().unwrap_or("."),

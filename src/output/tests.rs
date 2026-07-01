@@ -41,7 +41,7 @@ fn emits_agent_actionable_dead_file_findings() -> Result<(), Box<dyn std::error:
     assert_eq!(report.schema_version, SCHEMA_VERSION);
     assert_eq!(report.verdict, Verdict::Fail);
     assert_eq!(report.summary.dead_files, 1);
-    assert_eq!(report.findings[0].rule_id, "decimate/dead-file");
+    assert_eq!(report.findings[0].rule_id, "dart-decimate/dead-file");
     assert_eq!(report.findings[0].path, "lib/dead.dart");
     assert!(report.findings[0].safe_to_delete);
     assert!(report.findings[0].actions[0].auto_fixable);
@@ -89,7 +89,7 @@ fn emits_agent_actionable_duplicate_export_findings() -> Result<(), Box<dyn std:
 
     assert_eq!(report.verdict, Verdict::Fail);
     assert_eq!(report.summary.duplicate_exports, 1);
-    assert_eq!(report.findings[0].rule_id, "decimate/duplicate-export");
+    assert_eq!(report.findings[0].rule_id, "dart-decimate/duplicate-export");
     assert_eq!(report.findings[0].kind, FindingKind::DuplicateExport);
     assert_eq!(report.findings[0].path, "lib/package.dart");
     assert_eq!(

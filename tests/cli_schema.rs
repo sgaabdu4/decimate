@@ -1,4 +1,4 @@
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 
 #[test]
@@ -14,15 +14,15 @@ fn schema_command_emits_agent_manifest() -> Result<(), Box<dyn std::error::Error
     assert!(json["commands"].as_array().is_some_and(|commands| {
         commands.iter().any(|command| {
             command["name"] == "decision-surface"
-                && command["schema"] == "decimate.decision-surface.v1"
+                && command["schema"] == "dart-decimate.decision-surface.v1"
         })
     }));
-    assert_eq!(json["schemas"]["coverage"], "decimate.coverage.v1");
-    assert_eq!(json["schemas"]["init"], "decimate.init.v1");
-    assert_eq!(json["schemas"]["hooks"], "decimate.hooks.v1");
+    assert_eq!(json["schemas"]["coverage"], "dart-decimate.coverage.v1");
+    assert_eq!(json["schemas"]["init"], "dart-decimate.init.v1");
+    assert_eq!(json["schemas"]["hooks"], "dart-decimate.hooks.v1");
     assert!(json["commands"].as_array().is_some_and(|commands| {
         commands.iter().any(|command| {
-            command["name"] == "trace-symbol" && command["schema"] == "decimate.trace.v1"
+            command["name"] == "trace-symbol" && command["schema"] == "dart-decimate.trace.v1"
         })
     }));
     assert!(json["commands"].as_array().is_some_and(|commands| {
@@ -95,7 +95,7 @@ fn schema_command_emits_agent_manifest() -> Result<(), Box<dyn std::error::Error
             task["intent"] == "trace a top-level symbol"
                 && task["command"]
                     .as_str()
-                    .is_some_and(|command| command.contains("decimate inspect"))
+                    .is_some_and(|command| command.contains("dart-decimate inspect"))
         })
     }));
 
@@ -103,9 +103,9 @@ fn schema_command_emits_agent_manifest() -> Result<(), Box<dyn std::error::Error
 }
 
 fn assert_manifest_identity(json: &Value) {
-    assert_eq!(json["schema_version"], "decimate.schema.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.schema.v1");
     assert_eq!(json["kind"], "schema");
-    assert_eq!(json["name"], "Decimate");
+    assert_eq!(json["name"], "Dart Decimate");
     assert_eq!(json["default_command"], "check");
     assert!(json["plugins"].as_array().is_some_and(|plugins| {
         plugins
@@ -114,14 +114,14 @@ fn assert_manifest_identity(json: &Value) {
     }));
     assert!(json["environment_variables"].as_array().is_some_and(|env| {
         env.iter()
-            .any(|variable| variable["name"] == "DECIMATE_BASE")
+            .any(|variable| variable["name"] == "DART_DECIMATE_BASE")
     }));
-    assert_eq!(json["mcp_tools"]["server"], "decimate-mcp");
+    assert_eq!(json["mcp_tools"]["server"], "dart-decimate-mcp");
     assert!(json["mcp_tools"]["tools"].as_array().is_some_and(|tools| {
         tools.iter().any(|tool| {
             tool["name"] == "code_execute"
                 && tool["read_only"] == true
-                && tool["schema"] == "decimate.mcp.code_execute.v1"
+                && tool["schema"] == "dart-decimate.mcp.code_execute.v1"
         })
     }));
     assert_mcp_tool_key(json, "code_execute", "code");
@@ -129,19 +129,19 @@ fn assert_manifest_identity(json: &Value) {
         tools.iter().any(|tool| {
             tool["name"] == "analyze"
                 && tool["read_only"] == true
-                && tool["command"] == "decimate check --format json"
+                && tool["command"] == "dart-decimate check --format json"
         })
     }));
     assert!(json["mcp_tools"]["tools"].as_array().is_some_and(|tools| {
         tools.iter().any(|tool| {
-            tool["name"] == "decimate_explain" && tool["schema"] == "decimate.explain.v1"
+            tool["name"] == "dart_decimate_explain" && tool["schema"] == "dart-decimate.explain.v1"
         })
     }));
     assert!(json["mcp_tools"]["tools"].as_array().is_some_and(|tools| {
         tools.iter().any(|tool| {
             tool["name"] == "fallow_explain"
-                && tool["command"] == "decimate explain --format json"
-                && tool["schema"] == "decimate.explain.v1"
+                && tool["command"] == "dart-decimate explain --format json"
+                && tool["schema"] == "dart-decimate.explain.v1"
         })
     }));
     assert_mcp_tool_key(json, "analyze", "changed_workspaces");
@@ -184,7 +184,7 @@ fn assert_mcp_tool_key(json: &Value, tool_name: &str, key: &str) {
 }
 
 fn assert_manifest_metadata(json: &Value) {
-    assert_eq!(json["manifest_version"], "decimate.schema.v1");
+    assert_eq!(json["manifest_version"], "dart-decimate.schema.v1");
     assert_eq!(
         json["output_formats"],
         serde_json::json!(["human", "json", "sarif"])
@@ -215,14 +215,20 @@ fn quiet_flag_is_accepted_by_report_commands() -> Result<(), Box<dyn std::error:
     let mut output = Vec::new();
     let code = run_from(
         [
-            "decimate", "check", "--format", "json", "--quiet", "--root", ".",
+            "dart-decimate",
+            "check",
+            "--format",
+            "json",
+            "--quiet",
+            "--root",
+            ".",
         ],
         &mut output,
     )?;
 
     assert!(matches!(code, 0 | 1));
     let json = serde_json::from_slice::<Value>(&output)?;
-    assert_eq!(json["schema_version"], "decimate.report.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.report.v1");
     assert_eq!(json["command"], "check");
 
     Ok(())
@@ -331,7 +337,7 @@ fn schema_command_lists_actual_cli_flags() -> Result<(), Box<dyn std::error::Err
 
 fn schema_json() -> Result<Value, Box<dyn std::error::Error>> {
     let mut output = Vec::new();
-    let code = run_from(["decimate", "schema", "--format", "json"], &mut output)?;
+    let code = run_from(["dart-decimate", "schema", "--format", "json"], &mut output)?;
     assert_eq!(code, 0);
     Ok(serde_json::from_slice::<Value>(&output)?)
 }
@@ -365,7 +371,7 @@ fn has_command_with_flags(json: &Value, name: &str, kind: &str, expected_flags: 
         commands.iter().any(|command| {
             command["name"] == name
                 && command["kind"] == kind
-                && command["schema"] == "decimate.coverage.v1"
+                && command["schema"] == "dart-decimate.coverage.v1"
                 && command["flags"].as_array().is_some_and(|flags| {
                     expected_flags
                         .iter()

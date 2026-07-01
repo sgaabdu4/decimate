@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -9,14 +9,14 @@ fn config_output_serializes_cache_settings() -> Result<(), Box<dyn std::error::E
     let fixture = tempfile::tempdir()?;
     write(
         &fixture,
-        ".decimaterc",
-        "[cache]\nenabled = true\npath = \".decimate/cache\"\n",
+        ".dart-decimaterc",
+        "[cache]\nenabled = true\npath = \".dart-decimate/cache\"\n",
     )?;
     let mut output = Vec::new();
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "config",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -27,9 +27,9 @@ fn config_output_serializes_cache_settings() -> Result<(), Box<dyn std::error::E
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.config.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.config.v1");
     assert_eq!(json["config"]["cache"]["enabled"], true);
-    assert_eq!(json["config"]["cache"]["path"], ".decimate/cache");
+    assert_eq!(json["config"]["cache"]["path"], ".dart-decimate/cache");
 
     Ok(())
 }
@@ -39,7 +39,7 @@ fn config_schema_exposes_cache_settings() -> Result<(), Box<dyn std::error::Erro
     let mut output = Vec::new();
 
     let code = run_from(
-        ["decimate", "config-schema", "--format", "json"],
+        ["dart-decimate", "config-schema", "--format", "json"],
         &mut output,
     )?;
 
@@ -62,12 +62,12 @@ fn config_schema_exposes_cache_settings() -> Result<(), Box<dyn std::error::Erro
 #[test]
 fn unknown_cache_config_keys_are_rejected() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
-    write(&fixture, ".decimaterc", "[cache]\nenabeld = true\n")?;
+    write(&fixture, ".dart-decimaterc", "[cache]\nenabeld = true\n")?;
     let mut output = Vec::new();
 
     let error = match run_from(
         [
-            "decimate",
+            "dart-decimate",
             "config",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -80,7 +80,7 @@ fn unknown_cache_config_keys_are_rejected() -> Result<(), Box<dyn std::error::Er
     };
 
     let message = error.to_string();
-    assert!(message.contains(".decimaterc"));
+    assert!(message.contains(".dart-decimaterc"));
     assert!(message.contains("enabeld"));
     assert!(message.contains("unknown"));
     assert!(output.is_empty());

@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -13,7 +13,7 @@ fn security_ci_emits_sarif_and_fails_on_candidates() -> Result<(), Box<dyn std::
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--ci",
@@ -27,15 +27,15 @@ fn security_ci_emits_sarif_and_fails_on_candidates() -> Result<(), Box<dyn std::
     };
     assert_eq!(code, 1);
     assert_eq!(json["version"], "2.1.0");
-    assert_eq!(json["runs"][0]["tool"]["driver"]["name"], "decimate");
+    assert_eq!(json["runs"][0]["tool"]["driver"]["name"], "dart-decimate");
     assert_eq!(
         json["runs"][0]["properties"]["schemaVersion"],
-        "decimate.report.v1"
+        "dart-decimate.report.v1"
     );
     assert_eq!(json["runs"][0]["properties"]["command"], "security");
     assert_eq!(results.len(), 2);
     assert!(results.iter().all(|result| result["level"] == "error"));
-    assert!(!String::from_utf8(output)?.contains("decimate_fixture_value_1234567890"));
+    assert!(!String::from_utf8(output)?.contains("dart_decimate_fixture_value_1234567890"));
 
     Ok(())
 }
@@ -49,7 +49,7 @@ fn security_json_fail_on_issues_fails_on_candidates() -> Result<(), Box<dyn std:
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -67,7 +67,7 @@ fn security_json_fail_on_issues_fails_on_candidates() -> Result<(), Box<dyn std:
         panic!("findings array");
     };
     assert_eq!(code, 1);
-    assert_eq!(json["schema_version"], "decimate.report.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.report.v1");
     assert_eq!(json["command"], "security");
     assert_eq!(json["verdict"], "fail");
     assert_eq!(json["summary"]["security_candidates"], 2);
@@ -89,7 +89,7 @@ fn summary_omits_arrays_keeps_failure_code() -> Result<(), Box<dyn std::error::E
 
     let full_code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -100,7 +100,7 @@ fn summary_omits_arrays_keeps_failure_code() -> Result<(), Box<dyn std::error::E
     )?;
     let summary_code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -114,7 +114,7 @@ fn summary_omits_arrays_keeps_failure_code() -> Result<(), Box<dyn std::error::E
     let json = serde_json::from_slice::<Value>(&summary_output)?;
     assert_eq!(summary_code, full_code);
     assert_eq!(summary_code, 1);
-    assert_eq!(json["schema_version"], "decimate.report.v1");
+    assert_eq!(json["schema_version"], "dart-decimate.report.v1");
     assert_eq!(json["command"], "security");
     assert_eq!(json["verdict"], "fail");
     assert_eq!(json["summary"]["security_candidates"], 2);
@@ -142,7 +142,7 @@ fn security_summary_does_not_change_passing_exit_code() -> Result<(), Box<dyn st
 
     let full_code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -152,7 +152,7 @@ fn security_summary_does_not_change_passing_exit_code() -> Result<(), Box<dyn st
     )?;
     let summary_code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -181,14 +181,14 @@ fn security_summary_does_not_change_passing_exit_code() -> Result<(), Box<dyn st
 #[test]
 fn security_ci_fails_on_warn_level_candidates() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
-    write(&fixture, ".decimaterc", "[rules]\nall = \"warn\"\n")?;
+    write(&fixture, ".dart-decimaterc", "[rules]\nall = \"warn\"\n")?;
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write_security_candidates(&fixture)?;
     let mut output = Vec::new();
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--ci",
@@ -212,14 +212,14 @@ fn security_ci_fails_on_warn_level_candidates() -> Result<(), Box<dyn std::error
 fn security_fail_on_issues_fails_on_warn_level_candidates() -> Result<(), Box<dyn std::error::Error>>
 {
     let fixture = tempfile::tempdir()?;
-    write(&fixture, ".decimaterc", "[rules]\nall = \"warn\"\n")?;
+    write(&fixture, ".dart-decimaterc", "[rules]\nall = \"warn\"\n")?;
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write_security_candidates(&fixture)?;
     let mut output = Vec::new();
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -244,7 +244,7 @@ fn security_process_execution_rule_off_removes_candidate_and_surface()
     let fixture = tempfile::tempdir()?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "[rules]\nsecurity-process-execution = \"off\"\n",
     )?;
     write(&fixture, "pubspec.yaml", "name: app\n")?;
@@ -257,7 +257,7 @@ fn security_process_execution_rule_off_removes_candidate_and_surface()
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "security",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -285,7 +285,7 @@ fn write_security_candidates(fixture: &TempDir) -> Result<(), std::io::Error> {
     write(
         fixture,
         "lib/main.dart",
-        "const accessToken = 'decimate_fixture_value_1234567890';
+        "const accessToken = 'dart_decimate_fixture_value_1234567890';
 final uri = Uri.parse('http://api.example.com/login');
 ",
     )

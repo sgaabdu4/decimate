@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -10,7 +10,7 @@ fn check_reports_cross_package_private_src_imports() -> Result<(), Box<dyn std::
     write_private_src_fixture(&fixture)?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -78,7 +78,7 @@ void main() { generatedMock(); generatedRoute(); generatedLookup(); }\n",
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -100,12 +100,12 @@ fn private_src_import_rule_can_warn_or_turn_off() -> Result<(), Box<dyn std::err
     write_private_src_fixture(&fixture)?;
     write(
         &fixture,
-        ".decimaterc.json",
+        ".dart-decimaterc.json",
         r#"{ "rules": { "private-src-import": "warn" } }"#,
     )?;
 
     let (warn_code, warn_json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -124,11 +124,11 @@ fn private_src_import_rule_can_warn_or_turn_off() -> Result<(), Box<dyn std::err
 
     write(
         &fixture,
-        ".decimaterc.json",
-        r#"{ "rules": { "decimate/private-src-import": "off" } }"#,
+        ".dart-decimaterc.json",
+        r#"{ "rules": { "dart-decimate/private-src-import": "off" } }"#,
     )?;
     let (off_code, off_json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -150,14 +150,14 @@ fn private_src_import_respects_inline_suppression() -> Result<(), Box<dyn std::e
     write(
         &fixture,
         "lib/main.dart",
-        "// decimate-ignore-next-line private-src-import -- legacy package boundary\n\
+        "// dart-decimate-ignore-next-line private-src-import -- legacy package boundary\n\
 import 'package:shared/src/internal.dart';\n\
 export 'package:collection/src/utils.dart';\n\
 void main() { internal(); }\n",
     )?;
 
     let (code, json) = run_json([
-        "decimate",
+        "dart-decimate",
         "check",
         fixture.path().to_str().unwrap_or("."),
         "--format",
@@ -174,7 +174,7 @@ void main() { internal(); }\n",
 
 #[test]
 fn private_src_imports_are_in_agent_contracts() -> Result<(), Box<dyn std::error::Error>> {
-    let report_schema = json_command(["decimate", "report-schema", "--format", "json"])?;
+    let report_schema = json_command(["dart-decimate", "report-schema", "--format", "json"])?;
     assert_array_contains(
         &report_schema["$defs"]["finding"]["properties"]["kind"]["enum"],
         "private-src-import",
@@ -188,7 +188,7 @@ fn private_src_imports_are_in_agent_contracts() -> Result<(), Box<dyn std::error
         "integer"
     );
 
-    let manifest = json_command(["decimate", "schema"])?;
+    let manifest = json_command(["dart-decimate", "schema"])?;
     assert_array_contains(&manifest["issue_types"], "private-src-import");
     assert!(manifest["commands"].as_array().is_some_and(|commands| {
         commands.iter().any(|command| {
@@ -210,7 +210,7 @@ fn assert_private_src_finding(json: &Value, dependency: &str, specifier: &str, l
     }) else {
         panic!("private src import finding for {dependency}");
     };
-    assert_eq!(finding["rule_id"], "decimate/private-src-import");
+    assert_eq!(finding["rule_id"], "dart-decimate/private-src-import");
     assert_eq!(finding["severity"], "error");
     assert_eq!(finding["path"], "lib/main.dart");
     assert_eq!(finding["line"], line);
@@ -222,7 +222,7 @@ fn assert_private_src_finding(json: &Value, dependency: &str, specifier: &str, l
     assert_eq!(finding["actions"][0]["auto_fixable"], false);
     assert_eq!(
         finding["actions"][0]["suppression_comment"],
-        "// decimate-ignore-next-line private-src-import"
+        "// dart-decimate-ignore-next-line private-src-import"
     );
 }
 

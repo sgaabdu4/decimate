@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -12,7 +12,7 @@ fn list_command_emits_project_metadata_json() -> Result<(), Box<dyn std::error::
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "list",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -25,8 +25,8 @@ fn list_command_emits_project_metadata_json() -> Result<(), Box<dyn std::error::
 
     let json = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(json["schema_version"], "decimate.list.v1");
-    assert_eq!(json["tool"], "decimate");
+    assert_eq!(json["schema_version"], "dart-decimate.list.v1");
+    assert_eq!(json["tool"], "dart-decimate");
     assert_eq!(json["command"], "list");
     assert_eq!(json["summary"]["files"], 3);
     assert_eq!(json["summary"]["entry_points"], 1);
@@ -54,14 +54,14 @@ fn list_command_filters_requested_sections() -> Result<(), Box<dyn std::error::E
     write_workspace(&fixture)?;
     write(
         &fixture,
-        ".decimaterc",
+        ".dart-decimaterc",
         "[cli]\nformat = \"json\"\nentry = [\"lib/main.dart\"]\n",
     )?;
     let mut output = Vec::new();
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "list",
             fixture.path().to_str().unwrap_or("."),
             "--entry-points",

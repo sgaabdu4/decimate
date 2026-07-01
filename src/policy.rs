@@ -14,8 +14,8 @@ use crate::{DartFile, DependencyKind, Location, ScannedProject};
 mod packs;
 pub use packs::load_policy_pack;
 
-/// Stable JSON schema version for Decimate policy rule packs.
-pub const RULE_PACK_SCHEMA_VERSION: &str = "decimate.rule-pack.v1";
+/// Stable JSON schema version for Dart Decimate policy rule packs.
+pub const RULE_PACK_SCHEMA_VERSION: &str = "dart-decimate.rule-pack.v1";
 
 /// Boundary-local forbidden call rule.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -300,7 +300,7 @@ pub fn rule_pack_schema() -> Value {
     json!({
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "schema_version": RULE_PACK_SCHEMA_VERSION,
-        "title": "Decimate policy rule pack",
+        "title": "Dart Decimate policy rule pack",
         "type": "object",
         "additionalProperties": false,
         "required": ["rules"],
@@ -421,7 +421,7 @@ fn detect_call_policy(
 }
 
 fn policy_rule_id(pack: &str, rule: &str) -> String {
-    format!("decimate/policy/{pack}/{rule}")
+    format!("dart-decimate/policy/{pack}/{rule}")
 }
 
 #[derive(Debug, Clone)]

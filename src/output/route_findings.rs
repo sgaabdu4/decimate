@@ -37,7 +37,7 @@ fn route_collision_finding(root: &Path, collision: &RouteCollision) -> Option<Fi
     };
 
     Some(Finding {
-        rule_id: "decimate/route-collision".to_owned(),
+        rule_id: "dart-decimate/route-collision".to_owned(),
         fingerprint: Some(route_collision_fingerprint(collision)),
         kind: FindingKind::RouteCollision,
         severity: Severity::Error,
@@ -60,8 +60,8 @@ fn route_collision_finding(root: &Path, collision: &RouteCollision) -> Option<Fi
             )
             .with_target_path(path.clone())
             .with_target_symbol(primary.route_class.clone())
-            .with_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
-            .with_suppression_comment("// decimate-ignore-next-line route-collision"),
+            .with_dart_decimate_args(["inspect", "--format", "json", "--file", path.as_str()])
+            .with_suppression_comment("// dart-decimate-ignore-next-line route-collision"),
         ],
     })
 }

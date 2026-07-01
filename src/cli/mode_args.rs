@@ -1,6 +1,6 @@
 use clap::{Arg, ArgAction, ArgMatches};
 
-use crate::config::{DecimateConfig, private_type_leaks_enabled};
+use crate::config::{DartDecimateConfig, private_type_leaks_enabled};
 
 use super::entry_points::EntryPointMode;
 
@@ -33,7 +33,7 @@ pub(super) fn private_type_leaks_arg() -> Arg {
         .action(ArgAction::SetTrue)
 }
 
-pub(super) fn production(matches: &ArgMatches, config: &DecimateConfig) -> bool {
+pub(super) fn production(matches: &ArgMatches, config: &DartDecimateConfig) -> bool {
     if matches.get_flag("no-production") {
         false
     } else if matches.get_flag("production") {
@@ -51,7 +51,7 @@ pub(super) fn production_mode(production: bool) -> EntryPointMode {
     }
 }
 
-pub(super) fn include_entry_exports(matches: &ArgMatches, config: &DecimateConfig) -> bool {
+pub(super) fn include_entry_exports(matches: &ArgMatches, config: &DartDecimateConfig) -> bool {
     matches
         .try_get_one::<bool>("include-entry-exports")
         .ok()
@@ -61,7 +61,7 @@ pub(super) fn include_entry_exports(matches: &ArgMatches, config: &DecimateConfi
         || config.include_entry_exports
 }
 
-pub(super) fn private_type_leaks(matches: &ArgMatches, config: &DecimateConfig) -> bool {
+pub(super) fn private_type_leaks(matches: &ArgMatches, config: &DartDecimateConfig) -> bool {
     matches
         .try_get_one::<bool>("private-type-leaks")
         .ok()

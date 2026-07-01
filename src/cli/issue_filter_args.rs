@@ -72,7 +72,7 @@ fn shared_issue_filter_command(command: Command) -> Command {
         ))
         .arg(filter_arg(
             "stale-suppressions",
-            "Report only stale decimate/fallow suppression comments",
+            "Report only stale dart-decimate/fallow suppression comments",
         ))
         .arg(filter_arg(
             "unused-dependency-overrides",

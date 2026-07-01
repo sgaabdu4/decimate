@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -30,7 +30,7 @@ void run(UsedAlias value) {
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -45,7 +45,7 @@ void run(UsedAlias value) {
     let Some(finding) = json["findings"].as_array().and_then(|findings| {
         findings
             .iter()
-            .find(|finding| finding["rule_id"] == "decimate/unused-type")
+            .find(|finding| finding["rule_id"] == "dart-decimate/unused-type")
     }) else {
         panic!("unused type finding");
     };
@@ -64,11 +64,11 @@ void run(UsedAlias value) {
     assert_eq!(finding["actions"][1]["target_symbol"], "UnusedAlias");
     assert_eq!(
         finding["actions"][1]["command"],
-        "decimate inspect --format json --symbol lib/src/types.dart:UnusedAlias"
+        "dart-decimate inspect --format json --symbol lib/src/types.dart:UnusedAlias"
     );
     assert_eq!(
         finding["actions"][1]["suppression_comment"],
-        "// decimate-ignore-next-line unused-type"
+        "// dart-decimate-ignore-next-line unused-type"
     );
     assert!(
         json["next_steps"]

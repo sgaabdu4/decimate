@@ -549,9 +549,9 @@ impl ComplexityRule {
     #[must_use]
     pub const fn rule_id(self) -> &'static str {
         match self {
-            Self::HighCyclomaticComplexity => "decimate/high-cyclomatic-complexity",
-            Self::HighCognitiveComplexity => "decimate/high-cognitive-complexity",
-            Self::HighComplexity => "decimate/high-complexity",
+            Self::HighCyclomaticComplexity => "dart-decimate/high-cyclomatic-complexity",
+            Self::HighCognitiveComplexity => "dart-decimate/high-cognitive-complexity",
+            Self::HighComplexity => "dart-decimate/high-complexity",
         }
     }
 }

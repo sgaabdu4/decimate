@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::run_from;
+use dart_decimate::cli::run_from;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -33,7 +33,7 @@ void runLive() {
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "dead-code",
             fixture.path().to_str().unwrap_or("."),
             "--format",
@@ -50,13 +50,13 @@ void runLive() {
     };
     let Some(enum_finding) = findings
         .iter()
-        .find(|finding| finding["rule_id"] == "decimate/unused-enum-member")
+        .find(|finding| finding["rule_id"] == "dart-decimate/unused-enum-member")
     else {
         panic!("unused enum member finding");
     };
     let Some(class_finding) = findings
         .iter()
-        .find(|finding| finding["rule_id"] == "decimate/unused-class-member")
+        .find(|finding| finding["rule_id"] == "dart-decimate/unused-class-member")
     else {
         panic!("unused class member finding");
     };

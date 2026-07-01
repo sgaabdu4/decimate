@@ -9,7 +9,7 @@ use crate::{explain_issue, render_explain_report};
 
 pub(super) fn explain_command() -> Command {
     Command::new("explain")
-        .about("Explain one Decimate issue type")
+        .about("Explain one Dart Decimate issue type")
         .arg(
             Arg::new("issue-type")
                 .value_name("ISSUE_TYPE")

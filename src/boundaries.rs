@@ -39,13 +39,13 @@ impl BoundaryPreset {
 pub struct BoundaryCoverageGap {
     /// File outside every configured boundary path.
     pub path: PathBuf,
-    /// Boundary paths Decimate considered as architecture zones.
+    /// Boundary paths Dart Decimate considered as architecture zones.
     pub configured_boundaries: Vec<PathBuf>,
     /// Location used for report anchoring.
     pub location: Location,
 }
 
-/// Architecture boundary inventory for `decimate list --boundaries`.
+/// Architecture boundary inventory for `dart-decimate list --boundaries`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BoundaryInventory {
     /// Whether any boundary rules are configured.

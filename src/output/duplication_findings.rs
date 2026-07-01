@@ -79,7 +79,7 @@ fn code_duplication_finding(root: &Path, clone: &crate::CodeClone) -> Finding {
         .collect::<Vec<_>>();
 
     Finding {
-        rule_id: "decimate/code-duplication".to_owned(),
+        rule_id: "dart-decimate/code-duplication".to_owned(),
         fingerprint: Some(clone.fingerprint.clone()),
         kind: FindingKind::CodeDuplication,
         severity: Severity::Warning,
@@ -101,14 +101,14 @@ fn code_duplication_finding(root: &Path, clone: &crate::CodeClone) -> Finding {
                 false,
             )
             .with_target_path(path.clone())
-            .with_decimate_args([
+            .with_dart_decimate_args([
                 "trace-clone",
                 "--format",
                 "json",
                 "--fingerprint",
                 clone.fingerprint.as_str(),
             ])
-            .with_suppression_comment("// decimate-ignore-next-line code-duplication"),
+            .with_suppression_comment("// dart-decimate-ignore-next-line code-duplication"),
         ],
     }
 }

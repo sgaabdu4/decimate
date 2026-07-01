@@ -1,6 +1,6 @@
 use clap::ArgMatches;
 
-use crate::config::DecimateConfig;
+use crate::config::DartDecimateConfig;
 use crate::output::ReportCommand;
 use crate::{DuplicateOptions, FeatureFlagOptions, HealthOptions, SecurityOptions};
 
@@ -13,7 +13,7 @@ use super::security_args::security_options_with_defaults;
 pub(super) fn duplicate_options_for(
     command: ReportCommand,
     subcommand: &ArgMatches,
-    config: &DecimateConfig,
+    config: &DartDecimateConfig,
 ) -> Result<DuplicateOptions, CliError> {
     if matches!(
         command,
@@ -33,7 +33,7 @@ pub(super) fn duplicate_options_for(
 pub(super) fn health_options_for(
     command: ReportCommand,
     subcommand: &ArgMatches,
-    config: &DecimateConfig,
+    config: &DartDecimateConfig,
 ) -> HealthOptions {
     if matches!(
         command,
@@ -50,7 +50,7 @@ pub(super) fn health_options_for(
 pub(super) fn feature_flag_options_for(
     command: ReportCommand,
     subcommand: &ArgMatches,
-    config: &DecimateConfig,
+    config: &DartDecimateConfig,
 ) -> FeatureFlagOptions {
     if command == ReportCommand::Flags {
         feature_flag_options_with_defaults(subcommand, config.feature_flag_options())
@@ -67,7 +67,7 @@ pub(super) fn feature_flag_options_for(
 pub(super) fn security_options_for(
     command: ReportCommand,
     subcommand: &ArgMatches,
-    config: &DecimateConfig,
+    config: &DartDecimateConfig,
 ) -> SecurityOptions {
     if command == ReportCommand::Security {
         security_options_with_defaults(subcommand, config.security_options())

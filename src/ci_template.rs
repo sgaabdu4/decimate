@@ -7,8 +7,8 @@ use serde_json::Value;
 use thiserror::Error;
 
 /// Stable schema version for CI template output.
-pub const CI_TEMPLATE_SCHEMA_VERSION: &str = "decimate.ci-template.v1";
-pub const CI_RECONCILE_REVIEW_SCHEMA_VERSION: &str = "decimate.ci-reconcile-review.v1";
+pub const CI_TEMPLATE_SCHEMA_VERSION: &str = "dart-decimate.ci-template.v1";
+pub const CI_RECONCILE_REVIEW_SCHEMA_VERSION: &str = "dart-decimate.ci-reconcile-review.v1";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -132,7 +132,7 @@ pub fn ci_template_report(platform: CiTemplatePlatform, vendor: bool) -> CiTempl
     CiTemplateReport {
         schema_version: CI_TEMPLATE_SCHEMA_VERSION.to_owned(),
         kind: "ci-template".to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: "ci-template".to_owned(),
         platform,
         vendor,
@@ -188,7 +188,7 @@ pub fn ci_reconcile_review_report(
     Ok(CiReconcileReviewReport {
         schema_version: CI_RECONCILE_REVIEW_SCHEMA_VERSION.to_owned(),
         kind: "ci-reconcile-review".to_owned(),
-        tool: "decimate".to_owned(),
+        tool: "dart-decimate".to_owned(),
         command: "ci reconcile-review".to_owned(),
         provider: options.provider,
         dry_run: options.dry_run,
@@ -208,8 +208,9 @@ pub fn ci_reconcile_review_report(
         failed_fingerprints: Vec::new(),
         unapplied_fingerprints: fingerprints.clone(),
         fingerprints,
-        apply_hint: "dry-run only: provider comment mutation is not implemented by Decimate yet"
-            .to_owned(),
+        apply_hint:
+            "dry-run only: provider comment mutation is not implemented by Dart Decimate yet"
+                .to_owned(),
     })
 }
 
@@ -282,7 +283,7 @@ fn mark_executable(path: &Path, executable: bool) -> Result<(), CiTemplateError>
 fn template_files(platform: CiTemplatePlatform, vendor: bool) -> Vec<CiTemplateFile> {
     match (platform, vendor) {
         (CiTemplatePlatform::Github, _) => vec![template_file(
-            ".github/workflows/decimate.yml",
+            ".github/workflows/dart-decimate.yml",
             false,
             GITHUB_WORKFLOW,
         )],
@@ -330,7 +331,7 @@ fn collect_fingerprints(value: &Value, fingerprints: &mut BTreeSet<String>) {
     }
 }
 
-const GITHUB_WORKFLOW: &str = r"name: Decimate
+const GITHUB_WORKFLOW: &str = r"name: Dart Decimate
 
 on:
   pull_request:
@@ -338,7 +339,7 @@ on:
     branches: [main]
 
 jobs:
-  decimate:
+  dart-decimate:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -346,31 +347,37 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo install --locked decimate
-      - run: decimate audit --format json --base origin/${{ github.base_ref || 'main' }}
+      - run: |
+          rustup toolchain install 1.85.0 --profile minimal
+          rustup default 1.85.0
+      - run: cargo install --git https://github.com/sgaabdu4/dart-decimate --locked dart-decimate
+      - run: dart-decimate audit --format json --base origin/${{ github.base_ref || 'main' }}
 ";
 
 const GITLAB_CI: &str = r#"stages:
   - quality
 
-decimate:
+dart-decimate:
   stage: quality
   image: rust:latest
   before_script:
-    - cargo install --locked decimate
+    - rustup toolchain install 1.85.0 --profile minimal
+    - rustup default 1.85.0
+    - cargo install --git https://github.com/sgaabdu4/dart-decimate --locked dart-decimate
   script:
-    - decimate audit --format json --base "origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-main}"
+    - dart-decimate audit --format json --base "origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-main}"
   rules:
     - if: $CI_MERGE_REQUEST_IID
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 "#;
 
-const GITLAB_VENDORED_CI: &str = r".decimate:
+const GITLAB_VENDORED_CI: &str = r".dart-decimate:
   stage: quality
   image: rust:latest
   before_script:
-    - cargo install --locked decimate
+    - rustup toolchain install 1.85.0 --profile minimal
+    - rustup default 1.85.0
+    - cargo install --git https://github.com/sgaabdu4/dart-decimate --locked dart-decimate
   script:
     - ci/scripts/review.sh
   rules:
@@ -382,11 +389,11 @@ const GITLAB_REVIEW_SCRIPT: &str = r#"#!/usr/bin/env sh
 set -eu
 
 BASE="origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-main}"
-decimate audit --format json --base "$BASE"
+dart-decimate audit --format json --base "$BASE"
 "#;
 
 const GITLAB_COMMENT_SCRIPT: &str = r#"#!/usr/bin/env sh
 set -eu
 
-decimate review --format json --base "origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-main}"
+dart-decimate review --format json --base "origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-main}"
 "#;

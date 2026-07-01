@@ -23,7 +23,7 @@ fn overview_tools() -> Vec<Value> {
 fn code_execute_tool() -> Value {
     tool(
         "code_execute",
-        "Compose bounded read-only Decimate MCP calls with a JSON program.",
+        "Compose bounded read-only Dart Decimate MCP calls with a JSON program.",
         schema(
             &[
                 ("code", "object"),
@@ -40,7 +40,7 @@ fn code_execute_tool() -> Value {
 fn analyze_tool() -> Value {
     tool(
         "analyze",
-        "Run Decimate check and return the JSON report.",
+        "Run Dart Decimate check and return the JSON report.",
         schema(
             &[
                 ("root", "string"),
@@ -98,7 +98,7 @@ fn analyze_tool() -> Value {
 fn check_changed_tool() -> Value {
     tool(
         "check_changed",
-        "Run Decimate check scoped to files changed since a Git ref.",
+        "Run Dart Decimate check scoped to files changed since a Git ref.",
         schema(
             &[
                 ("root", "string"),
@@ -119,7 +119,7 @@ fn check_changed_tool() -> Value {
 fn project_info_tool() -> Value {
     tool(
         "project_info",
-        "List Decimate project metadata.",
+        "List Dart Decimate project metadata.",
         schema(
             &[
                 ("root", "string"),
@@ -249,7 +249,7 @@ fn analysis_tools() -> Vec<Value> {
         health_tool(),
         runtime_tool(
             "check_runtime_coverage",
-            "Merge local V8 or Istanbul runtime coverage into Decimate runtime intelligence.",
+            "Merge local V8 or Istanbul runtime coverage into Dart Decimate runtime intelligence.",
             "coverage",
         ),
         runtime_tool(
@@ -317,7 +317,7 @@ fn dupes_tool() -> Value {
 fn health_tool() -> Value {
     tool(
         "check_health",
-        "Run Decimate health checks.",
+        "Run Dart Decimate health checks.",
         schema(
             &[
                 ("root", "string"),
@@ -411,7 +411,7 @@ fn security_tool() -> Value {
 fn impact_tool() -> Value {
     tool(
         "impact",
-        "Read the local Decimate value report without running analysis.",
+        "Read the local Dart Decimate value report without running analysis.",
         schema(&[("root", "string")], &[]),
     )
 }
@@ -419,7 +419,7 @@ fn impact_tool() -> Value {
 fn impact_all_tool() -> Value {
     tool(
         "impact_all",
-        "Roll up every tracked Decimate project on this machine.",
+        "Roll up every tracked Dart Decimate project on this machine.",
         schema(&[("sort", "string"), ("limit", "integer")], &[]),
     )
 }
@@ -456,7 +456,7 @@ fn change_tools() -> Vec<Value> {
         fix_apply_tool(),
         audit_tool(),
         decision_surface_tool(),
-        explain_tool("decimate_explain"),
+        explain_tool("dart_decimate_explain"),
         explain_tool("fallow_explain"),
     ]
 }
@@ -589,7 +589,7 @@ fn decision_surface_tool() -> Value {
 fn explain_tool(name: &str) -> Value {
     tool(
         name,
-        "Explain a Decimate issue type.",
+        "Explain a Dart Decimate issue type.",
         schema(&[("issue_type", "string"), ("rule_id", "string")], &[]),
     )
 }

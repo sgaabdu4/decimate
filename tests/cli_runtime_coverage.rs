@@ -1,6 +1,6 @@
 use std::fs;
 
-use decimate::cli::{CliError, run_from};
+use dart_decimate::cli::{CliError, run_from};
 use serde_json::{Value, json};
 use tempfile::TempDir;
 
@@ -13,7 +13,7 @@ fn coverage_setup_emits_non_mutating_json_plan() -> Result<(), Box<dyn std::erro
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "coverage",
             "setup",
             root.as_str(),
@@ -26,7 +26,7 @@ fn coverage_setup_emits_non_mutating_json_plan() -> Result<(), Box<dyn std::erro
 
     let report = serde_json::from_slice::<Value>(&output)?;
     assert_eq!(code, 0);
-    assert_eq!(report["schema_version"], "decimate.coverage.v1");
+    assert_eq!(report["schema_version"], "dart-decimate.coverage.v1");
     assert_eq!(report["kind"], "coverage-setup");
     assert_eq!(report["command"], "coverage setup");
     assert_eq!(report["applied"], false);
@@ -34,7 +34,7 @@ fn coverage_setup_emits_non_mutating_json_plan() -> Result<(), Box<dyn std::erro
     assert_eq!(report["summary"]["pubspec"], true);
     assert_eq!(report["summary"]["flutter"], true);
     assert_eq!(report["summary"]["dart_files"], 1);
-    assert_eq!(report["files"][0]["path"], ".decimaterc");
+    assert_eq!(report["files"][0]["path"], ".dart-decimaterc");
     assert_eq!(report["files"][0]["action"], "would-create");
     assert!(
         report["capture_commands"]
@@ -43,7 +43,7 @@ fn coverage_setup_emits_non_mutating_json_plan() -> Result<(), Box<dyn std::erro
                 .iter()
                 .any(|command| command == "flutter test --coverage"))
     );
-    assert!(!fixture.path().join(".decimaterc").exists());
+    assert!(!fixture.path().join(".dart-decimaterc").exists());
 
     Ok(())
 }
@@ -57,7 +57,7 @@ fn coverage_setup_yes_writes_defaults_once() -> Result<(), Box<dyn std::error::E
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "coverage",
             "setup",
             root.as_str(),
@@ -69,7 +69,7 @@ fn coverage_setup_yes_writes_defaults_once() -> Result<(), Box<dyn std::error::E
     )?;
 
     let first = serde_json::from_slice::<Value>(&first_output)?;
-    let config_path = fixture.path().join(".decimaterc");
+    let config_path = fixture.path().join(".dart-decimaterc");
     let config = fs::read_to_string(&config_path)?;
     assert_eq!(code, 0);
     assert_eq!(first["files"][0]["action"], "created");
@@ -78,7 +78,7 @@ fn coverage_setup_yes_writes_defaults_once() -> Result<(), Box<dyn std::error::E
     let mut second_output = Vec::new();
     run_from(
         [
-            "decimate",
+            "dart-decimate",
             "coverage",
             "setup",
             root.as_str(),
@@ -110,7 +110,7 @@ fn coverage_upload_inventory_dry_run_reports_sources() -> Result<(), Box<dyn std
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "coverage",
             "upload-inventory",
             root.as_str(),
@@ -149,7 +149,7 @@ fn coverage_upload_source_maps_dry_run_reports_files() -> Result<(), Box<dyn std
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "coverage",
             "upload-source-maps",
             root.as_str(),
@@ -186,7 +186,7 @@ fn coverage_upload_source_maps_validates_inputs() -> Result<(), Box<dyn std::err
 
     let bad_sha = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "coverage",
             "upload-source-maps",
             root.as_str(),
@@ -207,7 +207,7 @@ fn coverage_upload_source_maps_validates_inputs() -> Result<(), Box<dyn std::err
 
     let missing_dir = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "coverage",
             "upload-source-maps",
             root.as_str(),
@@ -237,7 +237,7 @@ fn coverage_cloud_analyze_accepts_repo_then_errors() -> Result<(), Box<dyn std::
 
     let result = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "coverage",
             "analyze",
             root.as_str(),
@@ -276,7 +276,7 @@ fn health_runtime_coverage_parses_istanbul_json() -> Result<(), Box<dyn std::err
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "health",
             root.as_str(),
             "--format",
@@ -345,7 +345,7 @@ fn coverage_analyze_parses_istanbul_json() -> Result<(), Box<dyn std::error::Err
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "coverage",
             "analyze",
             root.as_str(),
@@ -366,7 +366,7 @@ fn coverage_analyze_parses_istanbul_json() -> Result<(), Box<dyn std::error::Err
     let report = serde_json::from_slice::<Value>(&output)?;
     let runtime = &report["runtime_coverage"];
     assert_eq!(code, 0);
-    assert_eq!(report["schema_version"], "decimate.coverage.v1");
+    assert_eq!(report["schema_version"], "dart-decimate.coverage.v1");
     assert_eq!(report["kind"], "runtime-coverage");
     assert_eq!(report["command"], "coverage analyze");
     assert_eq!(runtime["summary"]["observed_files"], 2);
@@ -391,7 +391,7 @@ fn coverage_analyze_requires_runtime_coverage_path() {
     let mut output = Vec::new();
 
     let result = run_from(
-        ["decimate", "coverage", "analyze", "--format", "json"],
+        ["dart-decimate", "coverage", "analyze", "--format", "json"],
         &mut output,
     );
 
@@ -413,7 +413,7 @@ fn health_runtime_coverage_parses_v8_directory() -> Result<(), Box<dyn std::erro
 
     let code = run_from(
         [
-            "decimate",
+            "dart-decimate",
             "health",
             root.as_str(),
             "--format",
