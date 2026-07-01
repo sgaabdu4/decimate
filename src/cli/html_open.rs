@@ -87,13 +87,8 @@ fn percent_encode_path(path: &str) -> String {
 }
 
 pub(super) fn open_url(url: &str) -> io::Result<()> {
-    let status = if cfg!(target_os = "macos") {
-        Command::new("open").arg(url).status()
-    } else if cfg!(target_os = "windows") {
-        Command::new("cmd").args(["/C", "start", "", url]).status()
-    } else {
-        Command::new("xdg-open").arg(url).status()
-    }?;
+    let command = open_command(url, OpenPlatform::current());
+    let status = Command::new(command.program).args(command.args).status()?;
 
     if status.success() {
         Ok(())
@@ -101,6 +96,47 @@ pub(super) fn open_url(url: &str) -> io::Result<()> {
         Err(io::Error::other(format!(
             "failed to open HTML report in browser: {status}"
         )))
+    }
+}
+
+struct OpenCommand {
+    program: &'static str,
+    args: Vec<String>,
+}
+
+#[derive(Clone, Copy)]
+enum OpenPlatform {
+    Macos,
+    Windows,
+    Other,
+}
+
+impl OpenPlatform {
+    fn current() -> Self {
+        if cfg!(target_os = "macos") {
+            Self::Macos
+        } else if cfg!(target_os = "windows") {
+            Self::Windows
+        } else {
+            Self::Other
+        }
+    }
+}
+
+fn open_command(url: &str, platform: OpenPlatform) -> OpenCommand {
+    match platform {
+        OpenPlatform::Macos => OpenCommand {
+            program: "open",
+            args: vec![url.to_owned()],
+        },
+        OpenPlatform::Windows => OpenCommand {
+            program: "explorer.exe",
+            args: vec![url.to_owned()],
+        },
+        OpenPlatform::Other => OpenCommand {
+            program: "xdg-open",
+            args: vec![url.to_owned()],
+        },
     }
 }
 
@@ -118,6 +154,15 @@ mod tests {
         let url = file_url(Path::new("/tmp/dart-decimate/report <1>.html"));
 
         assert_eq!(url, "file:///tmp/dart-decimate/report%20%3C1%3E.html");
+    }
+
+    #[test]
+    fn windows_open_command_preserves_encoded_file_url() {
+        let url = "file:///C:/Users/Ada%20Lovelace/report%20%C3%A9.html";
+        let command = open_command(url, OpenPlatform::Windows);
+
+        assert_eq!(command.program, "explorer.exe");
+        assert_eq!(command.args, vec![url.to_owned()]);
     }
 
     #[test]
