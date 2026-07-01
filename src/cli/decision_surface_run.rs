@@ -1,16 +1,16 @@
 use std::io::Write;
 
-use clap::{Arg, ArgMatches, Command, parser::ValueSource, value_parser};
+use clap::{parser::ValueSource, value_parser, Arg, ArgMatches, Command};
 
 use crate::changed_scope::changed_files;
 use crate::decision_surface::{
     decision_surface_report_for_command, render_decision_surface_report,
 };
 use crate::output::render_decision_surface_html_report;
-use crate::scan::{ScanOptions, scan_project_with_options};
+use crate::scan::{scan_project_with_options, ScanOptions};
 
 use super::common_args::{config_arg, format_arg, root_arg, root_flag_arg, root_path};
-use super::{CliError, ReportOutputFormat, html_open};
+use super::{html_open, CliError, ReportOutputFormat};
 
 pub(super) fn decision_surface_command() -> Command {
     decision_surface_command_named(

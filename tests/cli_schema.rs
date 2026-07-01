@@ -6,11 +6,9 @@ fn schema_command_emits_agent_manifest() -> Result<(), Box<dyn std::error::Error
     let json = schema_json()?;
     assert_manifest_identity(&json);
     assert_manifest_metadata(&json);
-    assert!(
-        json["commands"]
-            .as_array()
-            .is_some_and(|commands| commands.iter().any(|command| command["name"] == "inspect"))
-    );
+    assert!(json["commands"]
+        .as_array()
+        .is_some_and(|commands| commands.iter().any(|command| command["name"] == "inspect")));
     assert!(json["commands"].as_array().is_some_and(|commands| {
         commands.iter().any(|command| {
             command["name"] == "decision-surface"
@@ -30,61 +28,45 @@ fn schema_command_emits_agent_manifest() -> Result<(), Box<dyn std::error::Error
             .iter()
             .any(|command| command["name"] == "trace" && command["kind"] == "trace-symbol")
     }));
-    assert!(
-        json["issue_types"]
-            .as_array()
-            .is_some_and(|issues| issues.iter().any(|issue| issue == "unused-export"))
-    );
-    assert!(
-        json["issue_types"]
-            .as_array()
-            .is_some_and(|issues| issues.iter().any(|issue| issue == "unused-type"))
-    );
-    assert!(
-        json["issue_types"]
-            .as_array()
-            .is_some_and(|issues| issues.iter().any(|issue| issue == "private-type-leak"))
-    );
-    assert!(
-        json["issue_types"]
-            .as_array()
-            .is_some_and(|issues| issues.iter().any(|issue| issue == "unused-widget-param"))
-    );
-    assert!(
-        json["issue_types"]
-            .as_array()
-            .is_some_and(|issues| issues.iter().any(|issue| issue == "unrendered-widget"))
-    );
+    assert!(json["issue_types"]
+        .as_array()
+        .is_some_and(|issues| issues.iter().any(|issue| issue == "unused-export")));
+    assert!(json["issue_types"]
+        .as_array()
+        .is_some_and(|issues| issues.iter().any(|issue| issue == "unused-type")));
+    assert!(json["issue_types"]
+        .as_array()
+        .is_some_and(|issues| issues.iter().any(|issue| issue == "private-type-leak")));
+    assert!(json["issue_types"]
+        .as_array()
+        .is_some_and(|issues| issues.iter().any(|issue| issue == "unused-widget-param")));
+    assert!(json["issue_types"]
+        .as_array()
+        .is_some_and(|issues| issues.iter().any(|issue| issue == "unrendered-widget")));
     assert!(json["issue_types"].as_array().is_some_and(|issues| {
         issues
             .iter()
             .any(|issue| issue == "missing-context-mounted-after-await")
     }));
-    assert!(
-        json["issue_types"]
-            .as_array()
-            .is_some_and(|issues| { issues.iter().any(|issue| issue == "private-widget-class") })
-    );
+    assert!(json["issue_types"]
+        .as_array()
+        .is_some_and(|issues| { issues.iter().any(|issue| issue == "private-widget-class") }));
     assert!(json["issue_types"].as_array().is_some_and(|issues| {
         issues
             .iter()
             .any(|issue| issue == "widget-top-level-function-boundary")
     }));
-    assert!(
-        json["issue_types"]
-            .as_array()
-            .is_some_and(|issues| issues.iter().any(|issue| issue == "boundary-coverage"))
-    );
+    assert!(json["issue_types"]
+        .as_array()
+        .is_some_and(|issues| issues.iter().any(|issue| issue == "boundary-coverage")));
     assert!(json["issue_types"].as_array().is_some_and(|issues| {
         issues
             .iter()
             .any(|issue| issue == "boundary-call-violation")
     }));
-    assert!(
-        json["issue_types"]
-            .as_array()
-            .is_some_and(|issues| issues.iter().any(|issue| issue == "policy-violation"))
-    );
+    assert!(json["issue_types"]
+        .as_array()
+        .is_some_and(|issues| issues.iter().any(|issue| issue == "policy-violation")));
     assert!(json["issue_types"].as_array().is_some_and(|issues| {
         issues
             .iter()
@@ -194,16 +176,12 @@ fn assert_manifest_metadata(json: &Value) {
             .iter()
             .all(|expected| flags.iter().any(|flag| flag == expected))
     }));
-    assert!(
-        json["exit_codes"]
-            .as_array()
-            .is_some_and(|codes| { codes.iter().any(|code| code["code"] == 2) })
-    );
-    assert!(
-        json["exit_codes"]
-            .as_array()
-            .is_some_and(|codes| { codes.iter().any(|code| code["code"] == 3) })
-    );
+    assert!(json["exit_codes"]
+        .as_array()
+        .is_some_and(|codes| { codes.iter().any(|code| code["code"] == 2) }));
+    assert!(json["exit_codes"]
+        .as_array()
+        .is_some_and(|codes| { codes.iter().any(|code| code["code"] == 3) }));
     assert_eq!(
         json["severity_levels"],
         serde_json::json!(["error", "warning"])

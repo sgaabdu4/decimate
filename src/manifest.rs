@@ -1,4 +1,4 @@
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::ci_template::{CI_RECONCILE_REVIEW_SCHEMA_VERSION, CI_TEMPLATE_SCHEMA_VERSION};
 use crate::config::CONFIG_SCHEMA_VERSION;

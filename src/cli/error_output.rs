@@ -3,7 +3,7 @@ use std::io::{self, Write};
 
 use serde::Serialize;
 
-use super::{CliError, default_command, run_from};
+use super::{default_command, run_from, CliError};
 
 /// Run Dart Decimate from process arguments and return an exit code.
 #[must_use]

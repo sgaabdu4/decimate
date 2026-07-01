@@ -5,7 +5,7 @@ use std::process::Command;
 
 use tempfile::Builder;
 
-use crate::output::{JsonReport, render_html_report};
+use crate::output::{render_html_report, JsonReport};
 
 pub(super) fn write_and_open_html_report<W: Write>(
     report: &JsonReport,

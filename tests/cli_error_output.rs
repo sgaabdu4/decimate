@@ -26,11 +26,9 @@ fn binary_emits_json_error_for_missing_entry_points() -> Result<(), Box<dyn std:
     let json = serde_json::from_slice::<Value>(&output.stdout)?;
     assert_eq!(json["error"], true);
     assert_eq!(json["exit_code"], 2);
-    assert!(
-        json["message"]
-            .as_str()
-            .is_some_and(|message| message.contains("no entry points provided"))
-    );
+    assert!(json["message"]
+        .as_str()
+        .is_some_and(|message| message.contains("no entry points provided")));
 
     Ok(())
 }
@@ -98,11 +96,9 @@ fn binary_emits_json_error_for_clap_errors() -> Result<(), Box<dyn std::error::E
     let json = serde_json::from_slice::<Value>(&output.stdout)?;
     assert_eq!(json["error"], true);
     assert_eq!(json["exit_code"], 2);
-    assert!(
-        json["message"]
-            .as_str()
-            .is_some_and(|message| message.contains("unexpected argument '--unknown'"))
-    );
+    assert!(json["message"]
+        .as_str()
+        .is_some_and(|message| message.contains("unexpected argument '--unknown'")));
 
     Ok(())
 }
@@ -119,11 +115,9 @@ fn binary_emits_json_error_for_json_shortcut_clap_errors() -> Result<(), Box<dyn
     let json = serde_json::from_slice::<Value>(&output.stdout)?;
     assert_eq!(json["error"], true);
     assert_eq!(json["exit_code"], 2);
-    assert!(
-        json["message"]
-            .as_str()
-            .is_some_and(|message| message.contains("unexpected argument '--bad-flag'"))
-    );
+    assert!(json["message"]
+        .as_str()
+        .is_some_and(|message| message.contains("unexpected argument '--bad-flag'")));
 
     Ok(())
 }

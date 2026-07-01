@@ -124,8 +124,8 @@ fn cycles_command_reports_re_export_cycles_separately() -> Result<(), Box<dyn st
 }
 
 #[test]
-fn dead_code_command_reports_unused_exports_with_safe_fix_action()
--> Result<(), Box<dyn std::error::Error>> {
+fn dead_code_command_reports_unused_exports_with_safe_fix_action(
+) -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write(
@@ -299,8 +299,8 @@ fn open_html_rejects_explicit_non_html_format() -> Result<(), Box<dyn std::error
 }
 
 #[test]
-fn check_command_reports_boundaries_and_unresolved_imports()
--> Result<(), Box<dyn std::error::Error>> {
+fn check_command_reports_boundaries_and_unresolved_imports(
+) -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write(
@@ -440,8 +440,8 @@ fn unlisted_dependency_json_edge_kind_preserves_export() -> Result<(), Box<dyn s
 }
 
 #[test]
-fn check_command_uses_path_dependencies_without_reporting_their_findings()
--> Result<(), Box<dyn std::error::Error>> {
+fn check_command_uses_path_dependencies_without_reporting_their_findings(
+) -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     write(
         &fixture,
@@ -531,8 +531,8 @@ fn check_command_treats_tests_as_default_entry_points() -> Result<(), Box<dyn st
 }
 
 #[test]
-fn check_command_treats_public_library_files_as_default_entry_points()
--> Result<(), Box<dyn std::error::Error>> {
+fn check_command_treats_public_library_files_as_default_entry_points(
+) -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     write(&fixture, "pubspec.yaml", "name: package\n")?;
     write(
