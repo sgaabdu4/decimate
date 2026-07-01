@@ -16,6 +16,7 @@ const COMMANDS: &[&str] = &[
     "fix",
     "flags",
     "health",
+    "html",
     "hooks",
     "impact",
     "init",
@@ -37,6 +38,8 @@ const COMMANDS: &[&str] = &[
     "trace-symbol",
     "watch",
     "workspaces",
+    "human",
+    "json",
 ];
 
 pub(super) fn args_with_default_check<I, T>(args: I) -> Vec<OsString>
@@ -45,10 +48,59 @@ where
     T: Into<OsString>,
 {
     let mut args = args.into_iter().map(Into::into).collect::<Vec<_>>();
+    if let Some(expanded) = args_with_output_alias(&args) {
+        return expanded;
+    }
     if should_insert_check(&args) {
         args.insert(1, OsString::from("check"));
     }
     args
+}
+
+fn args_with_output_alias(args: &[OsString]) -> Option<Vec<OsString>> {
+    let alias = args.get(1)?.to_str()?;
+    if args.iter().skip(2).any(is_help_arg) {
+        return None;
+    }
+    let format = match alias {
+        "human" => "human",
+        "json" => "json",
+        "html" => "html",
+        _ => return None,
+    };
+    let mut expanded = Vec::with_capacity(args.len() + 3);
+    expanded.push(args[0].clone());
+    expanded.push(OsString::from("check"));
+    let mut stdout_html = false;
+    let mut iter = args.iter().skip(2);
+    while let Some(arg) = iter.next() {
+        if alias == "html" && arg == "--stdout" {
+            stdout_html = true;
+            continue;
+        }
+        if arg == "--format" {
+            iter.next();
+            continue;
+        }
+        if arg
+            .to_str()
+            .is_some_and(|value| value.starts_with("--format="))
+        {
+            continue;
+        }
+        expanded.push(arg.clone());
+    }
+    expanded.push(OsString::from("--format"));
+    expanded.push(OsString::from(format));
+    if alias == "html" && !stdout_html {
+        expanded.push(OsString::from("--open"));
+    }
+    Some(expanded)
+}
+
+fn is_help_arg(arg: &OsString) -> bool {
+    arg.to_str()
+        .is_some_and(|value| matches!(value, "-h" | "--help"))
 }
 
 fn should_insert_check(args: &[OsString]) -> bool {
@@ -66,4 +118,44 @@ fn first_non_flag(args: &[OsString]) -> Option<&str> {
         .skip(1)
         .filter_map(|arg| arg.to_str())
         .find(|arg| !arg.starts_with('-'))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn values(items: &[&str]) -> Vec<OsString> {
+        items.iter().map(OsString::from).collect()
+    }
+
+    #[test]
+    fn output_aliases_expand_to_check_formats() {
+        assert_eq!(
+            args_with_default_check(["dart-decimate", "human", "app"]),
+            values(&["dart-decimate", "check", "app", "--format", "human"])
+        );
+        assert_eq!(
+            args_with_default_check(["dart-decimate", "json", "app", "--format", "human"]),
+            values(&["dart-decimate", "check", "app", "--format", "json"])
+        );
+    }
+
+    #[test]
+    fn html_alias_opens_unless_stdout_is_requested() {
+        assert_eq!(
+            args_with_default_check(["dart-decimate", "html", "app"]),
+            values(&[
+                "dart-decimate",
+                "check",
+                "app",
+                "--format",
+                "html",
+                "--open",
+            ])
+        );
+        assert_eq!(
+            args_with_default_check(["dart-decimate", "html", "app", "--stdout"]),
+            values(&["dart-decimate", "check", "app", "--format", "html"])
+        );
+    }
 }

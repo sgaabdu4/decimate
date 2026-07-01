@@ -13,6 +13,7 @@ pub(super) fn report_command(command: Command) -> Command {
     super::scope_args::report_command(super::summary_args::summary_command(
         scan_command_with_format(command, report_format_arg()),
     ))
+    .arg(open_arg())
 }
 
 fn scan_command_with_format(command: Command, format: Arg) -> Command {
@@ -74,7 +75,14 @@ pub(super) fn format_arg() -> Arg {
 }
 
 fn report_format_arg() -> Arg {
-    format_arg().value_parser(["human", "json", "sarif"])
+    format_arg().value_parser(["human", "html", "json", "sarif"])
+}
+
+fn open_arg() -> Arg {
+    Arg::new("open")
+        .long("open")
+        .help("Write an HTML report to a temporary file and open its file:// URL in the default browser")
+        .action(ArgAction::SetTrue)
 }
 
 pub(super) fn config_arg() -> Arg {
