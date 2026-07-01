@@ -487,6 +487,9 @@ fn escape(value: &str) -> String {
             '>' => escaped.push_str("&gt;"),
             '"' => escaped.push_str("&quot;"),
             '\'' => escaped.push_str("&#39;"),
+            character if character.is_control() => {
+                let _ = write!(escaped, "&#x{:X};", character as u32);
+            }
             _ => escaped.push(character),
         }
     }
@@ -496,7 +499,7 @@ fn escape(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::output::{FindingAction, ReportCommand, ReportSummary};
+    use crate::output::{FindingAction, FindingEdge, NextStep, ReportCommand, ReportSummary};
 
     #[test]
     fn renders_browser_ready_report_with_escaped_evidence() {
@@ -566,5 +569,76 @@ mod tests {
         assert!(rendered.contains("Why"));
         assert!(rendered.contains("cycle:&lt;unsafe&gt;"));
         assert!(rendered.contains("lib/a.dart -&gt; lib/b.dart -&gt; lib/c.dart -&gt; lib/a.dart"));
+    }
+
+    #[test]
+    fn escapes_control_characters_from_user_values() {
+        let report = JsonReport {
+            schema_version: "dart-decimate.report.v1".to_owned(),
+            kind: "combined".to_owned(),
+            tool: "dart-decimate".to_owned(),
+            command: ReportCommand::Check,
+            verdict: Verdict::Fail,
+            summary: ReportSummary {
+                files: 2,
+                edges: 1,
+                findings: 1,
+                cycles: 1,
+                ..ReportSummary::default()
+            },
+            findings: vec![Finding {
+                rule_id: "dart-decimate/circular-dependency".to_owned(),
+                fingerprint: Some("cycle:\x1bunsafe".to_owned()),
+                kind: FindingKind::CircularDependency,
+                severity: Severity::Error,
+                message: "Circular dependency includes \x07bell".to_owned(),
+                path: "lib/\x1b[31mbad.dart".to_owned(),
+                line: 1,
+                column: 0,
+                safe_to_delete: false,
+                files: vec![
+                    "lib/\x1b[31mbad.dart".to_owned(),
+                    "lib/\x07bell.dart".to_owned(),
+                ],
+                edge: Some(FindingEdge {
+                    from: "lib/\x1b[31mbad.dart".to_owned(),
+                    to: "lib/\x07bell.dart".to_owned(),
+                    specifier: "package:app/\x1bbad.dart".to_owned(),
+                    kind: "import".to_owned(),
+                }),
+                actions: vec![
+                    FindingAction::new("inspect-control", "Inspect \x07bell", false)
+                        .with_dart_decimate_args([
+                            "inspect",
+                            "--format",
+                            "json",
+                            "--file",
+                            "lib/\x1b[31mbad.dart",
+                        ]),
+                ],
+            }],
+            clone_groups: Vec::new(),
+            complexity: Vec::new(),
+            file_scores: Vec::new(),
+            hotspots: Vec::new(),
+            refactoring_targets: Vec::new(),
+            threshold_overrides: Vec::new(),
+            feature_flags: Vec::new(),
+            security_candidates: Vec::new(),
+            attack_surface: Vec::new(),
+            runtime_coverage: None,
+            next_steps: vec![NextStep {
+                id: "inspect-control".to_owned(),
+                command: "dart-decimate inspect --file lib/\x1b[31mbad.dart".to_owned(),
+                reason: "Review \x07bell evidence".to_owned(),
+            }],
+        };
+
+        let rendered = render_html_report(&report);
+
+        assert!(!rendered.contains('\x1b'));
+        assert!(!rendered.contains('\x07'));
+        assert!(rendered.contains("lib/&#x1B;[31mbad.dart"));
+        assert!(rendered.contains("&#x7;bell"));
     }
 }
