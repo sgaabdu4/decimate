@@ -98,13 +98,15 @@ fn render_human_report_with_style(report: &JsonReport, style: Style) -> String {
     if !report.next_steps.is_empty() {
         let _ = writeln!(rendered, "\n{}", style.bold("Next Steps"));
         for (index, step) in report.next_steps.iter().enumerate() {
+            let command = terminal_text(&step.command);
+            let reason = terminal_text(&step.reason);
             let _ = writeln!(
                 rendered,
                 "  {}. {}",
                 index + 1,
-                style.cyan(step.command.as_str())
+                style.cyan(command.as_str())
             );
-            let _ = writeln!(rendered, "     Why: {}", step.reason);
+            let _ = writeln!(rendered, "     Why: {reason}");
         }
     }
 
@@ -169,8 +171,9 @@ fn render_finding(rendered: &mut String, index: usize, finding: &Finding, style:
         style.bold(kind_label(finding.kind)),
         location(finding)
     );
-    let _ = writeln!(rendered, "   Rule: {}", style.dim(&finding.rule_id));
-    let _ = writeln!(rendered, "   What: {}", finding.message);
+    let rule_id = terminal_text(&finding.rule_id);
+    let _ = writeln!(rendered, "   Rule: {}", style.dim(&rule_id));
+    let _ = writeln!(rendered, "   What: {}", terminal_text(&finding.message));
     let _ = writeln!(rendered, "   Why: {}", why_text(finding.kind));
     render_evidence(rendered, finding, style);
     render_best_action(rendered, finding, style);
@@ -180,7 +183,7 @@ fn render_evidence(rendered: &mut String, finding: &Finding, style: Style) {
     let _ = writeln!(rendered, "   Evidence:");
     let _ = writeln!(rendered, "     Location: {}", location(finding));
     if let Some(fingerprint) = &finding.fingerprint {
-        let _ = writeln!(rendered, "     Fingerprint: {fingerprint}");
+        let _ = writeln!(rendered, "     Fingerprint: {}", terminal_text(fingerprint));
     }
     if let Some(edge) = &finding.edge {
         render_edge(rendered, edge);
@@ -200,7 +203,10 @@ fn render_edge(rendered: &mut String, edge: &FindingEdge) {
     let _ = writeln!(
         rendered,
         "     Edge: {} {} -> {} ({})",
-        edge.kind, edge.from, edge.to, edge.specifier
+        terminal_text(&edge.kind),
+        terminal_text(&edge.from),
+        terminal_text(&edge.to),
+        terminal_text(&edge.specifier)
     );
 }
 
@@ -233,14 +239,15 @@ fn render_best_action(rendered: &mut String, finding: &Finding, style: Style) {
         || fallback_best(finding.kind),
         |action| best_text(finding, action),
     );
-    let _ = writeln!(rendered, "   Best: {best}");
+    let _ = writeln!(rendered, "   Best: {}", terminal_text(&best));
 
     if let Some(command) = finding
         .actions
         .iter()
         .find_map(|action| action.command.as_ref())
     {
-        let _ = writeln!(rendered, "   Inspect: {}", style.cyan(command));
+        let command = terminal_text(command);
+        let _ = writeln!(rendered, "   Inspect: {}", style.cyan(&command));
     }
 }
 
@@ -251,7 +258,15 @@ fn location(finding: &Finding) -> String {
     } else {
         finding.path.as_str()
     };
+    let path = terminal_text(path);
     format!("{path}:{}:{}", finding.line, finding.column)
+}
+
+fn terminal_text(value: &str) -> String {
+    value
+        .chars()
+        .filter(|character| !character.is_control())
+        .collect()
 }
 
 #[must_use]
@@ -275,7 +290,7 @@ fn cycle_preview(files: &[String]) -> String {
     let mut visible = files
         .iter()
         .take(MAX_RELATED_FILES)
-        .cloned()
+        .map(|file| terminal_text(file))
         .collect::<Vec<_>>();
     if files.len() > MAX_RELATED_FILES {
         visible.push(format!(
@@ -284,7 +299,7 @@ fn cycle_preview(files: &[String]) -> String {
         ));
     }
     if let Some(first) = files.first() {
-        visible.push(first.clone());
+        visible.push(terminal_text(first));
     }
     visible.join(" -> ")
 }
@@ -294,7 +309,7 @@ fn related_files_preview(files: &[String]) -> String {
     let mut visible = files
         .iter()
         .take(MAX_RELATED_FILES)
-        .cloned()
+        .map(|file| terminal_text(file))
         .collect::<Vec<_>>();
     if files.len() > MAX_RELATED_FILES {
         visible.push(format!(
@@ -308,7 +323,7 @@ fn related_files_preview(files: &[String]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::output::{FindingAction, FindingKind, ReportCommand};
+    use crate::output::{FindingAction, ReportCommand};
 
     #[test]
     fn explains_large_cycles_with_truncated_evidence() {
@@ -387,6 +402,27 @@ mod tests {
         assert!(rendered.contains("Best: Delete the unreachable Dart file"));
         assert!(rendered.contains("Next Steps"));
         assert!(rendered.contains("Why: Collect references before deleting the file"));
+    }
+
+    #[test]
+    fn strips_control_characters_from_terminal_paths() {
+        let mut finding = cycle_finding(2);
+        finding.path = "lib/\x1b[31mbad.dart".to_owned();
+        finding.message = "Circular dependency includes lib/\x1b[31mbad.dart".to_owned();
+        finding.files = vec![
+            "lib/\x1b[31mbad.dart".to_owned(),
+            "lib/live.dart".to_owned(),
+        ];
+        let report = report_with_finding(finding);
+
+        let rendered = render_human_report_with_style(&report, Style::plain());
+
+        assert!(
+            !rendered
+                .chars()
+                .any(|character| { character.is_control() && character != '\n' })
+        );
+        assert!(!rendered.contains('\x1b'));
     }
 
     fn report_with_finding(finding: Finding) -> JsonReport {

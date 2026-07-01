@@ -79,7 +79,10 @@ fn args_with_output_alias(args: &[OsString]) -> Option<Vec<OsString>> {
             continue;
         }
         if arg == "--format" {
-            iter.next();
+            let value = iter.next()?;
+            if value.to_str().is_none_or(|value| value.starts_with('-')) {
+                return None;
+            }
             continue;
         }
         if arg
@@ -130,6 +133,18 @@ mod tests {
         assert_eq!(
             args_with_default_check(["dart-decimate", "json", "app", "--format", "human"]),
             values(&["dart-decimate", "check", "app", "--format", "json"])
+        );
+    }
+
+    #[test]
+    fn output_aliases_preserve_malformed_explicit_format_errors() {
+        assert_eq!(
+            args_with_default_check(["dart-decimate", "json", "app", "--format"]),
+            values(&["dart-decimate", "json", "app", "--format"])
+        );
+        assert_eq!(
+            args_with_default_check(["dart-decimate", "json", "app", "--format", "--quiet"]),
+            values(&["dart-decimate", "json", "app", "--format", "--quiet"])
         );
     }
 

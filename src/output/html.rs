@@ -496,7 +496,7 @@ fn escape(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::output::{FindingAction, ReportCommand, ReportSummary, Verdict, types::Finding};
+    use crate::output::{FindingAction, ReportCommand, ReportSummary};
 
     #[test]
     fn renders_browser_ready_report_with_escaped_evidence() {
