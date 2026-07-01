@@ -274,6 +274,7 @@ fn next_step_enabled(id: &str, findings: &[Finding]) -> bool {
                     | FindingKind::HighCrapScore
             )
         }),
+        "review-security-surface" => has_kind(findings, FindingKind::SecurityCandidate),
         _ => true,
     }
 }

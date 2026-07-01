@@ -679,8 +679,9 @@ fn is_module_uri_directive_line(line: &str) -> bool {
 }
 
 fn benign_secret_named_literal(value: &str) -> bool {
-    literal_looks_like_route_path(value)
-        || literal_looks_like_reset_or_recovery_url(value)
+    let route_or_reset_url =
+        literal_looks_like_route_path(value) || literal_looks_like_reset_or_recovery_url(value);
+    route_or_reset_url && !literal_has_secret_like_url_parameter(value)
         || literal_looks_like_user_facing_copy(value)
 }
 
@@ -711,6 +712,41 @@ fn literal_looks_like_reset_or_recovery_url(value: &str) -> bool {
         ]
         .iter()
         .any(|needle| lower.contains(needle))
+}
+
+fn literal_has_secret_like_url_parameter(value: &str) -> bool {
+    let trimmed = value.trim();
+    if let Some(query_index) = trimmed.find('?') {
+        let query_start = query_index + 1;
+        let query_end = trimmed[query_start..]
+            .find('#')
+            .map_or(trimmed.len(), |fragment_index| query_start + fragment_index);
+        if segment_has_secret_like_url_parameter(&trimmed[query_start..query_end]) {
+            return true;
+        }
+    }
+    trimmed.find('#').is_some_and(|fragment_index| {
+        segment_has_secret_like_url_parameter(&trimmed[fragment_index + 1..])
+    })
+}
+
+fn segment_has_secret_like_url_parameter(segment: &str) -> bool {
+    segment.split('&').any(|parameter| {
+        let Some((name, value)) = parameter.split_once('=') else {
+            return false;
+        };
+        has_secret_like_name(name) && concrete_url_parameter_value(value)
+    })
+}
+
+fn concrete_url_parameter_value(value: &str) -> bool {
+    let trimmed = value.trim();
+    trimmed.len() >= 8
+        && !trimmed.contains('$')
+        && !trimmed.starts_with(':')
+        && !(trimmed.starts_with('{') && trimmed.ends_with('}'))
+        && !(trimmed.starts_with('<') && trimmed.ends_with('>'))
+        && !is_placeholder(trimmed)
 }
 
 fn literal_looks_like_user_facing_copy(value: &str) -> bool {
