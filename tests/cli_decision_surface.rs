@@ -6,8 +6,8 @@ use serde_json::Value;
 use tempfile::TempDir;
 
 #[test]
-fn decision_surface_reports_changed_public_api_and_coupling_decisions(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn decision_surface_reports_changed_public_api_and_coupling_decisions()
+-> Result<(), Box<dyn std::error::Error>> {
     let fixture = git_fixture()?;
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write(&fixture, "lib/app.dart", "export 'domain/service.dart';\n")?;
@@ -59,8 +59,8 @@ fn decision_surface_reports_changed_public_api_and_coupling_decisions(
 }
 
 #[test]
-fn decision_surface_reports_changed_pubspec_dependency_decision(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn decision_surface_reports_changed_pubspec_dependency_decision()
+-> Result<(), Box<dyn std::error::Error>> {
     let fixture = git_fixture()?;
     write(&fixture, "pubspec.yaml", "name: app\n")?;
     write(&fixture, "lib/main.dart", "void main() {}\n")?;
@@ -95,8 +95,8 @@ fn decision_surface_reports_changed_pubspec_dependency_decision(
 }
 
 #[test]
-fn decision_surface_treats_nested_non_src_libraries_as_public_api(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn decision_surface_treats_nested_non_src_libraries_as_public_api()
+-> Result<(), Box<dyn std::error::Error>> {
     let fixture = git_fixture()?;
     write(&fixture, "pubspec.yaml", "name: package\n")?;
     write(&fixture, "lib/widgets/button.dart", "class Button {}\n")?;

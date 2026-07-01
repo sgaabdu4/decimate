@@ -22,39 +22,39 @@ mod types;
 mod widget_findings;
 
 use crate::{
-    scan::ScannedProject, BoundaryCallViolation, BoundaryCoverageGap, BoundaryViolation,
-    DeadCodeReport, DependencyCycle, DependencyHygieneReport, DuplicateCodeReport,
-    FeatureFlagReport, HealthReport, PolicyViolation, ReExportCycle, RouteCollisionReport,
-    SecurityReport, SymbolReport, WidgetReport,
+    BoundaryCallViolation, BoundaryCoverageGap, BoundaryViolation, DeadCodeReport, DependencyCycle,
+    DependencyHygieneReport, DuplicateCodeReport, FeatureFlagReport, HealthReport, PolicyViolation,
+    ReExportCycle, RouteCollisionReport, SecurityReport, SymbolReport, WidgetReport,
+    scan::ScannedProject,
 };
 pub use audit_risk::apply_audit_risk;
 use dependency_findings::add_dependency_hygiene_findings;
-use duplication_findings::{add_duplication_findings, json_clone_groups};
 pub use duplication_findings::{JsonCloneGroup, JsonCloneInstance};
-use feature_flag_findings::{add_feature_flag_findings, json_feature_flags};
+use duplication_findings::{add_duplication_findings, json_clone_groups};
 pub use feature_flag_findings::{JsonFeatureFlag, JsonFeatureFlagOccurrence};
+use feature_flag_findings::{add_feature_flag_findings, json_feature_flags};
 use graph_findings::{
     add_boundary_call_findings, add_boundary_findings, add_cycle_findings, add_dead_code_findings,
     add_part_of_findings, add_policy_findings, add_re_export_cycle_findings,
     add_unresolved_findings, project_part_of_violation_count, project_unresolved_count,
 };
-use health_findings::{
-    add_health_findings, json_complexity, json_file_scores, json_hotspots,
-    json_refactoring_targets, json_threshold_overrides,
-};
 pub use health_findings::{
     JsonComplexityContribution, JsonComplexityFinding, JsonEffectiveThresholds,
     JsonFileHealthScore, JsonHealthHotspot, JsonRefactoringTarget, JsonThresholdOverride,
+};
+use health_findings::{
+    add_health_findings, json_complexity, json_file_scores, json_hotspots,
+    json_refactoring_targets, json_threshold_overrides,
 };
 pub use html::{render_decision_surface_html_report, render_html_report};
 pub use human::render_human_report;
 use next_steps::next_steps;
 use route_findings::add_route_findings;
 pub use runtime_coverage::{
-    json_runtime_coverage, JsonRuntimeBlastRadius, JsonRuntimeCoverage,
-    JsonRuntimeCoverageActionable, JsonRuntimeCoverageFinding, JsonRuntimeCoverageIntelligence,
-    JsonRuntimeCoverageProvenance, JsonRuntimeCoverageSummary, JsonRuntimeCoverageWatermark,
-    JsonRuntimeHotPath, JsonRuntimeImportance,
+    JsonRuntimeBlastRadius, JsonRuntimeCoverage, JsonRuntimeCoverageActionable,
+    JsonRuntimeCoverageFinding, JsonRuntimeCoverageIntelligence, JsonRuntimeCoverageProvenance,
+    JsonRuntimeCoverageSummary, JsonRuntimeCoverageWatermark, JsonRuntimeHotPath,
+    JsonRuntimeImportance, json_runtime_coverage,
 };
 use scope::{
     file_scope, finding_in_scope, health_file_score_count, project_file_scope_count,
@@ -62,10 +62,10 @@ use scope::{
     scope_file_scores, scope_hotspots, scope_refactoring_targets, scope_security_candidates,
     scoped_quality_score,
 };
-use security_findings::{add_security_findings, json_attack_surface, json_security_candidates};
 pub use security_findings::{
     JsonAttackSurfaceEntry, JsonSecurityCandidate, JsonSecurityOccurrence, JsonSecurityReachability,
 };
+use security_findings::{add_security_findings, json_attack_surface, json_security_candidates};
 pub(crate) use security_sarif::render_sarif_report;
 use suppressions::filter_suppressed_findings;
 use symbol_findings::add_symbol_findings;

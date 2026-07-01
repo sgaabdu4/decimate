@@ -326,8 +326,10 @@ mod tests {
         assert!(rendered.contains("... 4 more files ... -> lib/file_0.dart"));
         assert!(rendered.contains("Files in cycle: 12 total"));
         assert!(rendered.contains("Best: Break one import/export edge first."));
-        assert!(rendered
-            .contains("Inspect: dart-decimate inspect --format json --file lib/file_0.dart"));
+        assert!(
+            rendered
+                .contains("Inspect: dart-decimate inspect --format json --file lib/file_0.dart")
+        );
     }
 
     #[test]
@@ -338,8 +340,10 @@ mod tests {
 
         assert!(rendered.contains("\x1b[1;31mFAIL\x1b[0m"));
         assert!(rendered.contains("\x1b[1;31merror\x1b[0m"));
-        assert!(rendered
-            .contains("\x1b[36mlib/file_0.dart -> lib/file_1.dart -> lib/file_0.dart\x1b[0m"));
+        assert!(
+            rendered
+                .contains("\x1b[36mlib/file_0.dart -> lib/file_1.dart -> lib/file_0.dart\x1b[0m")
+        );
     }
 
     #[test]
@@ -436,18 +440,20 @@ mod tests {
             safe_to_delete: false,
             files,
             edge: None,
-            actions: vec![FindingAction::new(
-                "break-cycle",
-                "Move shared dependencies inward or invert one import edge",
-                false,
-            )
-            .with_dart_decimate_args([
-                "inspect",
-                "--format",
-                "json",
-                "--file",
-                path.as_str(),
-            ])],
+            actions: vec![
+                FindingAction::new(
+                    "break-cycle",
+                    "Move shared dependencies inward or invert one import edge",
+                    false,
+                )
+                .with_dart_decimate_args([
+                    "inspect",
+                    "--format",
+                    "json",
+                    "--file",
+                    path.as_str(),
+                ]),
+            ],
         }
     }
 }

@@ -1,4 +1,4 @@
-use clap::{parser::ValueSource, ArgMatches};
+use clap::{ArgMatches, parser::ValueSource};
 
 use crate::config::{ConfigOutputFormat, DartDecimateConfig};
 

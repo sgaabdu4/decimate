@@ -7,8 +7,8 @@ use super::{CliError, CommandRequest, ReportOutputFormat};
 use crate::config::apply_rules_to_report;
 use crate::graph::normalize_against;
 use crate::inspect::{inspect_file, inspect_symbol, render_inspect_report};
-use crate::output::{build_json_report, ReportCommand};
-use crate::{find_dead_code, ScannedProject};
+use crate::output::{ReportCommand, build_json_report};
+use crate::{ScannedProject, find_dead_code};
 
 pub(super) fn run_inspect_request<W: Write>(
     request: &CommandRequest,

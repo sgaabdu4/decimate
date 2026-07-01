@@ -3,22 +3,23 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use clap::{parser::ValueSource, Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command, parser::ValueSource};
 
 use crate::baseline::{
-    apply_baseline_to_report, baseline_from_report, compare_regression_baseline, load_baseline,
-    load_regression_baseline, regression_baseline_from_report, save_baseline as write_baseline,
-    save_regression_baseline as write_regression_baseline, RegressionTolerance,
+    RegressionTolerance, apply_baseline_to_report, baseline_from_report,
+    compare_regression_baseline, load_baseline, load_regression_baseline,
+    regression_baseline_from_report, save_baseline as write_baseline,
+    save_regression_baseline as write_regression_baseline,
 };
 use crate::config::{
-    apply_rules_to_report, load_dart_decimate_config, ConfigError, DartDecimateConfig,
-    IgnoreDependencyOverrideRule, RuleConfig,
+    ConfigError, DartDecimateConfig, IgnoreDependencyOverrideRule, RuleConfig,
+    apply_rules_to_report, load_dart_decimate_config,
 };
 use crate::output::{
-    build_json_report, filter_report_findings, render_html_report, render_human_report,
-    render_sarif_report, ReportCommand, Verdict,
+    ReportCommand, Verdict, build_json_report, filter_report_findings, render_html_report,
+    render_human_report, render_sarif_report,
 };
-use crate::scan::{scan_project_with_options, ScanOptions};
+use crate::scan::{ScanOptions, scan_project_with_options};
 use crate::{
     BoundaryCallRule, BoundaryRule, DuplicateOptions, FeatureFlagOptions, HealthOptions,
     SecurityOptions,
@@ -97,7 +98,7 @@ use inspect_run::run_inspect_request;
 use issue_filter_args::{check_issue_filter_command, dead_code_issue_filter_command};
 use list_run::{list_command, run_list, run_workspaces, workspaces_command};
 use output_format::{
-    output_format, output_format_value, report_output_format, OutputFormat, ReportOutputFormat,
+    OutputFormat, ReportOutputFormat, output_format, output_format_value, report_output_format,
 };
 use regression_args::{
     regression_baseline_path, regression_request_args, save_regression_baseline_path,
@@ -108,8 +109,8 @@ use schema_commands::{
     run_config_schema, run_manifest, run_report_schema, run_rule_pack_schema,
 };
 use security_args::{
-    security_cli_options, security_command, SecurityCliOptions, SecurityIssueMode,
-    SecuritySummaryMode,
+    SecurityCliOptions, SecurityIssueMode, SecuritySummaryMode, security_cli_options,
+    security_command,
 };
 use security_gate_run::apply_security_gate;
 use trace_args::{

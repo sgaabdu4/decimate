@@ -496,7 +496,7 @@ fn escape(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::output::{types::Finding, FindingAction, ReportCommand, ReportSummary, Verdict};
+    use crate::output::{FindingAction, ReportCommand, ReportSummary, Verdict, types::Finding};
 
     #[test]
     fn renders_browser_ready_report_with_escaped_evidence() {
@@ -529,18 +529,20 @@ mod tests {
                     "lib/c.dart".to_owned(),
                 ],
                 edge: None,
-                actions: vec![FindingAction::new(
-                    "break-cycle",
-                    "Move shared dependencies inward or invert one import edge",
-                    false,
-                )
-                .with_dart_decimate_args([
-                    "inspect",
-                    "--format",
-                    "json",
-                    "--file",
-                    "lib/a.dart",
-                ])],
+                actions: vec![
+                    FindingAction::new(
+                        "break-cycle",
+                        "Move shared dependencies inward or invert one import edge",
+                        false,
+                    )
+                    .with_dart_decimate_args([
+                        "inspect",
+                        "--format",
+                        "json",
+                        "--file",
+                        "lib/a.dart",
+                    ]),
+                ],
             }],
             clone_groups: Vec::new(),
             complexity: Vec::new(),

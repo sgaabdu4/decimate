@@ -252,11 +252,7 @@ fn push_count(items: &mut Vec<String>, count: usize, singular: &str, plural_labe
 }
 
 const fn plural<'a>(count: usize, singular: &'a str, plural: &'a str) -> &'a str {
-    if count == 1 {
-        singular
-    } else {
-        plural
-    }
+    if count == 1 { singular } else { plural }
 }
 
 fn format_basis_points(points: u32) -> String {
