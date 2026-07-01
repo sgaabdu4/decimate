@@ -105,6 +105,31 @@ fn json_shortcut_runs_check_with_json_output() -> Result<(), Box<dyn std::error:
 }
 
 #[test]
+fn json_shortcut_delimiter_runs_check_with_json_output() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(&fixture, "lib/main.dart", "void main() {}\n")?;
+    let mut output = Vec::new();
+
+    let code = run_from(
+        [
+            "dart-decimate",
+            "json",
+            "--",
+            fixture.path().to_str().unwrap_or("."),
+        ],
+        &mut output,
+    )?;
+
+    let json = serde_json::from_slice::<Value>(&output)?;
+    assert_eq!(code, 0);
+    assert_eq!(json["command"], "check");
+    assert_eq!(json["summary"]["files"], 1);
+
+    Ok(())
+}
+
+#[test]
 fn human_shortcut_runs_check_with_human_output() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
     write(&fixture, "pubspec.yaml", "name: app\n")?;

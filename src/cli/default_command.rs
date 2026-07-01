@@ -61,7 +61,12 @@ where
 
 fn args_with_output_alias(args: &[OsString]) -> Option<Vec<OsString>> {
     let alias = args.get(1)?.to_str()?;
-    if args.iter().skip(2).any(is_help_arg) {
+    if args
+        .iter()
+        .skip(2)
+        .take_while(|arg| !is_delimiter(arg))
+        .any(is_help_arg)
+    {
         return None;
     }
     let format = match alias {
@@ -76,6 +81,12 @@ fn args_with_output_alias(args: &[OsString]) -> Option<Vec<OsString>> {
     let mut stdout_html = false;
     let mut iter = args.iter().skip(2);
     while let Some(arg) = iter.next() {
+        if is_delimiter(arg) {
+            push_output_alias_flags(&mut expanded, alias, format, stdout_html);
+            expanded.push(arg.clone());
+            expanded.extend(iter.cloned());
+            return Some(expanded);
+        }
         if alias == "html" && arg == "--stdout" {
             stdout_html = true;
             continue;
@@ -101,17 +112,30 @@ fn args_with_output_alias(args: &[OsString]) -> Option<Vec<OsString>> {
         }
         expanded.push(arg.clone());
     }
+    push_output_alias_flags(&mut expanded, alias, format, stdout_html);
+    Some(expanded)
+}
+
+fn push_output_alias_flags(
+    expanded: &mut Vec<OsString>,
+    alias: &str,
+    format: &str,
+    stdout_html: bool,
+) {
     expanded.push(OsString::from("--format"));
     expanded.push(OsString::from(format));
     if alias == "html" && !stdout_html {
         expanded.push(OsString::from("--open"));
     }
-    Some(expanded)
 }
 
 pub(super) fn json_output_alias_requested(args: &[OsString]) -> bool {
     args.get(1).and_then(|arg| arg.to_str()) == Some("json")
-        && !args.iter().skip(2).any(is_help_arg)
+        && !args
+            .iter()
+            .skip(2)
+            .take_while(|arg| !is_delimiter(arg))
+            .any(is_help_arg)
 }
 
 fn is_report_format(value: &str) -> bool {
@@ -121,6 +145,10 @@ fn is_report_format(value: &str) -> bool {
 pub(super) fn is_help_arg(arg: &OsString) -> bool {
     arg.to_str()
         .is_some_and(|value| matches!(value, "-h" | "--help"))
+}
+
+fn is_delimiter(arg: &OsString) -> bool {
+    arg == "--"
 }
 
 fn should_insert_check(args: &[OsString]) -> bool {
@@ -177,6 +205,38 @@ mod tests {
                 values(&["dart-decimate", alias, "app", "--format=xml"])
             );
         }
+    }
+
+    #[test]
+    fn output_aliases_insert_forced_flags_before_delimiter() {
+        assert_eq!(
+            args_with_default_check(["dart-decimate", "json", "--", "app"]),
+            values(&["dart-decimate", "check", "--format", "json", "--", "app"])
+        );
+        assert_eq!(
+            args_with_default_check(["dart-decimate", "html", "--stdout", "--", "app"]),
+            values(&["dart-decimate", "check", "--format", "html", "--", "app"])
+        );
+        assert_eq!(
+            args_with_default_check(["dart-decimate", "html", "--", "app"]),
+            values(&[
+                "dart-decimate",
+                "check",
+                "--format",
+                "html",
+                "--open",
+                "--",
+                "app",
+            ])
+        );
+    }
+
+    #[test]
+    fn output_aliases_treat_help_after_delimiter_as_positional() {
+        assert_eq!(
+            args_with_default_check(["dart-decimate", "json", "--", "--help"]),
+            values(&["dart-decimate", "check", "--format", "json", "--", "--help",])
+        );
     }
 
     #[test]
