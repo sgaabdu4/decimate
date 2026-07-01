@@ -120,7 +120,12 @@ Phase 4 exposes the CLI and agent output contract:
 - `dart-decimate config`
 - `dart-decimate config-schema`
 - `dart-decimate report-schema`
+- `dart-decimate human`, `dart-decimate json`, and `dart-decimate html` are
+  shortcuts for `dart-decimate check` with the matching human, JSON, or HTML output
 - analysis commands with `--format json` emit `dart-decimate.report.v1`
+- report commands with `--format html` emit a browser-ready static HTML report
+- report commands with `--open` write an HTML report to a private temporary file
+  and open its `file://` URL in the default browser
 - trace commands with `--format json` emit `dart-decimate.trace.v1`
 - `dart-decimate inspect --format json` emits `dart-decimate.inspect.v1`
 - `dart-decimate schema --format json` emits `dart-decimate.schema.v1` with commands,
