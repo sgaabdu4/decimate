@@ -311,13 +311,12 @@ fn string_literals(source: &str) -> Vec<StringLiteral> {
     let mut index = 0;
     let bytes = source.as_bytes();
     while index < bytes.len() {
-        if matches!(bytes[index], b'\'' | b'"')
-            && !is_comment_match(source, index)
-            && let Some((value, end)) = read_string(source, index)
-        {
-            literals.push(StringLiteral { index, value });
-            index = end;
-            continue;
+        if matches!(bytes[index], b'\'' | b'"') && !is_comment_match(source, index) {
+            if let Some((value, end)) = read_string(source, index) {
+                literals.push(StringLiteral { index, value });
+                index = end;
+                continue;
+            }
         }
         index += 1;
     }

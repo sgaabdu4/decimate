@@ -16,13 +16,13 @@ fn collect_identifier_references(
     source: &str,
     references: &mut Vec<IdentifierReference>,
 ) {
-    if is_reference_identifier(node, source)
-        && let Ok(name) = node.utf8_text(source.as_bytes())
-    {
-        references.push(IdentifierReference {
-            name: name.to_owned(),
-            location: node.start_position().into(),
-        });
+    if is_reference_identifier(node, source) {
+        if let Ok(name) = node.utf8_text(source.as_bytes()) {
+            references.push(IdentifierReference {
+                name: name.to_owned(),
+                location: node.start_position().into(),
+            });
+        }
     }
 
     let mut cursor = node.walk();

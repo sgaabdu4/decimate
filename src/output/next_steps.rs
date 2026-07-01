@@ -72,20 +72,20 @@ pub(super) fn next_steps(root: &Path, results: &AnalysisResults) -> Vec<NextStep
         });
     }
 
-    if let Some(health) = &results.health
-        && let Some(complexity) = health.complexity.first()
-    {
-        steps.push(NextStep {
-            id: "complexity-breakdown".to_owned(),
-            command: format!(
-                "dart-decimate health --format json --complexity-breakdown --top 1 --max-cyclomatic {} --max-cognitive {}",
-                health.options.max_cyclomatic, health.options.max_cognitive
-            ),
-            reason: format!(
-                "Explain the decision points driving complexity in {}",
-                display_path(root, &complexity.path)
-            ),
-        });
+    if let Some(health) = &results.health {
+        if let Some(complexity) = health.complexity.first() {
+            steps.push(NextStep {
+                id: "complexity-breakdown".to_owned(),
+                command: format!(
+                    "dart-decimate health --format json --complexity-breakdown --top 1 --max-cyclomatic {} --max-cognitive {}",
+                    health.options.max_cyclomatic, health.options.max_cognitive
+                ),
+                reason: format!(
+                    "Explain the decision points driving complexity in {}",
+                    display_path(root, &complexity.path)
+                ),
+            });
+        }
     }
 
     steps

@@ -116,15 +116,14 @@ fn is_abstract_class(class: Node<'_>, source: &str) -> bool {
 fn object_constructor_names(root: Node<'_>, source: &str) -> Vec<String> {
     let mut constructors = Vec::new();
     visit_named(root, &mut |node| {
-        if is_object_constructor(node)
-            && !has_ancestor_kind(node, &["annotation"])
-            && let Some(constructor) = constructor_type_name(node, source)
-        {
-            constructors.extend(constructor_name_candidates(&constructor));
-        } else if is_arrow_body_constructor_identifier(node, source)
-            && let Ok(constructor) = node.utf8_text(source.as_bytes())
-        {
-            constructors.extend(constructor_name_candidates(constructor));
+        if is_object_constructor(node) && !has_ancestor_kind(node, &["annotation"]) {
+            if let Some(constructor) = constructor_type_name(node, source) {
+                constructors.extend(constructor_name_candidates(&constructor));
+            }
+        } else if is_arrow_body_constructor_identifier(node, source) {
+            if let Ok(constructor) = node.utf8_text(source.as_bytes()) {
+                constructors.extend(constructor_name_candidates(constructor));
+            }
         }
     });
     constructors

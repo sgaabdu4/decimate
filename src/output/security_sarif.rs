@@ -127,10 +127,10 @@ fn result_properties(
     properties.insert("safeToDelete".to_owned(), json!(finding.safe_to_delete));
     properties.insert("files".to_owned(), json!(&finding.files));
     properties.insert("actions".to_owned(), json!(&finding.actions));
-    if let Some(fingerprint) = &finding.fingerprint
-        && let Some(reachability) = reachability_by_fingerprint.get(fingerprint)
-    {
-        properties.insert("securityReachability".to_owned(), reachability.clone());
+    if let Some(fingerprint) = &finding.fingerprint {
+        if let Some(reachability) = reachability_by_fingerprint.get(fingerprint) {
+            properties.insert("securityReachability".to_owned(), reachability.clone());
+        }
     }
     Value::Object(properties)
 }

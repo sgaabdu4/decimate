@@ -167,10 +167,11 @@ fn primary_constructor_header(
     let class_name = source[name_start..name_end].to_owned();
     let mut header_cursor = skip_whitespace(source, name_end).unwrap_or(name_end);
 
-    if source.as_bytes().get(header_cursor).copied() == Some(b'<')
-        && let Some(type_params_end) = matching_delimiter(source, header_cursor, b'<', b'>')
-    {
-        header_cursor = skip_whitespace(source, type_params_end + 1).unwrap_or(type_params_end + 1);
+    if source.as_bytes().get(header_cursor).copied() == Some(b'<') {
+        if let Some(type_params_end) = matching_delimiter(source, header_cursor, b'<', b'>') {
+            header_cursor =
+                skip_whitespace(source, type_params_end + 1).unwrap_or(type_params_end + 1);
+        }
     }
 
     let replacement_start = primary_constructor_replacement_start(source, &mut header_cursor)?;
@@ -259,16 +260,18 @@ fn push_constructor_body_replacement(
     replacements: &mut Vec<Replacement>,
     header: &PrimaryConstructorHeader,
 ) {
-    if let Some((terminator_start, _)) = header.terminator
-        && let Some(body_end) = matching_delimiter(source, terminator_start, b'{', b'}')
-        && let Some(this_start) =
-            find_primary_constructor_body(source, terminator_start + 1, body_end)
-    {
-        replacements.push(Replacement {
-            start: this_start,
-            end: this_start + "this".len(),
-            kind: ReplacementKind::ConstructorBody(header.class_name.clone()),
-        });
+    if let Some((terminator_start, _)) = header.terminator {
+        if let Some(body_end) = matching_delimiter(source, terminator_start, b'{', b'}') {
+            if let Some(this_start) =
+                find_primary_constructor_body(source, terminator_start + 1, body_end)
+            {
+                replacements.push(Replacement {
+                    start: this_start,
+                    end: this_start + "this".len(),
+                    kind: ReplacementKind::ConstructorBody(header.class_name.clone()),
+                });
+            }
+        }
     }
 }
 

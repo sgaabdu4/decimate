@@ -155,9 +155,10 @@ impl PackageMap {
                 self.discover_nested_pubspecs(&path, visited)?;
             } else if file_type.is_file()
                 && path.file_name().is_some_and(|name| name == "pubspec.yaml")
-                && let Some(package_root) = path.parent()
             {
-                self.discover_pubspec(package_root, visited)?;
+                if let Some(package_root) = path.parent() {
+                    self.discover_pubspec(package_root, visited)?;
+                }
             }
         }
 
@@ -315,7 +316,7 @@ fn percent_decode(value: &str) -> Option<String> {
         if bytes[index] == b'%' {
             let high = hex_value(*bytes.get(index + 1)?)?;
             let low = hex_value(*bytes.get(index + 2)?)?;
-            decoded.push(high << 4 | low);
+            decoded.push((high << 4) | low);
             index += 3;
         } else {
             decoded.push(bytes[index]);
