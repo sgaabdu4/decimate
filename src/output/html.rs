@@ -18,7 +18,7 @@ use assets::{render_interaction_script, render_style};
 const MAX_RELATED_FILES: usize = 12;
 const MAX_GROUP_RULE_IDS: usize = 3;
 
-/// Render a browser-ready static report for humans.
+/// Render a browser-ready static report with grouped finding navigation.
 #[must_use]
 pub fn render_html_report(report: &JsonReport) -> String {
     let mut html = String::new();
