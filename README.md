@@ -159,7 +159,8 @@ npx --yes dart-decimate html . --stdout > dart-decimate-report.html
 ```
 
 Changed files only: `npx --yes dart-decimate html . --compare origin/main`.
-`--compare REF` aliases `--changed-since REF` and suggests similar branches when the ref is not found.
+`--compare REF` aliases `--changed-since REF` and suggests similar branches when
+the ref is not found.
 
 To run the GitHub version directly:
 
@@ -333,7 +334,12 @@ Useful commands:
 dart-decimate security . --surface --format json
 dart-decimate security . --ci --sarif-file dart-decimate-security.sarif
 git diff --cached --unified=0 | dart-decimate security . --gate new --diff-stdin --format json
+dart-decimate security . --gate newly-reachable --compare origin/main --format json
 ```
+
+`--gate new` keeps candidates on added lines. `--gate newly-reachable` keeps
+reachable candidates affected by changed files. Both accept `--compare REF`,
+`--changed-since REF`, `--diff-file PATCH`, or `--diff-stdin`.
 
 ### 9. PR Risk
 
@@ -434,6 +440,10 @@ Example shape:
   "next_steps": []
 }
 ```
+
+When grouped security findings hide additional occurrences, `next_steps` can
+include `review-security-surface`, which reruns
+`dart-decimate security . --format json --surface`.
 
 If a JSON command fails before a report can be built, stdout still stays
 machine-readable:
