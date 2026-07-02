@@ -8,6 +8,7 @@
 - [ ] `cargo clippy --all-targets -- -D warnings`
 - [ ] `cargo test --all-targets`
 - [ ] `npm run version:check`
+- [ ] `npm run version:bump:check -- origin/main`
 - [ ] `npm run release:check`
 - [ ] `npm run migration:check`
 - [ ] `npm run pack:check`
