@@ -732,7 +732,7 @@ fn value_assignment_literal_index(
             continue;
         }
         cursor += 1;
-        if matches!(bytes.get(cursor), Some(b'=') | Some(b'>')) {
+        if matches!(bytes.get(cursor), Some(b'=' | b'>')) {
             search_start = cursor;
             continue;
         }
@@ -1084,19 +1084,20 @@ fn segment_has_secret_like_url_parameter(segment: &str) -> bool {
 
 fn concrete_url_parameter_value(value: &str) -> bool {
     let trimmed = value.trim();
-    trimmed.len() >= 8
-        && !trimmed.contains('$')
-        && !trimmed.starts_with(':')
-        && !(trimmed.starts_with('{') && trimmed.ends_with('}'))
-        && !(trimmed.starts_with('<') && trimmed.ends_with('>'))
-        && !is_placeholder(trimmed)
+    if trimmed.len() < 8
+        || trimmed.contains('$')
+        || trimmed.starts_with(':')
+        || (trimmed.starts_with('{') && trimmed.ends_with('}'))
+        || (trimmed.starts_with('<') && trimmed.ends_with('>'))
+    {
+        return false;
+    }
+    !is_placeholder(trimmed)
 }
 
 fn literal_has_secret_like_reset_path_segment(value: &str) -> bool {
     let trimmed = value.trim();
-    let path_end = trimmed
-        .find(|character| matches!(character, '?' | '#'))
-        .unwrap_or(trimmed.len());
+    let path_end = trimmed.find(['?', '#']).unwrap_or(trimmed.len());
     let path = &trimmed[..path_end];
     let mut reset_or_recovery_path_seen = false;
     for segment in path.split('/') {

@@ -196,10 +196,10 @@ fn check_command_omits_security_surface_step_when_baseline_removes_grouped_candi
         &mut save_output,
     )?;
     let mut baseline = serde_json::from_slice::<Value>(&fs::read(&baseline_path)?)?;
-    baseline["findings"]
+    let findings = baseline["findings"]
         .as_array_mut()
-        .expect("baseline findings array")
-        .retain(|finding| finding["rule_id"] == "dart-decimate/security-hardcoded-secret");
+        .ok_or_else(|| std::io::Error::other("baseline findings array"))?;
+    findings.retain(|finding| finding["rule_id"] == "dart-decimate/security-hardcoded-secret");
     fs::write(&baseline_path, serde_json::to_vec(&baseline)?)?;
 
     let mut output = Vec::new();
