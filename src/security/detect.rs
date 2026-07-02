@@ -96,6 +96,7 @@ fn detect_firebase_api_keys(
     for literal in string_literals(source) {
         if is_comment_match(source, literal.index)
             || is_placeholder(&literal.value)
+            || !concrete_firebase_api_key_literal(&literal.value)
             || !firebase_api_key_context(source, literal.index)
         {
             continue;
@@ -530,6 +531,10 @@ fn firebase_options_context(source: &str, index: usize) -> bool {
     enclosing_call_name(source, index).is_some_and(|name| name == "FirebaseOptions")
 }
 
+fn concrete_firebase_api_key_literal(value: &str) -> bool {
+    !value.trim().is_empty() && !value.contains('$')
+}
+
 fn firebase_secret_name_context(source: &str, index: usize) -> bool {
     literal_argument_context(source, index).is_some_and(has_secret_like_name)
 }
@@ -817,7 +822,9 @@ fn password_autofill_assignment_context(
 }
 
 fn value_target_has_password_context(target_lower: &str) -> bool {
-    terminal_value_target_segment(target_lower).contains("password")
+    let terminal = terminal_value_target_segment(target_lower);
+    let compact = compact_without_ascii_whitespace(terminal);
+    !negative_password_input_hint(&compact) && terminal.contains("password")
 }
 
 fn terminal_value_target_segment(target_lower: &str) -> &str {
@@ -884,10 +891,7 @@ fn context_ties_password_to_target(context_lower: &str, target_lower: &str) -> b
 }
 
 fn password_input_hint(context_lower: &str) -> bool {
-    let compact = context_lower
-        .chars()
-        .filter(|character| !character.is_ascii_whitespace())
-        .collect::<String>();
+    let compact = compact_without_ascii_whitespace(context_lower);
     if negative_password_input_hint(&compact) {
         return false;
     }
@@ -898,8 +902,10 @@ fn negative_password_input_hint(compact_context: &str) -> bool {
     [
         "type!=='password'",
         "type!==\"password\"",
+        "type!==password",
         "type!='password'",
         "type!=\"password\"",
+        "type!=password",
         ":not([type=password",
         ":not([type='password'",
         ":not([type=\"password\"",
@@ -909,6 +915,12 @@ fn negative_password_input_hint(compact_context: &str) -> bool {
     ]
     .iter()
     .any(|needle| compact_context.contains(needle))
+}
+
+fn compact_without_ascii_whitespace(text: &str) -> String {
+    text.chars()
+        .filter(|character| !character.is_ascii_whitespace())
+        .collect()
 }
 
 fn positive_password_input_hint(compact_context: &str) -> bool {

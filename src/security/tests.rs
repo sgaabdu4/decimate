@@ -195,6 +195,30 @@ fn classifies_firebase_options_api_key_separately() -> Result<(), Box<dyn std::e
 }
 
 #[test]
+fn skips_dynamic_firebase_options_api_key() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(
+        &fixture,
+        "lib/firebase_options.dart",
+        "const options = FirebaseOptions(
+  apiKey: '$firebaseApiKey',
+  appId: '1:123:web:abc',
+);
+const emptyOptions = FirebaseOptions(apiKey: '', appId: '1:123:web:def');
+",
+    )?;
+
+    let project = scan_project(fixture.path())?;
+    let report = analyze_security(&project, &SecurityOptions::default(), None)?;
+
+    assert!(report.candidates.is_empty());
+    assert_eq!(report.total_occurrences, 0);
+
+    Ok(())
+}
+
+#[test]
 fn classifies_compact_firebase_options_literals_by_argument()
 -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
@@ -408,6 +432,29 @@ fn skips_javascript_password_autofill_when_password_hint_is_negative()
         "const loginJs = '''
   if (input.type !== 'password') input.value = 'alice@company.invalid';
   if (input.matches(':not([type=password])')) input.value = 'alice@company.invalid';
+''';
+",
+    )?;
+
+    let project = scan_project(fixture.path())?;
+    let report = analyze_security(&project, &SecurityOptions::default(), None)?;
+
+    assert!(report.candidates.is_empty());
+    assert_eq!(report.total_occurrences, 0);
+
+    Ok(())
+}
+
+#[test]
+fn skips_javascript_password_autofill_when_target_selector_is_negative()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(
+        &fixture,
+        "lib/main.dart",
+        "const loginJs = '''
+  document.querySelector('input:not([type=password])').value = 'alice@company.invalid';
 ''';
 ",
     )?;
