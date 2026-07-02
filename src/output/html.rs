@@ -16,6 +16,7 @@ mod assets;
 use assets::{render_interaction_script, render_style};
 
 const MAX_RELATED_FILES: usize = 12;
+const MAX_GROUP_RULE_IDS: usize = 3;
 
 /// Render a browser-ready static report for humans.
 #[must_use]
@@ -252,7 +253,7 @@ fn render_findings(html: &mut String, report: &JsonReport) {
 
 struct FindingGroup<'a> {
     kind: FindingKind,
-    rule_id: &'a str,
+    rule_ids: Vec<&'a str>,
     entries: Vec<(usize, &'a Finding)>,
     error_count: usize,
     warning_count: usize,
@@ -274,7 +275,7 @@ impl<'a> FindingGroup<'a> {
     fn new(index: usize, finding: &'a Finding) -> Self {
         let mut group = Self {
             kind: finding.kind,
-            rule_id: finding.rule_id.as_str(),
+            rule_ids: Vec::new(),
             entries: Vec::new(),
             error_count: 0,
             warning_count: 0,
@@ -287,6 +288,10 @@ impl<'a> FindingGroup<'a> {
         match finding.severity {
             Severity::Error => self.error_count += 1,
             Severity::Warning => self.warning_count += 1,
+        }
+        let rule_id = finding.rule_id.as_str();
+        if !self.rule_ids.contains(&rule_id) {
+            self.rule_ids.push(rule_id);
         }
         self.entries.push((index, finding));
     }
@@ -343,12 +348,16 @@ fn render_finding_group(html: &mut String, group_index: usize, group: &FindingGr
         open
     );
     let _ = writeln!(html, "<summary>");
+    let rule_summary = group_rule_summary(group);
+    let rule_html = rule_summary.map_or_else(String::new, |rule_ids| {
+        format!("<span class=\"rule\">{}</span>", escape(&rule_ids))
+    });
     let _ = writeln!(
         html,
-        "<span class=\"summary-title\"><span class=\"group-number\">{}.</span><span class=\"summary-text\"><strong>{}</strong><span class=\"rule\">{}</span></span></span>",
+        "<span class=\"summary-title\"><span class=\"group-number\">{}.</span><span class=\"summary-text\"><strong>{}</strong>{}</span></span>",
         group_index + 1,
         escape(label),
-        escape(group.rule_id)
+        rule_html
     );
     let _ = writeln!(
         html,
@@ -362,6 +371,13 @@ fn render_finding_group(html: &mut String, group_index: usize, group: &FindingGr
     }
     let _ = writeln!(html, "</div>");
     let _ = writeln!(html, "</details>");
+}
+
+fn group_rule_summary(group: &FindingGroup<'_>) -> Option<String> {
+    if group.rule_ids.is_empty() || group.rule_ids.len() > MAX_GROUP_RULE_IDS {
+        return None;
+    }
+    Some(group.rule_ids.join(", "))
 }
 
 fn group_summary(group: &FindingGroup<'_>) -> String {

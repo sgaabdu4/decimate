@@ -139,6 +139,86 @@ fn groups_findings_by_type_with_search_and_type_controls() {
 }
 
 #[test]
+fn group_headers_render_unique_rule_ids_only_when_concise() {
+    let report = JsonReport {
+        schema_version: "dart-decimate.report.v1".to_owned(),
+        kind: "combined".to_owned(),
+        tool: "dart-decimate".to_owned(),
+        command: ReportCommand::Check,
+        verdict: Verdict::Fail,
+        summary: ReportSummary {
+            files: 6,
+            findings: 6,
+            policy_violations: 2,
+            security_candidates: 4,
+            ..ReportSummary::default()
+        },
+        findings: vec![
+            finding(
+                FindingKind::PolicyViolation,
+                "dart-decimate/policy/mobile/no-dart-io",
+                "dart:io is not allowed",
+                "lib/io.dart",
+            ),
+            finding(
+                FindingKind::PolicyViolation,
+                "dart-decimate/policy/mobile/no-process",
+                "Process APIs are not allowed",
+                "lib/process.dart",
+            ),
+            finding(
+                FindingKind::SecurityCandidate,
+                "dart-decimate/security/hardcoded-secret",
+                "Hardcoded secret candidate",
+                "lib/secret.dart",
+            ),
+            finding(
+                FindingKind::SecurityCandidate,
+                "dart-decimate/security/tls-bypass",
+                "TLS bypass candidate",
+                "lib/tls.dart",
+            ),
+            finding(
+                FindingKind::SecurityCandidate,
+                "dart-decimate/security/raw-sql",
+                "Raw SQL candidate",
+                "lib/sql.dart",
+            ),
+            finding(
+                FindingKind::SecurityCandidate,
+                "dart-decimate/security/webview-javascript",
+                "WebView JavaScript bridge candidate",
+                "lib/webview.dart",
+            ),
+        ],
+        clone_groups: Vec::new(),
+        complexity: Vec::new(),
+        file_scores: Vec::new(),
+        hotspots: Vec::new(),
+        refactoring_targets: Vec::new(),
+        threshold_overrides: Vec::new(),
+        feature_flags: Vec::new(),
+        security_candidates: Vec::new(),
+        attack_surface: Vec::new(),
+        runtime_coverage: None,
+        next_steps: Vec::new(),
+    };
+
+    let rendered = render_html_report(&report);
+
+    assert!(rendered.contains(
+        "<span class=\"summary-text\"><strong>Policy violation</strong><span class=\"rule\">dart-decimate/policy/mobile/no-dart-io, dart-decimate/policy/mobile/no-process</span></span>"
+    ));
+    assert!(
+        rendered
+            .contains("<span class=\"summary-text\"><strong>Security candidate</strong></span>")
+    );
+    assert!(!rendered.contains(
+        "<strong>Security candidate</strong><span class=\"rule\">dart-decimate/security/hardcoded-secret</span>"
+    ));
+}
+
+#[test]
 fn escapes_control_characters_from_user_values() {
     let report = JsonReport {
         schema_version: "dart-decimate.report.v1".to_owned(),
