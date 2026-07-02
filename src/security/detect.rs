@@ -531,7 +531,7 @@ fn firebase_options_context(source: &str, index: usize) -> bool {
 }
 
 fn named_argument_context(source: &str, index: usize, name: &str) -> bool {
-    let Some(context) = literal_context(source, index) else {
+    let Some(context) = literal_argument_context(source, index) else {
         return false;
     };
     let Some((candidate, rest)) = context.rsplit_once(':') else {
@@ -558,6 +558,18 @@ fn assignment_context(source: &str, index: usize, name: &str) -> bool {
 }
 
 fn literal_context(source: &str, index: usize) -> Option<&str> {
+    literal_context_until_separator(source, index, true)
+}
+
+fn literal_argument_context(source: &str, index: usize) -> Option<&str> {
+    literal_context_until_separator(source, index, false)
+}
+
+fn literal_context_until_separator(
+    source: &str,
+    index: usize,
+    stop_at_newline: bool,
+) -> Option<&str> {
     let bytes = source.as_bytes();
     let mut depth = 0usize;
     let mut cursor = index.min(bytes.len());
@@ -571,7 +583,10 @@ fn literal_context(source: &str, index: usize) -> Option<&str> {
                 }
                 depth -= 1;
             }
-            b',' | b';' | b'\n' if depth == 0 => {
+            b',' | b';' if depth == 0 => {
+                return trimmed_context(source, cursor + 1, index);
+            }
+            b'\n' if depth == 0 && stop_at_newline => {
                 return trimmed_context(source, cursor + 1, index);
             }
             _ => {}
