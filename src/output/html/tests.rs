@@ -32,20 +32,18 @@ fn renders_browser_ready_report_with_escaped_evidence() {
                 "lib/c.dart".to_owned(),
             ],
             edge: None,
-            actions: vec![
-                FindingAction::new(
-                    "break-cycle",
-                    "Move shared dependencies inward or invert one import edge",
-                    false,
-                )
-                .with_dart_decimate_args([
-                    "inspect",
-                    "--format",
-                    "json",
-                    "--file",
-                    "lib/a.dart",
-                ]),
-            ],
+            actions: vec![FindingAction::new(
+                "break-cycle",
+                "Move shared dependencies inward or invert one import edge",
+                false,
+            )
+            .with_dart_decimate_args([
+                "inspect",
+                "--format",
+                "json",
+                "--file",
+                "lib/a.dart",
+            ])],
         }],
         clone_groups: Vec::new(),
         complexity: Vec::new(),
@@ -209,10 +207,8 @@ fn group_headers_render_unique_rule_ids_only_when_concise() {
     assert!(rendered.contains(
         "<span class=\"summary-text\"><strong>Policy violation</strong><span class=\"rule\">dart-decimate/policy/mobile/no-dart-io, dart-decimate/policy/mobile/no-process</span></span>"
     ));
-    assert!(
-        rendered
-            .contains("<span class=\"summary-text\"><strong>Security candidate</strong></span>")
-    );
+    assert!(rendered
+        .contains("<span class=\"summary-text\"><strong>Security candidate</strong></span>"));
     assert!(!rendered.contains(
         "<strong>Security candidate</strong><span class=\"rule\">dart-decimate/security/hardcoded-secret</span>"
     ));
