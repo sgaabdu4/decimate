@@ -108,6 +108,7 @@ jobs:
       - name: Validate release candidate
         run: |
           npm run version:check
+          npm run release:check
           npm run migration:check
           cargo fmt --check
           cargo clippy --all-targets -- -D warnings
