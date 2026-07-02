@@ -97,6 +97,41 @@ fn security_gate_newly_reachable_compare_keeps_downstream_reachable_candidate()
 }
 
 #[test]
+fn security_gate_newly_reachable_compare_suggests_similar_branch()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = git_fixture()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(&fixture, "lib/main.dart", "void main() {}\n")?;
+    commit_all(&fixture)?;
+    git(&fixture, ["update-ref", "refs/remotes/origin/main", "HEAD"])?;
+    let mut output = Vec::new();
+
+    let error = match run_from(
+        [
+            "dart-decimate",
+            "security",
+            fixture.path().to_str().unwrap_or("."),
+            "--format",
+            "json",
+            "--gate",
+            "newly-reachable",
+            "--compare",
+            "orign/main",
+        ],
+        &mut output,
+    ) {
+        Ok(code) => panic!("invalid git base should fail, got exit code {code}"),
+        Err(error) => error,
+    };
+
+    let message = error.to_string();
+    assert!(message.contains("orign/main"));
+    assert!(message.contains("Did you mean origin/main?"));
+
+    Ok(())
+}
+
+#[test]
 fn security_gate_newly_reachable_passes_for_changed_unreachable_candidate()
 -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;

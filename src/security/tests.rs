@@ -398,6 +398,30 @@ fn skips_javascript_password_autofill_when_value_target_is_unrelated()
 }
 
 #[test]
+fn skips_javascript_password_autofill_when_password_hint_is_negative()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(
+        &fixture,
+        "lib/main.dart",
+        "const loginJs = '''
+  if (input.type !== 'password') input.value = 'alice@company.invalid';
+  if (input.matches(':not([type=password])')) input.value = 'alice@company.invalid';
+''';
+",
+    )?;
+
+    let project = scan_project(fixture.path())?;
+    let report = analyze_security(&project, &SecurityOptions::default(), None)?;
+
+    assert!(report.candidates.is_empty());
+    assert_eq!(report.total_occurrences, 0);
+
+    Ok(())
+}
+
+#[test]
 fn skips_javascript_password_autofill_when_only_parent_target_is_password_named()
 -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;

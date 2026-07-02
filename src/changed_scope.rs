@@ -43,6 +43,12 @@ impl fmt::Display for RefSuggestions {
     }
 }
 
+impl RefSuggestions {
+    pub(crate) fn for_base(root: &Path, base: &str) -> Self {
+        Self(similar_refs(root, base))
+    }
+}
+
 /// Return root-normalized files changed since `base`.
 ///
 /// # Errors
@@ -135,7 +141,7 @@ fn git_diff_error(root: &Path, base: &str, stderr: &[u8]) -> ChangedScopeError {
     ChangedScopeError::GitDiff {
         base: base.to_owned(),
         stderr: String::from_utf8_lossy(stderr).trim().to_owned(),
-        suggestions: RefSuggestions(similar_refs(root, base)),
+        suggestions: RefSuggestions::for_base(root, base),
     }
 }
 

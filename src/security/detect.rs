@@ -884,14 +884,39 @@ fn context_ties_password_to_target(context_lower: &str, target_lower: &str) -> b
 }
 
 fn password_input_hint(context_lower: &str) -> bool {
-    if context_lower.contains("'password'") || context_lower.contains("\"password\"") {
-        return true;
-    }
     let compact = context_lower
         .chars()
         .filter(|character| !character.is_ascii_whitespace())
         .collect::<String>();
+    if negative_password_input_hint(&compact) {
+        return false;
+    }
+    positive_password_input_hint(&compact)
+}
+
+fn negative_password_input_hint(compact_context: &str) -> bool {
     [
+        "type!=='password'",
+        "type!==\"password\"",
+        "type!='password'",
+        "type!=\"password\"",
+        ":not([type=password",
+        ":not([type='password'",
+        ":not([type=\"password\"",
+        "not([type=password",
+        "not([type='password'",
+        "not([type=\"password\"",
+    ]
+    .iter()
+    .any(|needle| compact_context.contains(needle))
+}
+
+fn positive_password_input_hint(compact_context: &str) -> bool {
+    [
+        "type==='password'",
+        "type===\"password\"",
+        "type=='password'",
+        "type==\"password\"",
         "type=password",
         "type='password'",
         "type=\"password\"",
@@ -900,7 +925,7 @@ fn password_input_hint(context_lower: &str) -> bool {
         "[type=\"password\"",
     ]
     .iter()
-    .any(|needle| compact.contains(needle))
+    .any(|needle| compact_context.contains(needle))
 }
 
 fn target_reference_range(
