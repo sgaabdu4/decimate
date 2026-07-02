@@ -942,10 +942,21 @@ fn is_module_uri_directive_line(line: &str) -> bool {
         .any(|prefix| trimmed.starts_with(prefix))
 }
 
+const RESET_OR_RECOVERY_PATH_MARKERS: &[&str] = &[
+    "forgot-password",
+    "reset-password",
+    "passwordreset",
+    "password-reset",
+    "password-recovery",
+    "recover-password",
+];
+
 fn benign_secret_named_literal(value: &str) -> bool {
     let route_or_reset_url =
         literal_looks_like_route_path(value) || literal_looks_like_reset_or_recovery_url(value);
-    route_or_reset_url && !literal_has_secret_like_url_parameter(value)
+    (route_or_reset_url
+        && !literal_has_secret_like_url_parameter(value)
+        && !literal_has_secret_like_reset_path_segment(value))
         || literal_looks_like_user_facing_copy(value)
 }
 
@@ -966,16 +977,9 @@ fn literal_looks_like_route_path(value: &str) -> bool {
 fn literal_looks_like_reset_or_recovery_url(value: &str) -> bool {
     let lower = value.to_ascii_lowercase();
     (lower.starts_with("https://") || lower.starts_with("http://"))
-        && [
-            "forgot-password",
-            "reset-password",
-            "passwordreset",
-            "password-reset",
-            "password-recovery",
-            "recover-password",
-        ]
-        .iter()
-        .any(|needle| lower.contains(needle))
+        && RESET_OR_RECOVERY_PATH_MARKERS
+            .iter()
+            .any(|needle| lower.contains(needle))
 }
 
 fn literal_has_secret_like_url_parameter(value: &str) -> bool {
@@ -1011,6 +1015,44 @@ fn concrete_url_parameter_value(value: &str) -> bool {
         && !(trimmed.starts_with('{') && trimmed.ends_with('}'))
         && !(trimmed.starts_with('<') && trimmed.ends_with('>'))
         && !is_placeholder(trimmed)
+}
+
+fn literal_has_secret_like_reset_path_segment(value: &str) -> bool {
+    let trimmed = value.trim();
+    let path_end = trimmed
+        .find(|character| matches!(character, '?' | '#'))
+        .unwrap_or(trimmed.len());
+    let path = &trimmed[..path_end];
+    let mut reset_or_recovery_path_seen = false;
+    for segment in path.split('/') {
+        let lower = segment.to_ascii_lowercase();
+        if reset_or_recovery_path_seen && concrete_secret_like_path_segment(segment) {
+            return true;
+        }
+        if RESET_OR_RECOVERY_PATH_MARKERS.contains(&lower.as_str()) {
+            reset_or_recovery_path_seen = true;
+        }
+    }
+    false
+}
+
+fn concrete_secret_like_path_segment(segment: &str) -> bool {
+    let trimmed = segment.trim();
+    if !concrete_url_parameter_value(trimmed) || trimmed.len() < 12 {
+        return false;
+    }
+    let mut has_alpha = false;
+    let mut has_digit = false;
+    for byte in trimmed.bytes() {
+        if byte.is_ascii_alphabetic() {
+            has_alpha = true;
+        } else if byte.is_ascii_digit() {
+            has_digit = true;
+        } else if !matches!(byte, b'-' | b'_' | b'.' | b'~') {
+            return false;
+        }
+    }
+    has_alpha && has_digit
 }
 
 fn literal_looks_like_user_facing_copy(value: &str) -> bool {

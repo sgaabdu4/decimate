@@ -144,8 +144,10 @@ fn reports_secret_named_urls_with_concrete_secret_parameters()
         "lib/main.dart",
         "class Routes {
   static const String resetPassword = '/reset-password?next=/settings';
+  static const String resetPasswordSuccess = '/reset-password/success-page';
   static const String resetPasswordToken = '/reset-password?token=dartdecimate12345';
   static const String recoveryAccessToken = 'https://auth.invalid/reset-password#access_token=dartdecimate67890';
+  static const String resetPasswordPathToken = 'https://auth.invalid/reset-password/dartdecimate12345';
 }
 ",
     )?;
@@ -153,12 +155,12 @@ fn reports_secret_named_urls_with_concrete_secret_parameters()
     let project = scan_project(fixture.path())?;
     let report = analyze_security(&project, &SecurityOptions::default(), None)?;
 
-    assert_eq!(report.total_occurrences, 2);
+    assert_eq!(report.total_occurrences, 3);
     assert_eq!(
         report.candidates[0].rule_id,
         "dart-decimate/security-hardcoded-secret"
     );
-    assert_eq!(report.candidates[0].occurrences.len(), 2);
+    assert_eq!(report.candidates[0].occurrences.len(), 3);
 
     Ok(())
 }
