@@ -797,7 +797,7 @@ fn password_autofill_assignment_context(
     target: &ValueAssignmentTarget<'_>,
 ) -> bool {
     let target_lower = target.text.to_ascii_lowercase();
-    if target_lower.contains("password") {
+    if value_target_has_password_context(&target_lower) {
         return true;
     }
     if line_lower
@@ -812,8 +812,102 @@ fn password_autofill_assignment_context(
     })
 }
 
+fn value_target_has_password_context(target_lower: &str) -> bool {
+    terminal_value_target_segment(target_lower).contains("password")
+}
+
+fn terminal_value_target_segment(target_lower: &str) -> &str {
+    let target = target_lower.trim();
+    if let Some(segment) = target
+        .ends_with(']')
+        .then(|| matching_open_bracket(target).and_then(|start| target.get(start..)))
+        .flatten()
+    {
+        return segment;
+    }
+    if let Some(index) = last_top_level_dot(target) {
+        target.get(index + 1..).unwrap_or(target)
+    } else {
+        target
+    }
+}
+
+fn matching_open_bracket(text: &str) -> Option<usize> {
+    let bytes = text.as_bytes();
+    let mut depth = 0usize;
+    for index in (0..bytes.len()).rev() {
+        match bytes[index] {
+            b']' => depth += 1,
+            b'[' => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    return Some(index);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn last_top_level_dot(text: &str) -> Option<usize> {
+    let bytes = text.as_bytes();
+    let mut paren_depth = 0usize;
+    let mut bracket_depth = 0usize;
+    for index in (0..bytes.len()).rev() {
+        match bytes[index] {
+            b')' => paren_depth += 1,
+            b'(' => paren_depth = paren_depth.saturating_sub(1),
+            b']' => bracket_depth += 1,
+            b'[' => bracket_depth = bracket_depth.saturating_sub(1),
+            b'.' if paren_depth == 0 && bracket_depth == 0 => return Some(index),
+            _ => {}
+        }
+    }
+    None
+}
+
 fn context_ties_password_to_target(context_lower: &str, target_lower: &str) -> bool {
-    context_lower.contains("password") && context_references_target(context_lower, target_lower)
+    context_references_target(context_lower, target_lower)
+        && password_context_hint_without_target(context_lower, target_lower)
+}
+
+fn password_context_hint_without_target(context_lower: &str, target_lower: &str) -> bool {
+    let context = context_without_target(context_lower, target_lower);
+    password_input_hint(&context)
+}
+
+fn context_without_target(context_lower: &str, target_lower: &str) -> String {
+    let mut context = String::with_capacity(context_lower.len());
+    let mut search_start = 0;
+    while let Some(relative_index) = context_lower[search_start..].find(target_lower) {
+        let start = search_start + relative_index;
+        let end = start + target_lower.len();
+        context.push_str(&context_lower[search_start..start]);
+        search_start = end;
+    }
+    context.push_str(&context_lower[search_start..]);
+    context
+}
+
+fn password_input_hint(context_lower: &str) -> bool {
+    if context_lower.contains("'password'") || context_lower.contains("\"password\"") {
+        return true;
+    }
+    let compact = context_lower
+        .chars()
+        .filter(|character| !character.is_ascii_whitespace())
+        .collect::<String>();
+    [
+        "type=password",
+        "type='password'",
+        "type=\"password\"",
+        "[type=password",
+        "[type='password'",
+        "[type=\"password\"",
+    ]
+    .iter()
+    .any(|needle| compact.contains(needle))
 }
 
 fn context_references_target(context_lower: &str, target_lower: &str) -> bool {
