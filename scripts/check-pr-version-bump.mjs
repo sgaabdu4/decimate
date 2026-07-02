@@ -123,9 +123,9 @@ function comparePrerelease(left, right) {
   return 0;
 }
 
-function compareSemver(left, right, label) {
-  const parsedLeft = parseSemver(left, label);
-  const parsedRight = parseSemver(right, label);
+function compareSemver(left, right, leftLabel, rightLabel) {
+  const parsedLeft = parseSemver(left, leftLabel);
+  const parsedRight = parseSemver(right, rightLabel);
 
   for (const key of ["major", "minor", "patch"]) {
     const compared = compareNumber(parsedLeft[key], parsedRight[key]);
@@ -138,7 +138,7 @@ function compareSemver(left, right, label) {
 }
 
 function requireBumped(label, current, base, failures) {
-  if (compareSemver(current, base, label) <= 0) {
+  if (compareSemver(current, base, label, `base ${label}`) <= 0) {
     failures.push(`${label} version must be bumped: ${base} -> ${current}`);
   }
 }

@@ -141,6 +141,18 @@ fn pr_version_bump_script_rejects_unchanged_or_downgraded_versions()
             .contains("package.json version must be bumped: 1.2.3 -> 1.2.3")
     );
 
+    write_versions(root, "not-semver", "1.2.3")?;
+    run_git(root, &["add", "Cargo.toml", "package.json"])?;
+    run_git(root, &["commit", "-m", "invalid base"])?;
+    run_git(root, &["update-ref", "refs/remotes/origin/main", "HEAD"])?;
+    write_versions(root, "1.2.4", "1.2.4")?;
+    let output = run_pr_bump_script(root)?;
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("base Cargo.toml has invalid semver: not-semver")
+    );
+
     Ok(())
 }
 
