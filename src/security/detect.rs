@@ -55,7 +55,7 @@ fn detect_hardcoded_secrets(
         let secret_value = has_secret_shape(&literal.value);
         let firebase_options_literal = firebase_options_context(source, literal.index);
         let secret_name = if firebase_options_literal {
-            literal_context(source, literal.index).is_some_and(has_secret_like_name)
+            firebase_secret_name_context(source, literal.index)
         } else {
             has_secret_like_name(line)
         };
@@ -530,6 +530,10 @@ fn firebase_options_context(source: &str, index: usize) -> bool {
     enclosing_call_name(source, index).is_some_and(|name| name == "FirebaseOptions")
 }
 
+fn firebase_secret_name_context(source: &str, index: usize) -> bool {
+    literal_argument_context(source, index).is_some_and(has_secret_like_name)
+}
+
 fn named_argument_context(source: &str, index: usize, name: &str) -> bool {
     let Some(context) = literal_argument_context(source, index) else {
         return false;
@@ -868,26 +872,15 @@ fn last_top_level_dot(text: &str) -> Option<usize> {
 }
 
 fn context_ties_password_to_target(context_lower: &str, target_lower: &str) -> bool {
-    context_references_target(context_lower, target_lower)
-        && password_context_hint_without_target(context_lower, target_lower)
-}
-
-fn password_context_hint_without_target(context_lower: &str, target_lower: &str) -> bool {
-    let context = context_without_target(context_lower, target_lower);
-    password_input_hint(&context)
-}
-
-fn context_without_target(context_lower: &str, target_lower: &str) -> String {
-    let mut context = String::with_capacity(context_lower.len());
     let mut search_start = 0;
-    while let Some(relative_index) = context_lower[search_start..].find(target_lower) {
-        let start = search_start + relative_index;
-        let end = start + target_lower.len();
-        context.push_str(&context_lower[search_start..start]);
+    while let Some((start, end)) = target_reference_range(context_lower, target_lower, search_start)
+    {
+        if password_input_hint(target_reference_context(context_lower, start, end)) {
+            return true;
+        }
         search_start = end;
     }
-    context.push_str(&context_lower[search_start..]);
-    context
+    false
 }
 
 fn password_input_hint(context_lower: &str) -> bool {
@@ -910,25 +903,70 @@ fn password_input_hint(context_lower: &str) -> bool {
     .any(|needle| compact.contains(needle))
 }
 
-fn context_references_target(context_lower: &str, target_lower: &str) -> bool {
-    if target_lower.bytes().all(is_identifier_byte) {
-        let mut search_start = 0;
-        while let Some(relative_index) = context_lower[search_start..].find(target_lower) {
-            let start = search_start + relative_index;
-            let end = start + target_lower.len();
-            let before_boundary =
-                start == 0 || !is_identifier_byte(context_lower.as_bytes()[start - 1]);
-            let after_boundary =
-                end == context_lower.len() || !is_identifier_byte(context_lower.as_bytes()[end]);
-            if before_boundary && after_boundary {
-                return true;
-            }
-            search_start = end;
+fn target_reference_range(
+    context_lower: &str,
+    target_lower: &str,
+    search_start: usize,
+) -> Option<(usize, usize)> {
+    let bounded_identifier = target_lower.bytes().all(is_identifier_byte);
+    let mut cursor = search_start;
+    while let Some(relative_index) = context_lower[cursor..].find(target_lower) {
+        let start = cursor + relative_index;
+        let end = start + target_lower.len();
+        if !bounded_identifier || identifier_boundaries(context_lower, start, end) {
+            return Some((start, end));
         }
-        false
-    } else {
-        context_lower.contains(target_lower)
+        cursor = end;
     }
+    None
+}
+
+fn identifier_boundaries(context_lower: &str, start: usize, end: usize) -> bool {
+    let before_boundary = start == 0 || !is_identifier_byte(context_lower.as_bytes()[start - 1]);
+    let after_boundary =
+        end == context_lower.len() || !is_identifier_byte(context_lower.as_bytes()[end]);
+    before_boundary && after_boundary
+}
+
+fn target_reference_context(context_lower: &str, start: usize, end: usize) -> &str {
+    let context_start = logical_expression_start(context_lower, start);
+    let context_end = logical_expression_end(context_lower, end);
+    &context_lower[context_start..context_end]
+}
+
+fn logical_expression_start(context_lower: &str, start: usize) -> usize {
+    let bytes = context_lower.as_bytes();
+    let mut cursor = start;
+    while cursor > 0 {
+        if cursor >= 2 && bytes.get(cursor - 2..cursor) == Some(b"&&") {
+            return cursor;
+        }
+        if cursor >= 2 && bytes.get(cursor - 2..cursor) == Some(b"||") {
+            return cursor;
+        }
+        if matches!(bytes[cursor - 1], b';' | b'{' | b'}' | b'\n' | b',') {
+            return cursor;
+        }
+        cursor -= 1;
+    }
+    0
+}
+
+fn logical_expression_end(context_lower: &str, end: usize) -> usize {
+    let bytes = context_lower.as_bytes();
+    let mut cursor = end;
+    while cursor < bytes.len() {
+        if bytes.get(cursor..cursor + 2) == Some(b"&&")
+            || bytes.get(cursor..cursor + 2) == Some(b"||")
+        {
+            return cursor;
+        }
+        if matches!(bytes[cursor], b';' | b'{' | b'}' | b'\n' | b',') {
+            return cursor;
+        }
+        cursor += 1;
+    }
+    bytes.len()
 }
 
 fn is_identifier_byte(byte: u8) -> bool {

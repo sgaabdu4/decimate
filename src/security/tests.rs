@@ -260,6 +260,44 @@ fn classifies_newline_firebase_options_api_key_by_argument()
 }
 
 #[test]
+fn classifies_newline_firebase_options_secret_argument() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(
+        &fixture,
+        "lib/firebase_options.dart",
+        "const options = FirebaseOptions(
+  apiKey: 'DartDecimateFirebaseKeyValue123456789',
+  appId: '1:123:web:abc',
+  clientSecret:
+    'dart_decimate_fixture_value_1234567890',
+  projectId: 'example-project',
+);
+",
+    )?;
+
+    let project = scan_project(fixture.path())?;
+    let report = analyze_security(&project, &SecurityOptions::default(), None)?;
+    let mut rules = report
+        .candidates
+        .iter()
+        .map(|candidate| candidate.rule_id.as_str())
+        .collect::<Vec<_>>();
+    rules.sort_unstable();
+
+    assert_eq!(report.total_occurrences, 2);
+    assert_eq!(
+        rules,
+        vec![
+            "dart-decimate/security-firebase-api-key",
+            "dart-decimate/security-hardcoded-secret"
+        ]
+    );
+
+    Ok(())
+}
+
+#[test]
 fn locates_javascript_password_autofill_at_assignment_literal()
 -> Result<(), Box<dyn std::error::Error>> {
     let fixture = tempfile::tempdir()?;
@@ -300,6 +338,29 @@ fn skips_javascript_password_autofill_when_assignment_is_not_literal()
         "lib/main.dart",
         "const loginJs = '''
   if (input.type === 'password') input.value = token || 'dart_decimate_fixture_password_value_12345';
+''';
+",
+    )?;
+
+    let project = scan_project(fixture.path())?;
+    let report = analyze_security(&project, &SecurityOptions::default(), None)?;
+
+    assert!(report.candidates.is_empty());
+    assert_eq!(report.total_occurrences, 0);
+
+    Ok(())
+}
+
+#[test]
+fn skips_javascript_password_autofill_when_password_hint_is_unrelated()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixture = tempfile::tempdir()?;
+    write(&fixture, "pubspec.yaml", "name: app\n")?;
+    write(
+        &fixture,
+        "lib/main.dart",
+        "const loginJs = '''
+  if (input.type === 'password' && passwordResetForm.email) passwordResetForm.email.value = 'alice@company.invalid';
 ''';
 ",
     )?;
