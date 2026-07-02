@@ -146,7 +146,7 @@ jobs:
           exit 1
 
       - name: Reject reused package version
-        if: steps.state.outputs.npm_exists == 'true' && github.event_name == 'push' && (github.run_attempt == 1 || steps.state.outputs.tag_points_at_head == 'false')
+        if: steps.state.outputs.npm_exists == 'true' && steps.state.outputs.tag_points_at_head == 'false'
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |

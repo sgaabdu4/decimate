@@ -28,6 +28,7 @@
   "scripts": {
     "postinstall": "node npm/scripts/postinstall.js",
     "version:check": "node scripts/check-version-sync.mjs",
+    "version:bump:check": "node scripts/check-pr-version-bump.mjs",
     "release:check": "node scripts/check-release-version.mjs",
     "migration:check": "node scripts/check-dart-decimate-migration.mjs",
     "pack:check": "npm pack --dry-run",

@@ -43,7 +43,10 @@ jobs:
 
       - name: Check release version
         if: github.event_name == 'pull_request'
-        run: npm run release:check
+        run: |
+          git fetch --no-tags --depth=1 origin "$GITHUB_BASE_REF:refs/remotes/origin/$GITHUB_BASE_REF"
+          npm run version:bump:check -- "origin/$GITHUB_BASE_REF"
+          npm run release:check
 
       - name: Check formatting
         run: cargo fmt --check
